@@ -21,6 +21,7 @@ const PORT = Number(process.env.PORT ?? 3002);
 // Usuarios de prueba. En Supabase real esto lo gestiona GoTrue.
 const USERS = new Map([
   ['cajero@example.com', { id: '33333333-3333-3333-3333-333333333333', password: 'clave-de-prueba' }],
+  ['dueno@example.com',  { id: '66666666-6666-6666-6666-666666666666', password: 'clave-de-prueba' }],
 ]);
 
 const b64url = (buf) =>
@@ -108,10 +109,15 @@ const server = http.createServer(async (req, res) => {
     try {
       const upstream = await fetch(target, { method: req.method, headers, body });
       const text = await upstream.text();
-      res.writeHead(upstream.status, {
-        ...CORS,
-        'content-type': upstream.headers.get('content-type') ?? 'application/json',
-      });
+      // content-range lleva el total de filas cuando se pide `count=exact`.
+      // supabase-js saca de ahí el `count`; sin reenviarla, toda paginación
+      // recibe 0 y la interfaz cree que no hay resultados.
+      const passthrough = {};
+      for (const h of ['content-type', 'content-range', 'content-location', 'preference-applied']) {
+        const v = upstream.headers.get(h);
+        if (v) passthrough[h] = v;
+      }
+      res.writeHead(upstream.status, { ...CORS, ...passthrough });
       return res.end(text);
     } catch (err) {
       return json(502, { message: `proxy: ${err.message}` });

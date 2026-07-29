@@ -1288,6 +1288,42 @@ export interface Database {
           },
         ];
       };
+      work_order_assignees: {
+        Row: {
+          work_order_id: string;
+          profile_id: string;
+          company_id: string;
+          assigned_at: string;
+        };
+        Insert: {
+          work_order_id: string;
+          profile_id: string;
+          company_id: string;
+          assigned_at?: string;
+        };
+        Update: {
+          work_order_id?: string;
+          profile_id?: string;
+          company_id?: string;
+          assigned_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "work_order_assignees_order_same_company";
+            columns: ["work_order_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_order_assignees_profile_same_company";
+            columns: ["profile_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       work_order_items: {
         Row: {
           id: string;
@@ -1403,6 +1439,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          client_request_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1441,6 +1478,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
         };
         Update: {
           id?: string;
@@ -1479,6 +1517,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
         };
         Relationships: [
           {
@@ -1528,6 +1567,15 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      advance_work_order: {
+        Args: {
+          p_order_id: string;
+          p_new_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
+          p_bay_id?: string;
+          p_assignees?: string[];
+        };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
+      };
       annul_invoice: {
         Args: {
           p_invoice_id: string;
@@ -1552,6 +1600,24 @@ export interface Database {
           p_cash_session_id?: string;
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      create_work_order: {
+        Args: {
+          p_branch_id: string;
+          p_client_request_id: string;
+          p_vehicle_plate: string;
+          p_vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          p_items: Json;
+          p_customer_name?: string;
+          p_customer_id?: string;
+          p_customer_phone?: string;
+          p_vehicle_make?: string;
+          p_vehicle_model?: string;
+          p_vehicle_color?: string;
+          p_priority?: string;
+          p_notes?: string;
+        };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
       };
     };
     Enums: {

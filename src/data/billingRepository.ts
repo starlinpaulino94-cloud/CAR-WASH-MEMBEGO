@@ -267,7 +267,9 @@ export async function annulInvoice(
   return data as unknown as Invoice;
 }
 
-export async function fetchInvoiceItems(invoiceId: string) {
+export type InvoiceItem = Tables<'invoice_items'>;
+
+export async function fetchInvoiceItems(invoiceId: string): Promise<InvoiceItem[]> {
   const { data, error } = await requireSupabase()
     .from('invoice_items')
     .select('*')
@@ -278,16 +280,95 @@ export async function fetchInvoiceItems(invoiceId: string) {
   return data ?? [];
 }
 
-export async function fetchRecentInvoices(branchId: string, limit = 50): Promise<Invoice[]> {
-  const { data, error } = await requireSupabase()
+export type InvoiceKindFilter = 'all' | 'invoices' | 'credit_notes' | 'annulled';
+
+export interface InvoicePageParams {
+  branchId: string;
+  page: number;
+  pageSize: number;
+  search?: string;
+  kind?: InvoiceKindFilter;
+  fromDate?: string;   // ISO, inclusive
+  toDate?: string;     // ISO, inclusive
+}
+
+export interface InvoicePage {
+  rows: Invoice[];
+  total: number;
+}
+
+/**
+ * Página de facturas.
+ *
+ * Paginado en el servidor a propósito: la vista auditada renderizaba TODAS las
+ * filas sin paginar ni virtualizar (§3.3), lo que a unos miles de comprobantes
+ * significa decenas de miles de nodos en una sola tabla. Aquí el navegador
+ * nunca recibe más de una página.
+ */
+export async function fetchInvoicePage(params: InvoicePageParams): Promise<InvoicePage> {
+  const from = params.page * params.pageSize;
+  const to = from + params.pageSize - 1;
+
+  let query = requireSupabase()
     .from('invoices')
-    .select('*')
-    .eq('branch_id', branchId)
+    .select('*', { count: 'exact' })
+    .eq('branch_id', params.branchId);
+
+  const term = params.search?.trim();
+  if (term) {
+    // Filtrado en el servidor. Buscar en cliente obligaría a traerse el
+    // histórico completo, que es justo lo que se quiere evitar.
+    const escaped = term.replace(/[%,()]/g, '');
+    query = query.or(
+      `invoice_number.ilike.%${escaped}%,` +
+      `ncf.ilike.%${escaped}%,` +
+      `customer_name.ilike.%${escaped}%,` +
+      `vehicle_plate.ilike.%${escaped}%`
+    );
+  }
+
+  switch (params.kind) {
+    case 'invoices':     query = query.is('credits_invoice_id', null); break;
+    case 'credit_notes': query = query.not('credits_invoice_id', 'is', null); break;
+    case 'annulled':     query = query.eq('is_annulled', true); break;
+    default: break;
+  }
+
+  if (params.fromDate) query = query.gte('created_at', params.fromDate);
+  if (params.toDate)   query = query.lte('created_at', params.toDate);
+
+  const { data, error, count } = await query
     .order('created_at', { ascending: false })
-    .limit(limit);
+    .range(from, to);
 
   if (error) throw error;
-  return data ?? [];
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+/** Totales del periodo consultado, calculados por el servidor. */
+export async function fetchInvoiceTotals(
+  branchId: string,
+  fromDate?: string,
+  toDate?: string
+): Promise<{ issuedCents: number; annulledCents: number; count: number }> {
+  let query = requireSupabase()
+    .from('invoices')
+    .select('total_cents, is_annulled, credits_invoice_id')
+    .eq('branch_id', branchId)
+    .is('credits_invoice_id', null);
+
+  if (fromDate) query = query.gte('created_at', fromDate);
+  if (toDate)   query = query.lte('created_at', toDate);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  let issued = 0, annulled = 0;
+  for (const row of data ?? []) {
+    if (row.is_annulled) annulled += row.total_cents;
+    else issued += row.total_cents;
+  }
+  return { issuedCents: issued, annulledCents: annulled, count: (data ?? []).length };
 }
 
 /**

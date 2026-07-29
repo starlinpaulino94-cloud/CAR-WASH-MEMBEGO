@@ -4,14 +4,14 @@ Cimientos del backend real: esquema, aislamiento multi-tenant y autenticación.
 Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCION.md`.
 
 > **Estado:** el esquema está escrito y **verificado contra PostgreSQL 16 real**
-> (90/90 comprobaciones, ejecutadas con el rol `authenticated`, no como
+> (120/120 comprobaciones, ejecutadas con el rol `authenticated`, no como
 > superusuario). Todavía **no está aplicado** al proyecto alojado ni conectado a
 > las pantallas: la aplicación sigue funcionando contra `localStorage`. Migrar
 > las vistas es la fase siguiente.
 >
-> **POS y Caja YA están migrados** y verificados de extremo a extremo contra
-> PostgreSQL + PostgREST reales (28 comprobaciones, ver `tests/e2e/`). Las otras
-> 14 vistas siguen sobre `localStorage`.
+> **POS, Caja, Facturas, Órdenes y Kanban YA están migrados** y verificados de
+> extremo a extremo contra PostgreSQL + PostgREST reales (86 comprobaciones, ver
+> `tests/e2e/`). Las otras 11 vistas siguen sobre `localStorage`.
 
 ---
 
@@ -31,6 +31,9 @@ Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCIO
 | **H3 / I8** · Doble clic = dos facturas | Idempotencia por `client_request_id`, generado por el cliente una vez por operación (no por intento) |
 | **C6** · La anulación no emitía nota de crédito | `annul_invoice()`: emite B04, revierte inventario y caja con asiento compensatorio, y libera la orden |
 | **§6.2** · Precios manipulables desde el cliente | El precio lo resuelve siempre el servidor contra el catálogo; lo que envíe el cliente se ignora |
+| **M7** · Lógica de bahías ficticia | `advance_work_order()` ocupa la bahía elegida, rechaza las ocupadas o en mantenimiento, y la libera al salir de lavado |
+| **§14.4** · Comisiones que nadie generaba | Se crean al entregar, repartiendo cada línea entre los operarios asignados con la tasa de cada uno |
+| *(nuevo)* · Transiciones de estado sin validar | Máquina de estados impuesta por trigger: ningún cliente puede saltar de `pendiente` a `entregado` |
 
 ---
 
@@ -47,11 +50,13 @@ supabase/
 │   ├── ..._0600_audit_log.sql           bitácora inalterable
 │   ├── ..._0700_rls_policies.sql        TODA la superficie de seguridad, en un archivo
 │   ├── ..._0800_billing_rpc.sql         create_invoice() y annul_invoice()
-│   └── ..._0900_tenant_composite_fks.sql  integridad de tenant en claves foráneas
+│   ├── ..._0900_tenant_composite_fks.sql  integridad de tenant en claves foráneas
+│   └── ..._1000_orders_rpc.sql          máquina de estados, bahías y comisiones
 └── tests/
     ├── 00_supabase_shim.sql             simula auth.uid() para poder probar en local
     ├── 10_rls_tests.sql                 45 comprobaciones de esquema y RLS
     ├── 20_billing_tests.sql             45 de facturación, anulación y aislamiento
+    ├── 30_orders_tests.sql              30 de estados, bahías y comisiones
     └── run.sh                           levanta PostgreSQL, migra y ejecuta todo
 ```
 
@@ -90,7 +95,7 @@ supabase/tests/run.sh
 ```
 
 Levanta un PostgreSQL limpio, aplica el shim de `auth`, ejecuta las migraciones
-y corre las 90 comprobaciones. Las pruebas se ejecutan con el rol
+y corre las 120 comprobaciones. Las pruebas se ejecutan con el rol
 `authenticated`, **no** como superusuario: un superusuario se salta RLS y la
 prueba no demostraría nada.
 
@@ -166,12 +171,12 @@ visual: lo encontró la prueba.**
 
 Fuera del alcance de esta fase, en orden de prioridad:
 
-1. **Migrar las 14 vistas restantes** de `AppContext` a consultas contra Supabase.
+1. **Migrar las 11 vistas restantes** de `AppContext` a consultas contra Supabase.
 2. **Migración de datos** desde `localStorage` para las instalaciones piloto.
 3. **Claims de tenant en el JWT** (Custom Access Token Hook) para evitar el
    `SELECT` sobre `profiles` en cada evaluación de política. Optimización, no
    corrección: `app.current_company_id()` es `STABLE` y se evalúa una vez por
    sentencia, lo cual es suficiente hasta bastante escala.
 4. **Realtime** en el Kanban.
-5. **Generación de comisiones** al entregar una orden: la tabla existe y las
-   políticas están puestas, pero nada las crea todavía.
+5. **Beneficios Membego** en el registro de llegada: sigue siendo un simulador
+   en el cliente y migrarlo exige resolver antes el contrato real de la API.
