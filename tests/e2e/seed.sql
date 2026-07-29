@@ -7,13 +7,21 @@ insert into public.branches (id, company_id, name, is_main)
 values ('22222222-2222-2222-2222-222222222222','11111111-1111-1111-1111-111111111111','Sucursal E2E', true);
 
 insert into auth.users (id, email) values
-  ('33333333-3333-3333-3333-333333333333','cajero@example.com');
+  ('33333333-3333-3333-3333-333333333333','cajero@example.com'),
+  ('66666666-6666-6666-6666-666666666666','dueno@example.com');
 
 update public.profiles
    set company_id='11111111-1111-1111-1111-111111111111',
        branch_id ='22222222-2222-2222-2222-222222222222',
        role='cajero', full_name='Cajero E2E'
  where id='33333333-3333-3333-3333-333333333333';
+
+-- Un propietario, para probar que anular SÍ está permitido a quien corresponde.
+update public.profiles
+   set company_id='11111111-1111-1111-1111-111111111111',
+       branch_id ='22222222-2222-2222-2222-222222222222',
+       role='propietario', full_name='Dueño E2E'
+ where id='66666666-6666-6666-6666-666666666666';
 
 insert into public.services (id, company_id, code, name, description)
 values ('44444444-4444-4444-4444-444444444444','11111111-1111-1111-1111-111111111111',

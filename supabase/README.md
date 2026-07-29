@@ -9,9 +9,9 @@ Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCIO
 > las pantallas: la aplicación sigue funcionando contra `localStorage`. Migrar
 > las vistas es la fase siguiente.
 >
-> **POS y Caja YA están migrados** y verificados de extremo a extremo contra
-> PostgreSQL + PostgREST reales (28 comprobaciones, ver `tests/e2e/`). Las otras
-> 14 vistas siguen sobre `localStorage`.
+> **POS, Caja y Facturas YA están migrados** y verificados de extremo a extremo
+> contra PostgreSQL + PostgREST reales (54 comprobaciones, ver `tests/e2e/`).
+> Las otras 13 vistas siguen sobre `localStorage`.
 
 ---
 
@@ -166,7 +166,7 @@ visual: lo encontró la prueba.**
 
 Fuera del alcance de esta fase, en orden de prioridad:
 
-1. **Migrar las 14 vistas restantes** de `AppContext` a consultas contra Supabase.
+1. **Migrar las 13 vistas restantes** de `AppContext` a consultas contra Supabase.
 2. **Migración de datos** desde `localStorage` para las instalaciones piloto.
 3. **Claims de tenant en el JWT** (Custom Access Token Hook) para evitar el
    `SELECT` sobre `profiles` en cada evaluación de política. Optimización, no

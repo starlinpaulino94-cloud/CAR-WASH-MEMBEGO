@@ -32,6 +32,8 @@ const PosSupabaseView = lazy(() =>
   import('./components/views/PosSupabaseView').then(m => ({ default: m.PosSupabaseView })));
 const CashSupabaseView = lazy(() =>
   import('./components/views/CashSupabaseView').then(m => ({ default: m.CashSupabaseView })));
+const InvoicesSupabaseView = lazy(() =>
+  import('./components/views/InvoicesSupabaseView').then(m => ({ default: m.InvoicesSupabaseView })));
 const PhaseArchitectureReportModal = lazy(() =>
   import('./components/modals/PhaseArchitectureReportModal').then(m => ({ default: m.PhaseArchitectureReportModal })));
 
@@ -47,9 +49,9 @@ const AppContent: React.FC = () => {
   const { activeTab, isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
   const { phase } = useAuth();
 
-  // POS y Caja ya están migrados: con Supabase conectado usan la base de datos
-  // real; sin configurar, siguen funcionando en modo demostración sobre
-  // localStorage. Las demás vistas todavía no están migradas.
+  // POS, Caja y Facturas ya están migrados: con Supabase conectado usan la base
+  // de datos real; sin configurar, siguen funcionando en modo demostración
+  // sobre localStorage. Las demás vistas todavía no están migradas.
   const onSupabase = phase === 'ready';
 
   return (
@@ -69,8 +71,8 @@ const AppContent: React.FC = () => {
           <Suspense fallback={<ChunkFallback />}>
             {activeTab === 'pos' && (onSupabase ? <PosSupabaseView /> : <PosView />)}
             {activeTab === 'cash' && (onSupabase ? <CashSupabaseView /> : <CashView />)}
+            {activeTab === 'invoices' && (onSupabase ? <InvoicesSupabaseView /> : <InvoicesView />)}
           </Suspense>
-          {activeTab === 'invoices' && <InvoicesView />}
           {activeTab === 'customers' && <CustomersView />}
           {activeTab === 'vehicles' && <VehiclesView />}
           {activeTab === 'services' && <ServicesView />}
@@ -107,7 +109,7 @@ const DemoModeBanner: React.FC = () => {
     <div role="status" className="bg-indigo-950/60 border-b border-indigo-500/40 px-4 py-2 text-center text-[11px] text-indigo-200">
       <strong className="font-bold">Modo demostración.</strong>{' '}
       Sin base de datos conectada: los datos se guardan solo en este navegador y pueden perderse.
-      POS y Caja funcionan contra la base real al configurar Supabase.
+      POS, Caja y Facturas funcionan contra la base real al configurar Supabase.
     </div>
   );
 };
