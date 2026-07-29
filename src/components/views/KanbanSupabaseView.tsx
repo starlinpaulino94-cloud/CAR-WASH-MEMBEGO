@@ -3,6 +3,7 @@ import {
   Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
 import {
   fetchBoardOrders, fetchItemsForOrders, fetchBays, fetchOperators, fetchAssignees,
@@ -34,6 +35,7 @@ const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
  */
 export const KanbanSupabaseView: React.FC = () => {
   const { branch, company } = useAuth();
+  const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
   const [orders, setOrders] = useState<WorkOrder[]>([]);
@@ -103,6 +105,7 @@ export const KanbanSupabaseView: React.FC = () => {
       await advanceOrder(order.id, to, bayId, ops);
       setStartTarget(null);
       await load();
+      refreshQueue();   // el badge de la barra lateral se entera al momento
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo mover la orden');
     } finally {
@@ -290,7 +293,7 @@ export const KanbanSupabaseView: React.FC = () => {
       {creating && (
         <NewArrivalSupabaseModal
           onClose={() => setCreating(false)}
-          onCreated={() => { setCreating(false); void load(); }}
+          onCreated={() => { setCreating(false); void load(); refreshQueue(); }}
         />
       )}
     </div>

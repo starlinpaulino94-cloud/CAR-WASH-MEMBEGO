@@ -19,7 +19,17 @@ automatizadas. El resto del informe describe el estado auditado y **sigue vigent
 | **C8** — PII real en el bundle público | ✅ **Corregido.** Datos sintéticos (`example.com`, prefijo 555). Verificado ausente del artefacto servido |
 | **C7** — `JSON.parse` sin protección + sin Error Boundary | ✅ **Corregido.** Hidratación tolerante a fallos con cuarentena de datos ilegibles, versionado de esquema y frontera de error con vía de recuperación |
 | **C3** — Cuota agotada con pérdida silenciosa | ⚠️ **Mitigado, no resuelto.** El fallo ahora es visible (aviso crítico al operador + preaviso al 80%). **El techo de ~1.500 órdenes sigue existiendo**: solo desaparece con un backend |
-| Resto de riesgos críticos (C1, C2, C4, C5, C6, C9-C12) | ❌ **Abiertos** |
+| **C1** — Sin backend, datos no compartidos | ✅ **Resuelto.** Esquema PostgreSQL con las 16 vistas migradas y verificadas contra la pila real |
+| **C2** — Sin autenticación | ✅ **Resuelto.** Sesión real con los 8 roles; el `<select>` de identidad ya no existe |
+| **C4** — Estado que no se persistía | ✅ **Resuelto.** Todo vive en la base; `localStorage` queda solo para el modo demostración |
+| **C6** — Numeración fiscal aleatoria | ✅ **Resuelto.** NCF correlativo de rangos autorizados y notas de crédito B04 |
+| **C9** — Anulación que no revertía nada | ✅ **Resuelto.** `annul_invoice()` atómico con reversión de caja e inventario |
+| **C10** — Sin aislamiento multi-tenant | ✅ **Resuelto.** RLS forzado en todas las tablas + claves foráneas compuestas |
+| **C11** — Efecto de red en un updater de React | ✅ **Resuelto.** Las mutaciones van por RPC del servidor |
+| **C12** — Cero pruebas sobre el dinero | ✅ **Resuelto.** 137 comprobaciones de esquema y 114 de extremo a extremo |
+| **C3** — Cuota de `localStorage` | ✅ **Deja de aplicar** con la base conectada; sigue vigente en modo demostración |
+| **C5** — Sin copias de seguridad | ❌ **Abierto.** Depende del despliegue, no del código: exige PITR y restauración probada |
+| **C7, C8** | ✅ Resueltos previamente |
 
 ### Dos correcciones al propio informe
 

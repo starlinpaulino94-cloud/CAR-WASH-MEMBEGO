@@ -1,9 +1,10 @@
-# Ensayos de extremo a extremo — POS, Caja, Facturas, Órdenes y Kanban
+# Ensayos de extremo a extremo — las 16 vistas
 
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**86 comprobaciones** en tres ensayos (`pos-cash`, `invoices` y `orders-kanban`).
+**114 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
+`orders-kanban` y `admin-views`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 
@@ -23,6 +24,11 @@ debe:
 | Bahías | Iniciar lavado exige elegir bahía; la ocupada desaparece de las opciones y se libera al salir |
 | Estados | Solo se ofrecen transiciones válidas, y la base rechaza un salto inválido aunque se llame al API |
 | Comisiones | Se generan al entregar, con la tasa del operario asignado |
+| Badge de cola | Sale de una consulta de solo-conteo y baja al entregar un vehículo, sin recargar |
+| Panel | Los indicadores llevan rango de fechas real; el de "hoy" refleja solo lo de hoy |
+| Gastos | Un gasto en efectivo descuenta la gaveta en la misma operación |
+| Roles | El cajero ve catálogo, ajustes y comisiones en solo lectura, y la bitácora le está vedada |
+| Membego | La pantalla declara que no consulta a Membego; el intento sí queda persistido |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
 pantalla: lo que importa es lo que quedó escrito.
@@ -51,6 +57,7 @@ npm run build && npx vite preview --port 4174 &
 node tests/e2e/pos-cash.e2e.mjs
 node tests/e2e/invoices.e2e.mjs      # requiere reset.sh previo: siembra sus datos
 node tests/e2e/orders-kanban.e2e.mjs # ídem
+node tests/e2e/admin-views.e2e.mjs   # ídem
 ```
 
 ## Sobre el emulador

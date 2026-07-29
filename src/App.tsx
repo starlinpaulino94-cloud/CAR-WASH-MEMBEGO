@@ -1,43 +1,55 @@
 import React, { Suspense, lazy } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { QueueCountProvider } from './context/QueueCountContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginView, UnprovisionedView } from './components/auth/LoginView';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { StorageAlertBanner } from './components/layout/StorageAlertBanner';
-import { DashboardView } from './components/views/DashboardView';
-import { OrdersView } from './components/views/OrdersView';
-import { KanbanView } from './components/views/KanbanView';
-import { BaysView } from './components/views/BaysView';
-import { PosView } from './components/views/PosView';
-import { CashView } from './components/views/CashView';
-import { InvoicesView } from './components/views/InvoicesView';
-import { CustomersView } from './components/views/CustomersView';
-import { VehiclesView } from './components/views/VehiclesView';
-import { ServicesView } from './components/views/ServicesView';
-import { ProductsView } from './components/views/ProductsView';
-import { TeamView } from './components/views/TeamView';
-import { ExpensesView } from './components/views/ExpensesView';
-import { MembegoHubView } from './components/views/MembegoHubView';
-import { ReportsView } from './components/views/ReportsView';
-import { SettingsView } from './components/views/SettingsView';
 import { NuevaLlegadaModal } from './components/modals/NuevaLlegadaModal';
 
-// Carga diferida: estas piezas no hacen falta para pintar la primera pantalla.
-// Las vistas sobre Supabase arrastran el cliente de la base de datos, y el
-// informe de arquitectura son 291 líneas de prosa estática que viajaban en el
-// bundle principal (hallazgo H5 de la auditoría).
-const PosSupabaseView = lazy(() =>
-  import('./components/views/PosSupabaseView').then(m => ({ default: m.PosSupabaseView })));
-const CashSupabaseView = lazy(() =>
-  import('./components/views/CashSupabaseView').then(m => ({ default: m.CashSupabaseView })));
-const InvoicesSupabaseView = lazy(() =>
-  import('./components/views/InvoicesSupabaseView').then(m => ({ default: m.InvoicesSupabaseView })));
-const OrdersSupabaseView = lazy(() =>
-  import('./components/views/OrdersSupabaseView').then(m => ({ default: m.OrdersSupabaseView })));
-const KanbanSupabaseView = lazy(() =>
-  import('./components/views/KanbanSupabaseView').then(m => ({ default: m.KanbanSupabaseView })));
+// Todas las vistas se cargan bajo demanda. Antes se importaban las 16 de forma
+// estática y viajaban íntegras en el bundle inicial (hallazgo H5).
+const lazyView = <K extends string>(loader: () => Promise<Record<string, React.ComponentType>>, key: K) =>
+  lazy(() => loader().then(m => ({ default: m[key] })));
+
+// --- Vistas migradas a Supabase
+const DashboardSupabaseView = lazyView(() => import('./components/views/DashboardSupabaseView'), 'DashboardSupabaseView');
+const OrdersSupabaseView    = lazyView(() => import('./components/views/OrdersSupabaseView'), 'OrdersSupabaseView');
+const KanbanSupabaseView    = lazyView(() => import('./components/views/KanbanSupabaseView'), 'KanbanSupabaseView');
+const BaysSupabaseView      = lazyView(() => import('./components/views/BaysSupabaseView'), 'BaysSupabaseView');
+const PosSupabaseView       = lazyView(() => import('./components/views/PosSupabaseView'), 'PosSupabaseView');
+const CashSupabaseView      = lazyView(() => import('./components/views/CashSupabaseView'), 'CashSupabaseView');
+const InvoicesSupabaseView  = lazyView(() => import('./components/views/InvoicesSupabaseView'), 'InvoicesSupabaseView');
+const CustomersSupabaseView = lazyView(() => import('./components/views/CustomersSupabaseView'), 'CustomersSupabaseView');
+const VehiclesSupabaseView  = lazyView(() => import('./components/views/VehiclesSupabaseView'), 'VehiclesSupabaseView');
+const ServicesSupabaseView  = lazyView(() => import('./components/views/ServicesSupabaseView'), 'ServicesSupabaseView');
+const ProductsSupabaseView  = lazyView(() => import('./components/views/ProductsSupabaseView'), 'ProductsSupabaseView');
+const TeamSupabaseView      = lazyView(() => import('./components/views/TeamSupabaseView'), 'TeamSupabaseView');
+const ExpensesSupabaseView  = lazyView(() => import('./components/views/ExpensesSupabaseView'), 'ExpensesSupabaseView');
+const MembegoHubSupabaseView= lazyView(() => import('./components/views/MembegoHubSupabaseView'), 'MembegoHubSupabaseView');
+const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsSupabaseView'), 'ReportsSupabaseView');
+const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
+
+// --- Vistas de demostración (sin base de datos conectada)
+const DashboardView = lazyView(() => import('./components/views/DashboardView'), 'DashboardView');
+const OrdersView    = lazyView(() => import('./components/views/OrdersView'), 'OrdersView');
+const KanbanView    = lazyView(() => import('./components/views/KanbanView'), 'KanbanView');
+const BaysView      = lazyView(() => import('./components/views/BaysView'), 'BaysView');
+const PosView       = lazyView(() => import('./components/views/PosView'), 'PosView');
+const CashView      = lazyView(() => import('./components/views/CashView'), 'CashView');
+const InvoicesView  = lazyView(() => import('./components/views/InvoicesView'), 'InvoicesView');
+const CustomersView = lazyView(() => import('./components/views/CustomersView'), 'CustomersView');
+const VehiclesView  = lazyView(() => import('./components/views/VehiclesView'), 'VehiclesView');
+const ServicesView  = lazyView(() => import('./components/views/ServicesView'), 'ServicesView');
+const ProductsView  = lazyView(() => import('./components/views/ProductsView'), 'ProductsView');
+const TeamView      = lazyView(() => import('./components/views/TeamView'), 'TeamView');
+const ExpensesView  = lazyView(() => import('./components/views/ExpensesView'), 'ExpensesView');
+const MembegoHubView= lazyView(() => import('./components/views/MembegoHubView'), 'MembegoHubView');
+const ReportsView   = lazyView(() => import('./components/views/ReportsView'), 'ReportsView');
+const SettingsView  = lazyView(() => import('./components/views/SettingsView'), 'SettingsView');
+
 const PhaseArchitectureReportModal = lazy(() =>
   import('./components/modals/PhaseArchitectureReportModal').then(m => ({ default: m.PhaseArchitectureReportModal })));
 
@@ -53,9 +65,9 @@ const AppContent: React.FC = () => {
   const { activeTab, isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
   const { phase } = useAuth();
 
-  // POS, Caja, Facturas, Órdenes y Kanban ya están migrados: con Supabase
-  // conectado usan la base de datos real; sin configurar, siguen funcionando en
-  // modo demostración sobre localStorage. Las demás vistas no están migradas.
+  // Las 16 vistas están migradas: con Supabase conectado usan la base de datos
+  // real; sin configurar, la aplicación sigue funcionando en modo demostración
+  // sobre localStorage, que es lo que permite enseñarla sin desplegar nada.
   const onSupabase = phase === 'ready';
 
   return (
@@ -68,24 +80,24 @@ const AppContent: React.FC = () => {
         <Sidebar />
 
         <main className="flex-1 overflow-y-auto min-h-[calc(100vh-57px)]">
-          {activeTab === 'dashboard' && <DashboardView />}
-          {activeTab === 'bays' && <BaysView />}
           <Suspense fallback={<ChunkFallback />}>
-            {activeTab === 'orders' && (onSupabase ? <OrdersSupabaseView /> : <OrdersView />)}
-            {activeTab === 'kanban' && (onSupabase ? <KanbanSupabaseView /> : <KanbanView />)}
-            {activeTab === 'pos' && (onSupabase ? <PosSupabaseView /> : <PosView />)}
-            {activeTab === 'cash' && (onSupabase ? <CashSupabaseView /> : <CashView />)}
-            {activeTab === 'invoices' && (onSupabase ? <InvoicesSupabaseView /> : <InvoicesView />)}
+            {activeTab === 'dashboard' && (onSupabase ? <DashboardSupabaseView /> : <DashboardView />)}
+            {activeTab === 'orders'    && (onSupabase ? <OrdersSupabaseView />    : <OrdersView />)}
+            {activeTab === 'kanban'    && (onSupabase ? <KanbanSupabaseView />    : <KanbanView />)}
+            {activeTab === 'bays'      && (onSupabase ? <BaysSupabaseView />      : <BaysView />)}
+            {activeTab === 'pos'       && (onSupabase ? <PosSupabaseView />       : <PosView />)}
+            {activeTab === 'cash'      && (onSupabase ? <CashSupabaseView />      : <CashView />)}
+            {activeTab === 'invoices'  && (onSupabase ? <InvoicesSupabaseView />  : <InvoicesView />)}
+            {activeTab === 'customers' && (onSupabase ? <CustomersSupabaseView /> : <CustomersView />)}
+            {activeTab === 'vehicles'  && (onSupabase ? <VehiclesSupabaseView />  : <VehiclesView />)}
+            {activeTab === 'services'  && (onSupabase ? <ServicesSupabaseView />  : <ServicesView />)}
+            {activeTab === 'products'  && (onSupabase ? <ProductsSupabaseView />  : <ProductsView />)}
+            {activeTab === 'team'      && (onSupabase ? <TeamSupabaseView />      : <TeamView />)}
+            {activeTab === 'expenses'  && (onSupabase ? <ExpensesSupabaseView />  : <ExpensesView />)}
+            {activeTab === 'membego'   && (onSupabase ? <MembegoHubSupabaseView />: <MembegoHubView />)}
+            {activeTab === 'reports'   && (onSupabase ? <ReportsSupabaseView />   : <ReportsView />)}
+            {activeTab === 'settings'  && (onSupabase ? <SettingsSupabaseView />  : <SettingsView />)}
           </Suspense>
-          {activeTab === 'customers' && <CustomersView />}
-          {activeTab === 'vehicles' && <VehiclesView />}
-          {activeTab === 'services' && <ServicesView />}
-          {activeTab === 'products' && <ProductsView />}
-          {activeTab === 'team' && <TeamView />}
-          {activeTab === 'expenses' && <ExpensesView />}
-          {activeTab === 'membego' && <MembegoHubView />}
-          {activeTab === 'reports' && <ReportsView />}
-          {activeTab === 'settings' && <SettingsView />}
         </main>
       </div>
 
@@ -113,7 +125,7 @@ const DemoModeBanner: React.FC = () => {
     <div role="status" className="bg-indigo-950/60 border-b border-indigo-500/40 px-4 py-2 text-center text-[11px] text-indigo-200">
       <strong className="font-bold">Modo demostración.</strong>{' '}
       Sin base de datos conectada: los datos se guardan solo en este navegador y pueden perderse.
-      POS, Caja, Facturas, Órdenes y Kanban funcionan contra la base real al configurar Supabase.
+      Configure Supabase para trabajar contra la base de datos real.
     </div>
   );
 };
@@ -140,7 +152,9 @@ const AuthGate: React.FC = () => {
   // de datos.
   return (
     <AppProvider>
-      <AppContent />
+      <QueueCountProvider>
+        <AppContent />
+      </QueueCountProvider>
     </AppProvider>
   );
 };

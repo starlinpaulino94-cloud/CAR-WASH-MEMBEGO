@@ -4,14 +4,15 @@ Cimientos del backend real: esquema, aislamiento multi-tenant y autenticación.
 Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCION.md`.
 
 > **Estado:** el esquema está escrito y **verificado contra PostgreSQL 16 real**
-> (120/120 comprobaciones, ejecutadas con el rol `authenticated`, no como
+> (137/137 comprobaciones, ejecutadas con el rol `authenticated`, no como
 > superusuario). Todavía **no está aplicado** al proyecto alojado ni conectado a
 > las pantallas: la aplicación sigue funcionando contra `localStorage`. Migrar
 > las vistas es la fase siguiente.
 >
-> **POS, Caja, Facturas, Órdenes y Kanban YA están migrados** y verificados de
-> extremo a extremo contra PostgreSQL + PostgREST reales (86 comprobaciones, ver
-> `tests/e2e/`). Las otras 11 vistas siguen sobre `localStorage`.
+> **Las 16 vistas están migradas** y verificadas de extremo a extremo contra
+> PostgreSQL + PostgREST reales (114 comprobaciones, ver `tests/e2e/`). Sin
+> Supabase configurado la aplicación sigue funcionando en modo demostración
+> sobre `localStorage`.
 
 ---
 
@@ -34,6 +35,8 @@ Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCIO
 | **M7** · Lógica de bahías ficticia | `advance_work_order()` ocupa la bahía elegida, rechaza las ocupadas o en mantenimiento, y la libera al salir de lavado |
 | **§14.4** · Comisiones que nadie generaba | Se crean al entregar, repartiendo cada línea entre los operarios asignados con la tasa de cada uno |
 | *(nuevo)* · Transiciones de estado sin validar | Máquina de estados impuesta por trigger: ningún cliente puede saltar de `pendiente` a `entregado` |
+| **M11** · Indicadores "de hoy" que sumaban todo el histórico | `dashboard_metrics()` con rango explícito, seis números en una consulta |
+| **§4.1** · Gasto y salida de caja sin atomicidad | `create_expense()` registra ambos o ninguno; sin caja abierta, no admite efectivo |
 
 ---
 
@@ -51,12 +54,14 @@ supabase/
 │   ├── ..._0700_rls_policies.sql        TODA la superficie de seguridad, en un archivo
 │   ├── ..._0800_billing_rpc.sql         create_invoice() y annul_invoice()
 │   ├── ..._0900_tenant_composite_fks.sql  integridad de tenant en claves foráneas
-│   └── ..._1000_orders_rpc.sql          máquina de estados, bahías y comisiones
+│   ├── ..._1000_orders_rpc.sql          máquina de estados, bahías y comisiones
+│   └── ..._1100_admin_rpc.sql           gastos atómicos, métricas y bitácora Membego
 └── tests/
     ├── 00_supabase_shim.sql             simula auth.uid() para poder probar en local
     ├── 10_rls_tests.sql                 45 comprobaciones de esquema y RLS
     ├── 20_billing_tests.sql             45 de facturación, anulación y aislamiento
     ├── 30_orders_tests.sql              30 de estados, bahías y comisiones
+    ├── 40_admin_tests.sql               17 de gastos, métricas y bitácora
     └── run.sh                           levanta PostgreSQL, migra y ejecuta todo
 ```
 
@@ -95,7 +100,7 @@ supabase/tests/run.sh
 ```
 
 Levanta un PostgreSQL limpio, aplica el shim de `auth`, ejecuta las migraciones
-y corre las 120 comprobaciones. Las pruebas se ejecutan con el rol
+y corre las 137 comprobaciones. Las pruebas se ejecutan con el rol
 `authenticated`, **no** como superusuario: un superusuario se salta RLS y la
 prueba no demostraría nada.
 
@@ -177,6 +182,9 @@ Fuera del alcance de esta fase, en orden de prioridad:
    `SELECT` sobre `profiles` en cada evaluación de política. Optimización, no
    corrección: `app.current_company_id()` es `STABLE` y se evalúa una vez por
    sentencia, lo cual es suficiente hasta bastante escala.
-4. **Realtime** en el Kanban.
-5. **Beneficios Membego** en el registro de llegada: sigue siendo un simulador
-   en el cliente y migrarlo exige resolver antes el contrato real de la API.
+3. **Realtime** en el Kanban y en el badge de la cola, que hoy se refresca con
+   un sondeo lento.
+4. **Beneficios Membego**: sigue siendo un simulador en el cliente. La bitácora
+   de intentos ya se persiste, pero conectar la API real exige su contrato.
+5. **Alta de usuarios y sucursales** desde la interfaz: hoy se asignan en la
+   base. Las políticas que lo gobiernan ya están puestas y probadas.

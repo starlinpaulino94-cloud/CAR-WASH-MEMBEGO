@@ -653,6 +653,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          client_request_id: string | null;
         };
         Insert: {
           id?: string;
@@ -669,6 +670,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
         };
         Update: {
           id?: string;
@@ -685,6 +687,7 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
         };
         Relationships: [
           {
@@ -935,6 +938,70 @@ export interface Database {
             isOneToOne: false;
             referencedRelation: "work_orders";
             referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      membego_sync_logs: {
+        Row: {
+          id: number;
+          company_id: string;
+          branch_id: string | null;
+          action: string;
+          idempotency_key: string | null;
+          status: string;
+          request_payload: Json;
+          response_payload: Json;
+          error_message: string | null;
+          actor_id: string | null;
+          occurred_at: string;
+        };
+        Insert: {
+          id?: number;
+          company_id: string;
+          branch_id?: string | null;
+          action: string;
+          idempotency_key?: string | null;
+          status: string;
+          request_payload?: Json;
+          response_payload?: Json;
+          error_message?: string | null;
+          actor_id?: string | null;
+          occurred_at?: string;
+        };
+        Update: {
+          id?: number;
+          company_id?: string;
+          branch_id?: string | null;
+          action?: string;
+          idempotency_key?: string | null;
+          status?: string;
+          request_payload?: Json;
+          response_payload?: Json;
+          error_message?: string | null;
+          actor_id?: string | null;
+          occurred_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "membego_sync_logs_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "membego_sync_logs_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "membego_sync_logs_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1584,6 +1651,21 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
       };
+      create_expense: {
+        Args: {
+          p_branch_id: string;
+          p_client_request_id: string;
+          p_description: string;
+          p_amount_cents: number;
+          p_category?: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
+          p_payment_method?: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
+          p_supplier_name?: string;
+          p_invoice_ref?: string;
+          p_expense_date?: string;
+          p_cash_session_id?: string;
+        };
+        Returns: Database['public']['Tables']['expenses']['Row'];
+      };
       create_invoice: {
         Args: {
           p_branch_id: string;
@@ -1618,6 +1700,14 @@ export interface Database {
           p_notes?: string;
         };
         Returns: Database['public']['Tables']['work_orders']['Row'];
+      };
+      dashboard_metrics: {
+        Args: {
+          p_branch_id: string;
+          p_from: string;
+          p_to: string;
+        };
+        Returns: Json;
       };
     };
     Enums: {
