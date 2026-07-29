@@ -10,7 +10,7 @@ Corresponde al bloque *Corto plazo* (§20) de `AUDITORIA-ESCALABILIDAD-PRODUCCIO
 > las vistas es la fase siguiente.
 >
 > **POS, Caja, Facturas, Órdenes y Kanban YA están migrados** y verificados de
-> extremo a extremo contra PostgreSQL + PostgREST reales (86 comprobaciones, ver
+> extremo a extremo contra PostgreSQL + PostgREST reales (88 comprobaciones, ver
 > `tests/e2e/`). Las otras 11 vistas siguen sobre `localStorage`.
 
 ---

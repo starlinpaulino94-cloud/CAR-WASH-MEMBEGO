@@ -3,6 +3,7 @@ import {
   Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
 import {
   fetchOrderPage, WorkOrder, OrderStatus, STATUS_LABEL
@@ -40,6 +41,7 @@ const STATUS_TONE: Record<OrderStatus, string> = {
  */
 export const OrdersSupabaseView: React.FC = () => {
   const { branch, company } = useAuth();
+  const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
   const [rows, setRows] = useState<WorkOrder[]>([]);
@@ -238,6 +240,7 @@ export const OrdersSupabaseView: React.FC = () => {
             setCreating(false);
             setNotice(`Orden ${order.order_number} registrada para ${order.vehicle_plate}.`);
             void load();
+            refreshQueue();
           }}
         />
       )}

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { QueueCountProvider } from './context/QueueCountContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginView, UnprovisionedView } from './components/auth/LoginView';
 import { Navbar } from './components/layout/Navbar';
@@ -140,7 +141,9 @@ const AuthGate: React.FC = () => {
   // de datos.
   return (
     <AppProvider>
-      <AppContent />
+      <QueueCountProvider>
+        <AppContent />
+      </QueueCountProvider>
     </AppProvider>
   );
 };

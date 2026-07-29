@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**86 comprobaciones** en tres ensayos (`pos-cash`, `invoices` y `orders-kanban`).
+**88 comprobaciones** en tres ensayos (`pos-cash`, `invoices` y `orders-kanban`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 
@@ -23,6 +23,7 @@ debe:
 | Bahías | Iniciar lavado exige elegir bahía; la ocupada desaparece de las opciones y se libera al salir |
 | Estados | Solo se ofrecen transiciones válidas, y la base rechaza un salto inválido aunque se llame al API |
 | Comisiones | Se generan al entregar, con la tasa del operario asignado |
+| Badge de cola | Sale de una consulta de solo-conteo y baja al entregar un vehículo, sin recargar |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
 pantalla: lo que importa es lo que quedó escrito.
