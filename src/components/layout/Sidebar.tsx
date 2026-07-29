@@ -19,11 +19,19 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, workOrders, isMembegoOnline } = useApp();
+  const { phase } = useAuth();
 
-  const activeQueueCount = workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length;
+  // El contador de la cola sale del estado local de demostración. Con la base
+  // de datos conectada ese número no corresponde a nada real, así que se
+  // oculta en lugar de mostrar una cifra inventada: es el mismo problema que
+  // tenía la barra superior con el selector de rol.
+  const activeQueueCount = phase === 'demo'
+    ? workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length
+    : undefined;
 
   const menuSections = [
     {
