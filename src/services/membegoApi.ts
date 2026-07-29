@@ -30,9 +30,9 @@ class MembegoApiService {
         id: 'cust-1',
         companyId: 'comp-101',
         branchId: 'branch-1',
-        name: 'Starlin El Tanque',
-        phone: '809-771-4400',
-        email: 'starlin.eltanquemotors@gmail.com',
+        name: 'Ramón Peña (Demo)',
+        phone: '809-555-0101',
+        email: 'socio.diamond@example.com',
         membegoCustomerId: 'mbg-usr-9001',
         membegoStatus: 'active' as const,
         membegoTier: 'Socio VIP Diamond',
@@ -51,8 +51,8 @@ class MembegoApiService {
           usesRemaining: 8,
           usesMax: 10,
           expiresAt: '2026-12-31T23:59:59Z',
-          allowedPlates: ['A982134'],
-          restrictions: 'Válido para 1 lavado por día en vehículo registrado A982134.'
+          allowedPlates: ['A000101'],
+          restrictions: 'Válido para 1 lavado por día en vehículo registrado A000101.'
         },
         {
           id: 'ben-02-ceramic',
@@ -73,9 +73,9 @@ class MembegoApiService {
         id: 'cust-2',
         companyId: 'comp-101',
         branchId: 'branch-1',
-        name: 'Laura Fernández',
-        phone: '829-450-2211',
-        email: 'laura.fernandez@gmail.com',
+        name: 'Marisol Guzmán (Demo)',
+        phone: '829-555-0102',
+        email: 'socio.gold@example.com',
         membegoCustomerId: 'mbg-usr-9022',
         membegoStatus: 'active' as const,
         membegoTier: 'Gold Unlimited Club',
@@ -143,22 +143,37 @@ class MembegoApiService {
 
     // Match query against mock DB
     const cleanQuery = qrOrQuery.trim().toLowerCase();
-    
-    let matchedEntry = Object.values(this.membegoDatabase).find(entry => {
-      const c = entry.customer;
-      return (
-        c.membegoCustomerId.toLowerCase() === cleanQuery ||
-        c.phone.replace(/[^0-9]/g, '').includes(cleanQuery.replace(/[^0-9]/g, '')) ||
-        c.email.toLowerCase().includes(cleanQuery) ||
-        c.name.toLowerCase().includes(cleanQuery) ||
-        cleanQuery.includes(c.membegoCustomerId.toLowerCase())
-      );
-    });
+    const queryDigits = cleanQuery.replace(/[^0-9]/g, '');
 
-    // Default fallback mock if user enters a custom query
-    if (!matchedEntry && (cleanQuery.includes('starlin') || cleanQuery.includes('9001') || cleanQuery.includes('prado') || cleanQuery.includes('a982134'))) {
-      matchedEntry = this.membegoDatabase['mbg-usr-9001'];
-    }
+    // Una consulta demasiado corta no puede identificar a nadie. Sin esta guarda,
+    // la coincidencia por teléfono comparaba contra una cadena vacía y
+    // `String.includes('')` es SIEMPRE true: cualquier búsqueda sin dígitos
+    // devolvía al primer socio del directorio, con sus beneficios del 100%.
+    const MIN_QUERY_LENGTH = 3;
+    const MIN_PHONE_DIGITS = 7; // longitud de un número local dominicano
+
+    let matchedEntry =
+      cleanQuery.length < MIN_QUERY_LENGTH
+        ? undefined
+        : Object.values(this.membegoDatabase).find(entry => {
+            const c = entry.customer;
+            const phoneDigits = c.phone.replace(/[^0-9]/g, '');
+            return (
+              // Identificadores: coincidencia exacta, nunca parcial.
+              c.membegoCustomerId.toLowerCase() === cleanQuery ||
+              c.email.toLowerCase() === cleanQuery ||
+              // Teléfono: solo con dígitos suficientes para ser identificativo.
+              (queryDigits.length >= MIN_PHONE_DIGITS && phoneDigits.includes(queryDigits)) ||
+              // Nombre: búsqueda parcial legítima, ya acotada por MIN_QUERY_LENGTH.
+              c.name.toLowerCase().includes(cleanQuery)
+            );
+          });
+
+    // NOTA: aquí existía un fallback que devolvía el socio VIP si la consulta contenía
+    // ciertas palabras sueltas. Se eliminó junto con los datos personales reales: además
+    // de filtrar una identidad, concedía beneficios del 100% de descuento a cualquiera
+    // que escribiera una de esas palabras. Un socio solo se resuelve por coincidencia
+    // explícita contra el directorio.
 
     if (!matchedEntry) {
       this.recordLog({

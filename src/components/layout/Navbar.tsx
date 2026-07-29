@@ -1,9 +1,12 @@
 import React from 'react';
-import { Sparkles, Building2, User, Wifi, WifiOff, Plus, FileText, QrCode } from 'lucide-react';
+import { Building2, User, Wifi, WifiOff, Plus, FileText, LogOut } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { UserRole } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export const Navbar: React.FC = () => {
+  const { phase, profile, company: realCompany, branch: realBranch, signOut } = useAuth();
+  const authenticated = phase === 'ready';
+
   const {
     company,
     branches,
@@ -29,7 +32,7 @@ export const Navbar: React.FC = () => {
           </div>
           <div>
             <h1 className="font-bold text-sm tracking-tight flex items-center gap-2">
-              {company.tradeName}
+              {authenticated ? realCompany?.trade_name : company.tradeName}
               <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-medium">
                 SaaS Ops
               </span>
@@ -38,7 +41,14 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Branch selector */}
+        {/* Sucursal. Con sesión real es un dato del perfil, no algo elegible:
+            la sucursal la determina la asignación del usuario, y RLS la aplica. */}
+        {authenticated ? (
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-medium">
+            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+            {realBranch?.name ?? 'Sin sucursal'}
+          </div>
+        ) : (
         <div className="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
           <Building2 className="w-3.5 h-3.5 text-slate-400" />
           <select
@@ -56,6 +66,7 @@ export const Navbar: React.FC = () => {
             ))}
           </select>
         </div>
+        )}
       </div>
 
       {/* Center Actions */}
@@ -93,7 +104,26 @@ export const Navbar: React.FC = () => {
           <span className="hidden sm:inline">{isMembegoOnline ? 'Membego API' : 'Modo Offline'}</span>
         </button>
 
-        {/* User Role Switcher */}
+        {/* Identidad. Autenticado NO hay selector: cambiar de usuario exige
+            iniciar sesión. El desplegable de la demo permitía convertirse en
+            propietario con dos clics (§7.1 de la auditoría). */}
+        {authenticated ? (
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs">
+            <User className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="text-slate-200 font-medium max-w-[150px] truncate">
+              {profile?.full_name}
+            </span>
+            <span className="text-[10px] text-slate-500 uppercase">{profile?.role}</span>
+            <button
+              onClick={() => void signOut()}
+              title="Cerrar sesión"
+              aria-label="Cerrar sesión"
+              className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
         <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs">
           <User className="w-3.5 h-3.5 text-indigo-400" />
           <select
@@ -111,6 +141,7 @@ export const Navbar: React.FC = () => {
             ))}
           </select>
         </div>
+        )}
       </div>
     </header>
   );
