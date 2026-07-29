@@ -1,0 +1,6 @@
+{
+  "name": "Membego Car Wash Operations",
+  "description": "Sistema de gestión operacional completo para car wash pequeños y medianos. Control de llegadas, órdenes, cola kanban, punto de venta, caja, clientes, vehículos, facturación e integración opcional con Membego.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
