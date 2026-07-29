@@ -280,7 +280,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       Escanear QR / Simular VIP
                       <span className="text-[10px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded">Membego VIP</span>
                     </div>
-                    <div className="text-xs text-slate-400">Verificar membresía y beneficios de Starlin El Tanque</div>
+                    <div className="text-xs text-slate-400">Verificar membresía y beneficios de Ramón Peña (Demo)</div>
                   </div>
                 </button>
 
@@ -310,7 +310,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleMembegoSearch()}
-                    placeholder="Ej: 809-771-4400, A982134, Starlin, etc."
+                    placeholder="Ej: 809-555-0101, A000101, mbg-usr-9001, etc."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-28 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                   <button
@@ -417,7 +417,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     type="text"
                     value={plate}
                     onChange={e => setPlate(e.target.value.toUpperCase())}
-                    placeholder="Ej: A982134"
+                    placeholder="Ej: A000101"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold tracking-wider text-white uppercase focus:outline-none focus:border-indigo-500"
                   />
                 </div>

@@ -1,7 +1,9 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
+import { StorageAlertBanner } from './components/layout/StorageAlertBanner';
 import { DashboardView } from './components/views/DashboardView';
 import { OrdersView } from './components/views/OrdersView';
 import { KanbanView } from './components/views/KanbanView';
@@ -26,6 +28,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+      <StorageAlertBanner />
       <Navbar />
 
       <div className="flex flex-1">
@@ -66,9 +69,14 @@ const AppContent: React.FC = () => {
 };
 
 export default function App() {
+  // ErrorBoundary envuelve al proveedor, no al revés: los fallos de hidratación
+  // de localStorage ocurren al construir el estado de AppProvider, y una frontera
+  // interior no llegaría a capturarlos.
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

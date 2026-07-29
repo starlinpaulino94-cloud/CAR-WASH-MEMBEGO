@@ -37,6 +37,21 @@ import {
   initialAuditLogs
 } from '../data/initialData';
 import { membegoApiService } from '../services/membegoApi';
+import {
+  initStorage,
+  loadState,
+  saveState,
+  getStorageUsageRatio,
+  isArray,
+  isObject,
+  isObjectOrNull,
+  StorageStatus
+} from '../lib/storage';
+
+// Debe resolverse antes de la primera hidratación: comprueba la versión del
+// esquema y aparta los datos incompatibles en lugar de dejar que revienten al
+// construir el estado del proveedor.
+initStorage();
 
 interface AppContextType {
   company: Company;
@@ -65,7 +80,7 @@ interface AppContextType {
   updateProduct: (product: Product) => void;
 
   workOrders: WorkOrder[];
-  addWorkOrder: (order: Omit<WorkOrder, 'id' | 'orderNumber' | 'subtotal' | 'discountTotal' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }) => WorkOrder;
+  addWorkOrder: (order: Omit<WorkOrder, 'id' | 'orderNumber' | 'companyId' | 'branchId' | 'subtotal' | 'discountTotal' | 'membegoBenefitDiscount' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }) => WorkOrder;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, bayId?: string, employeeIds?: string[]) => void;
   assignWashersToOrder: (orderId: string, employeeIds: string[], employeeNames: string[]) => void;
 
@@ -100,6 +115,10 @@ interface AppContextType {
   isMembegoOnline: boolean;
   toggleMembegoOnline: () => void;
 
+  // Estado del almacenamiento local (ver StorageAlertBanner)
+  storageStatus: StorageStatus;
+  storageUsageRatio: number;
+
   // Modals & Active View state
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -114,10 +133,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [company, setCompany] = useState<Company>(() => {
-    const saved = localStorage.getItem('membego_cw_company');
-    return saved ? JSON.parse(saved) : initialCompany;
-  });
+  const [company, setCompany] = useState<Company>(() =>
+    loadState('membego_cw_company', initialCompany, isObject)
+  );
 
   const [branches] = useState<Branch[]>(initialBranches);
   const [currentBranch, setCurrentBranch] = useState<Branch>(initialBranches[0]);
@@ -125,50 +143,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [users] = useState<User[]>(initialUsers);
   const [currentUser, setCurrentUser] = useState<User>(initialUsers[0]);
 
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('membego_cw_customers');
-    return saved ? JSON.parse(saved) : initialCustomers;
-  });
+  const [customers, setCustomers] = useState<Customer[]>(() =>
+    loadState('membego_cw_customers', initialCustomers, isArray)
+  );
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
-    const saved = localStorage.getItem('membego_cw_vehicles');
-    return saved ? JSON.parse(saved) : initialVehicles;
-  });
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() =>
+    loadState('membego_cw_vehicles', initialVehicles, isArray)
+  );
 
-  const [services, setServices] = useState<Service[]>(() => {
-    const saved = localStorage.getItem('membego_cw_services');
-    return saved ? JSON.parse(saved) : initialServices;
-  });
+  const [services, setServices] = useState<Service[]>(() =>
+    loadState('membego_cw_services', initialServices, isArray)
+  );
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('membego_cw_products');
-    return saved ? JSON.parse(saved) : initialProducts;
-  });
+  const [products, setProducts] = useState<Product[]>(() =>
+    loadState('membego_cw_products', initialProducts, isArray)
+  );
 
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => {
-    const saved = localStorage.getItem('membego_cw_workorders');
-    return saved ? JSON.parse(saved) : initialWorkOrders;
-  });
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() =>
+    loadState('membego_cw_workorders', initialWorkOrders, isArray)
+  );
 
-  const [bays, setBays] = useState<Bay[]>(() => {
-    const saved = localStorage.getItem('membego_cw_bays');
-    return saved ? JSON.parse(saved) : initialBays;
-  });
+  const [bays, setBays] = useState<Bay[]>(() =>
+    loadState('membego_cw_bays', initialBays, isArray)
+  );
 
-  const [cashSession, setCashSession] = useState<CashSession | null>(() => {
-    const saved = localStorage.getItem('membego_cw_cashsession');
-    return saved ? JSON.parse(saved) : initialCashSession;
-  });
+  const [cashSession, setCashSession] = useState<CashSession | null>(() =>
+    loadState('membego_cw_cashsession', initialCashSession, isObjectOrNull)
+  );
 
-  const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    const saved = localStorage.getItem('membego_cw_invoices');
-    return saved ? JSON.parse(saved) : initialInvoices;
-  });
+  const [invoices, setInvoices] = useState<Invoice[]>(() =>
+    loadState('membego_cw_invoices', initialInvoices, isArray)
+  );
 
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const saved = localStorage.getItem('membego_cw_expenses');
-    return saved ? JSON.parse(saved) : initialExpenses;
-  });
+  const [expenses, setExpenses] = useState<Expense[]>(() =>
+    loadState('membego_cw_expenses', initialExpenses, isArray)
+  );
 
   const [commissions, setCommissions] = useState<CommissionEntry[]>(initialCommissionEntries);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
@@ -179,26 +188,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [isArchModalOpen, setIsArchModalOpen] = useState<boolean>(false);
 
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>({ kind: 'ok' });
+  const [storageUsageRatio, setStorageUsageRatio] = useState<number>(0);
+
+  /**
+   * Persiste una porción del estado y propaga el resultado.
+   *
+   * Antes estas escrituras eran `localStorage.setItem` desnudos: al agotarse la
+   * cuota lanzaban dentro del efecto y la transacción se perdía sin que nadie se
+   * enterara. Ahora un fallo queda reflejado en `storageStatus`, que el banner
+   * superior convierte en un aviso visible para el cajero.
+   */
+  const persist = (key: string, value: unknown) => {
+    const result = saveState(key, value);
+    setStorageStatus(prev => {
+      // Un fallo se mantiene visible hasta que una escritura vuelva a funcionar.
+      if (result.kind === 'ok') return prev.kind === 'ok' ? prev : result;
+      if (prev.kind === result.kind) return prev; // evita renders redundantes
+      return result;
+    });
+  };
+
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('membego_cw_workorders', JSON.stringify(workOrders));
+    persist('membego_cw_workorders', workOrders);
   }, [workOrders]);
 
   useEffect(() => {
-    localStorage.setItem('membego_cw_customers', JSON.stringify(customers));
+    persist('membego_cw_customers', customers);
   }, [customers]);
 
   useEffect(() => {
-    localStorage.setItem('membego_cw_vehicles', JSON.stringify(vehicles));
+    persist('membego_cw_vehicles', vehicles);
   }, [vehicles]);
 
   useEffect(() => {
-    localStorage.setItem('membego_cw_invoices', JSON.stringify(invoices));
+    persist('membego_cw_invoices', invoices);
   }, [invoices]);
 
   useEffect(() => {
-    localStorage.setItem('membego_cw_cashsession', JSON.stringify(cashSession));
+    persist('membego_cw_cashsession', cashSession);
   }, [cashSession]);
+
+  /**
+   * Vigilancia de ocupación, para avisar ANTES de que la escritura falle.
+   *
+   * Se muestrea con un intervalo en lugar de recalcular en cada escritura porque
+   * medir implica recorrer todos los valores del almacenamiento, y el camino de
+   * escritura ya es lo bastante costoso (ver sección 9 de la auditoría).
+   */
+  useEffect(() => {
+    const sample = () => {
+      // Redondeado a centésimas: evita renders por variaciones irrelevantes.
+      setStorageUsageRatio(Math.round(getStorageUsageRatio() * 100) / 100);
+    };
+    sample();
+    const id = window.setInterval(sample, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const switchRole = (role: UserRole) => {
     const found = users.find(u => u.role === role);
@@ -283,7 +330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addWorkOrder = (
-    data: Omit<WorkOrder, 'id' | 'orderNumber' | 'subtotal' | 'discountTotal' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }
+    data: Omit<WorkOrder, 'id' | 'orderNumber' | 'companyId' | 'branchId' | 'subtotal' | 'discountTotal' | 'membegoBenefitDiscount' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }
   ): WorkOrder => {
     const now = new Date();
     const orderNum = `CW-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -613,6 +660,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAuditLog,
         isMembegoOnline,
         toggleMembegoOnline,
+        storageStatus,
+        storageUsageRatio,
         activeTab,
         setActiveTab,
         isNuevaLlegadaOpen,

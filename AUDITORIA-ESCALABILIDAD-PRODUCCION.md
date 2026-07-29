@@ -8,6 +8,46 @@
 
 ---
 
+## Estado de correcciones (actualizado)
+
+Este documento es la auditoría del commit `c307572`. Desde entonces se han aplicado tres
+correcciones del bloque *Inmediato* (§20), verificadas en navegador con 31 comprobaciones
+automatizadas. El resto del informe describe el estado auditado y **sigue vigente**.
+
+| Hallazgo | Estado |
+|---|---|
+| **C8** — PII real en el bundle público | ✅ **Corregido.** Datos sintéticos (`example.com`, prefijo 555). Verificado ausente del artefacto servido |
+| **C7** — `JSON.parse` sin protección + sin Error Boundary | ✅ **Corregido.** Hidratación tolerante a fallos con cuarentena de datos ilegibles, versionado de esquema y frontera de error con vía de recuperación |
+| **C3** — Cuota agotada con pérdida silenciosa | ⚠️ **Mitigado, no resuelto.** El fallo ahora es visible (aviso crítico al operador + preaviso al 80%). **El techo de ~1.500 órdenes sigue existiendo**: solo desaparece con un backend |
+| Resto de riesgos críticos (C1, C2, C4, C5, C6, C9-C12) | ❌ **Abiertos** |
+
+### Dos correcciones al propio informe
+
+Al aplicar los arreglos aparecieron dos hechos que obligan a rectificar lo que este
+documento afirmaba:
+
+**1. §14.1 se quedó corto: `tsc --noEmit` no comprobaba nada de React.**
+El informe decía que la verificación de tipos «pasa limpio, pero está comprobando muy poco».
+La realidad es peor: **`@types/react` y `@types/react-dom` no estaban instalados** y React 19
+no incluye tipos propios. Con `noImplicitAny` desactivado, TypeScript trataba `React` y todos
+los hooks, componentes y props como `any` **en silencio, sin emitir un solo error**. El único
+control de calidad del proyecto no estaba comprobando la capa React en absoluto. Al instalar
+los tipos apareció **un error real preexistente**: la firma de `addWorkOrder` no excluía
+`companyId`, `branchId` ni `membegoBenefitDiscount`, campos que su propia implementación
+rellena. Ambas cosas quedan corregidas.
+
+**2. §6.2-B subestimó la gravedad de la búsqueda de socios.**
+El informe describía la coincidencia como «peligrosamente laxa» y señalaba el fallback
+codificado. La verificación en navegador demostró un defecto mayor: la comparación por
+teléfono hacía `phoneDigits.includes(queryDigits)` y, ante una consulta sin dígitos,
+`queryDigits` era la cadena vacía. Como **`String.includes('')` es siempre `true`**,
+**cualquier búsqueda sin números devolvía al primer socio del directorio con sus beneficios
+del 100% de descuento** — no solo las cuatro palabras del fallback. Corregido con longitud
+mínima de consulta, coincidencia exacta en identificadores y mínimo de 7 dígitos para el
+teléfono.
+
+---
+
 ## Advertencia previa: el hallazgo que reordena toda la auditoría
 
 Antes de responder a las 17 secciones solicitadas hay que establecer un hecho que cambia el significado de todas las respuestas:
