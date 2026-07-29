@@ -20,12 +20,17 @@ create table auth.users (
 
 -- En Supabase auth.uid() lee el claim `sub` del JWT. Localmente lo simulamos
 -- con una variable de sesión, que es exactamente lo que hace PostgREST.
+-- Definición equivalente a la real de Supabase: acepta tanto el claim suelto
+-- (que usan las pruebas SQL) como el JSON completo que inyecta PostgREST.
 create or replace function auth.uid()
 returns uuid
 language sql
 stable
 as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+  )::uuid
 $$;
 
 create or replace function auth.role()
@@ -37,3 +42,12 @@ as $$
 $$;
 
 grant execute on all functions in schema auth to anon, authenticated, service_role;
+
+-- Rol de conexión de PostgREST: no tiene privilegios propios, solo puede
+-- cambiar a anon o authenticated según el JWT. Igual que en Supabase.
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname='authenticator') then
+    create role authenticator login noinherit password 'authpass';
+  end if;
+end $$;
+grant anon, authenticated, service_role to authenticator;

@@ -75,6 +75,29 @@ export interface Database {
           user_agent?: string | null;
           occurred_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "audit_logs_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "audit_logs_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       bays: {
         Row: {
@@ -116,6 +139,36 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "bays_assigned_profile_id_fkey";
+            columns: ["assigned_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bays_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "bays_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bays_work_order_same_company";
+            columns: ["company_id", "current_work_order_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       branches: {
         Row: {
@@ -151,6 +204,15 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "branches_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: true;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       cash_movements: {
         Row: {
@@ -192,6 +254,43 @@ export interface Database {
           created_by?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cash_movements_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cash_movements_expense_same_company";
+            columns: ["company_id", "expense_id"];
+            isOneToOne: false;
+            referencedRelation: "expenses";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "cash_movements_invoice_same_company";
+            columns: ["company_id", "invoice_id"];
+            isOneToOne: false;
+            referencedRelation: "invoices";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "cash_movements_session_same_company";
+            columns: ["company_id", "cash_session_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_sessions";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       cash_sessions: {
         Row: {
@@ -263,6 +362,29 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: true;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "cash_sessions_cashier_id_fkey";
+            columns: ["cashier_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cash_sessions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       commissions: {
         Row: {
@@ -313,6 +435,43 @@ export interface Database {
           paid_at?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "commissions_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "commissions_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commissions_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commissions_work_order_item_id_fkey";
+            columns: ["work_order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "work_order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commissions_work_order_same_company";
+            columns: ["company_id", "work_order_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       companies: {
         Row: {
@@ -369,6 +528,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       customers: {
         Row: {
@@ -431,6 +591,22 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "customers_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "customers_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       document_counters: {
         Row: {
@@ -451,6 +627,15 @@ export interface Database {
           period?: string;
           next_value?: number;
         };
+        Relationships: [
+          {
+            foreignKeyName: "document_counters_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       expenses: {
         Row: {
@@ -501,6 +686,36 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "expenses_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "expenses_cash_session_same_company";
+            columns: ["company_id", "cash_session_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_sessions";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "expenses_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       invoice_items: {
         Row: {
@@ -545,6 +760,29 @@ export interface Database {
           created_at?: string;
           company_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_same_company";
+            columns: ["invoice_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "invoices";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoice_items_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoice_items_service_same_company";
+            columns: ["service_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       invoices: {
         Row: {
@@ -634,6 +872,71 @@ export interface Database {
           client_request_id?: string | null;
           credits_invoice_id?: string | null;
         };
+        Relationships: [
+          {
+            foreignKeyName: "invoices_annulled_by_fkey";
+            columns: ["annulled_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invoices_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoices_cash_session_same_company";
+            columns: ["company_id", "cash_session_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_sessions";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoices_cashier_id_fkey";
+            columns: ["cashier_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invoices_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invoices_credit_note_same_company";
+            columns: ["company_id", "credit_note_id"];
+            isOneToOne: false;
+            referencedRelation: "invoices";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoices_credits_same_company";
+            columns: ["company_id", "credits_invoice_id"];
+            isOneToOne: false;
+            referencedRelation: "invoices";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoices_customer_same_company";
+            columns: ["company_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "invoices_work_order_same_company";
+            columns: ["company_id", "work_order_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       ncf_sequences: {
         Row: {
@@ -678,6 +981,22 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "ncf_sequences_branch_id_fkey";
+            columns: ["branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ncf_sequences_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       products: {
         Row: {
@@ -734,6 +1053,22 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "products_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "products_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -781,6 +1116,29 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "profiles_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "profiles_id_fkey";
+            columns: ["id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       service_prices: {
         Row: {
@@ -798,6 +1156,15 @@ export interface Database {
           vehicle_category?: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
           price_cents?: number;
         };
+        Relationships: [
+          {
+            foreignKeyName: "service_prices_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       services: {
         Row: {
@@ -848,6 +1215,15 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "services_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       vehicles: {
         Row: {
@@ -895,6 +1271,22 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vehicles_customer_same_company";
+            columns: ["company_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       work_order_items: {
         Row: {
@@ -942,6 +1334,36 @@ export interface Database {
           created_at?: string;
           company_id?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "work_order_items_assigned_profile_id_fkey";
+            columns: ["assigned_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "work_order_items_order_same_company";
+            columns: ["work_order_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_order_items_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_order_items_service_same_company";
+            columns: ["service_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
       work_orders: {
         Row: {
@@ -1058,8 +1480,99 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_bay_same_company";
+            columns: ["company_id", "bay_id"];
+            isOneToOne: false;
+            referencedRelation: "bays";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_orders_branch_same_company";
+            columns: ["company_id", "branch_id"];
+            isOneToOne: false;
+            referencedRelation: "branches";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_orders_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "work_orders_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "work_orders_customer_same_company";
+            columns: ["company_id", "customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "work_orders_vehicle_same_company";
+            columns: ["company_id", "vehicle_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicles";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
       };
     };
+    Views: Record<string, never>;
+    Functions: {
+      annul_invoice: {
+        Args: {
+          p_invoice_id: string;
+          p_reason: string;
+          p_client_request_id: string;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      create_invoice: {
+        Args: {
+          p_branch_id: string;
+          p_client_request_id: string;
+          p_items: Json;
+          p_payments: Json;
+          p_vehicle_category?: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          p_work_order_id?: string;
+          p_customer_id?: string;
+          p_customer_name?: string;
+          p_customer_tax_id?: string;
+          p_vehicle_plate?: string;
+          p_ncf_type?: "B01" | "B02" | "B04" | "B14" | "B15";
+          p_cash_session_id?: string;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+    };
+    Enums: {
+      bay_status: "disponible" | "ocupada" | "mantenimiento" | "limpieza";
+      bay_type: "prelavado" | "lavado" | "aspirado" | "secado" | "detallado" | "qc";
+      benefit_status: "validado" | "reservado" | "en_proceso" | "consumido" | "cancelado";
+      cash_movement_type: "inflow" | "outflow";
+      cash_session_status: "open" | "closed";
+      expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
+      fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+      item_type: "service" | "package" | "product";
+      membego_status: "active" | "inactive" | "none";
+      ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";
+      order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
+      payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
+      payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
+      printer_width: "58mm" | "80mm" | "letter";
+      user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
+      vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+    };
+    CompositeTypes: Record<string, never>;
   };
 }
 
