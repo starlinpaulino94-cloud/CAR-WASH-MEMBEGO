@@ -515,6 +515,7 @@ export interface Database {
           discount_cents: number;
           is_membego_covered: boolean;
           created_at: string;
+          company_id: string;
         };
         Insert: {
           id?: string;
@@ -528,6 +529,7 @@ export interface Database {
           discount_cents?: number;
           is_membego_covered?: boolean;
           created_at?: string;
+          company_id: string;
         };
         Update: {
           id?: string;
@@ -541,6 +543,7 @@ export interface Database {
           discount_cents?: number;
           is_membego_covered?: boolean;
           created_at?: string;
+          company_id?: string;
         };
       };
       invoices: {
@@ -570,6 +573,8 @@ export interface Database {
           credit_note_id: string | null;
           created_at: string;
           updated_at: string;
+          client_request_id: string | null;
+          credits_invoice_id: string | null;
         };
         Insert: {
           id?: string;
@@ -597,6 +602,8 @@ export interface Database {
           credit_note_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
+          credits_invoice_id?: string | null;
         };
         Update: {
           id?: string;
@@ -624,6 +631,8 @@ export interface Database {
           credit_note_id?: string | null;
           created_at?: string;
           updated_at?: string;
+          client_request_id?: string | null;
+          credits_invoice_id?: string | null;
         };
       };
       ncf_sequences: {
@@ -901,6 +910,7 @@ export interface Database {
           is_membego_covered: boolean;
           assigned_profile_id: string | null;
           created_at: string;
+          company_id: string;
         };
         Insert: {
           id?: string;
@@ -915,6 +925,7 @@ export interface Database {
           is_membego_covered?: boolean;
           assigned_profile_id?: string | null;
           created_at?: string;
+          company_id: string;
         };
         Update: {
           id?: string;
@@ -929,6 +940,7 @@ export interface Database {
           is_membego_covered?: boolean;
           assigned_profile_id?: string | null;
           created_at?: string;
+          company_id?: string;
         };
       };
       work_orders: {

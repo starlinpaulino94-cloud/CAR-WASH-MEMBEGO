@@ -15,6 +15,24 @@ grant usage on schema test to authenticated, anon;
 grant select, insert on test.results to authenticated, anon;
 grant usage, select on all sequences in schema test to authenticated, anon;
 
+-- Contexto compartido entre archivos de prueba.
+-- Antes se usaba set_config(), pero esas variables son de SESIÓN y cada
+-- invocación de `psql -f` abre una nueva: el segundo archivo no veía los
+-- identificadores creados por el primero.
+create table if not exists test.vars (k text primary key, v text);
+grant select, insert, update on test.vars to authenticated, anon;
+
+create or replace function test.set_var(p_k text, p_v text)
+returns void language sql as $$
+  insert into test.vars(k, v) values (p_k, p_v)
+  on conflict (k) do update set v = excluded.v;
+$$;
+
+create or replace function test.var(p_k text)
+returns text language sql stable as $$
+  select v from test.vars where k = p_k;
+$$;
+
 create or replace function test.check(p_name text, p_condition boolean, p_detail text default '')
 returns void language plpgsql as $$
 begin
@@ -109,24 +127,24 @@ begin
   insert into public.ncf_sequences (company_id, ncf_type, range_start, range_end, next_value, authorized_until)
     values (c_a,'B02',1,3,1, current_date + 365);
 
-  perform set_config('test.c_a', c_a::text, false);
-  perform set_config('test.c_b', c_b::text, false);
-  perform set_config('test.b_a', b_a::text, false);
-  perform set_config('test.u_owner_a',   u_owner_a::text, false);
-  perform set_config('test.u_cashier_a', u_cashier_a::text, false);
-  perform set_config('test.u_owner_b',   u_owner_b::text, false);
-  perform set_config('test.u_orphan',    u_orphan::text, false);
+  perform test.set_var('c_a', c_a::text);
+  perform test.set_var('c_b', c_b::text);
+  perform test.set_var('b_a', b_a::text);
+  perform test.set_var('u_owner_a', u_owner_a::text);
+  perform test.set_var('u_cashier_a', u_cashier_a::text);
+  perform test.set_var('u_owner_b', u_owner_b::text);
+  perform test.set_var('u_orphan', u_orphan::text);
 end $$;
 
 -- Normalización de placa (se insertó 'a-000 111').
 select test.check('la placa se normaliza a mayúsculas y sin separadores',
-  (select plate from public.vehicles where company_id = current_setting('test.c_a')::uuid) = 'A000111',
-  (select plate from public.vehicles where company_id = current_setting('test.c_a')::uuid));
+  (select plate from public.vehicles where company_id = test.var('c_a')::uuid) = 'A000111',
+  (select plate from public.vehicles where company_id = test.var('c_a')::uuid));
 
 -- =============================================================== Aislamiento
 
 set role authenticated;
-select set_config('request.jwt.claim.sub', current_setting('test.u_owner_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
 
 select test.check('el usuario de Alfa ve su propia empresa',
   (select count(*) from public.companies) = 1);
@@ -148,19 +166,19 @@ select test.check('el usuario de Alfa solo ve su catálogo de servicios',
 -- Inserción cruzada de tenant.
 select test.expect_error('no puede insertar un cliente en la empresa ajena',
   format('insert into public.customers (company_id, name) values (%L, %L)',
-         current_setting('test.c_b'), 'Infiltrado'));
+         test.var('c_b'), 'Infiltrado'));
 
 -- Escalada de privilegios sobre el propio perfil.
 select test.expect_error('no puede cambiar su propia empresa',
   format('update public.profiles set company_id = %L where id = %L',
-         current_setting('test.c_b'), current_setting('test.u_owner_a')));
+         test.var('c_b'), test.var('u_owner_a')));
 
 select test.expect_no_effect('un propietario NO puede auto-ascenderse a superadmin',
-  format('update public.profiles set role = ''superadmin'' where id = %L', current_setting('test.u_owner_a')),
-  format('(select role from public.profiles where id = %L) = ''propietario''', current_setting('test.u_owner_a')));
+  format('update public.profiles set role = ''superadmin'' where id = %L', test.var('u_owner_a')),
+  format('(select role from public.profiles where id = %L) = ''propietario''', test.var('u_owner_a')));
 
 -- Usuario sin empresa asignada: fallo cerrado.
-select set_config('request.jwt.claim.sub', current_setting('test.u_orphan'), false);
+select set_config('request.jwt.claim.sub', test.var('u_orphan'), false);
 
 select test.check('un usuario recién registrado no ve NINGUNA empresa',
   (select count(*) from public.companies) = 0);
@@ -170,20 +188,20 @@ select test.check('un usuario recién registrado no ve NINGUNA orden',
   (select count(*) from public.work_orders) = 0);
 select test.expect_error('un usuario sin empresa no puede insertar nada',
   format('insert into public.customers (company_id, name) values (%L, %L)',
-         current_setting('test.c_a'), 'Colado'));
+         test.var('c_a'), 'Colado'));
 
 -- =============================================================== Negocio
 
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_cashier_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
 set role authenticated;
 
 -- Numeración correlativa de órdenes.
 do $$
 declare v_o1 uuid; v_o2 uuid; n1 text; n2 text; v_c uuid; v_b uuid;
 begin
-  v_c := current_setting('test.c_a')::uuid;
-  v_b := current_setting('test.b_a')::uuid;
+  v_c := test.var('c_a')::uuid;
+  v_b := test.var('b_a')::uuid;
   insert into public.work_orders (company_id, branch_id, customer_name, vehicle_plate)
     values (v_c, v_b, 'Cliente 1', 'A000111') returning id, order_number into v_o1, n1;
   insert into public.work_orders (company_id, branch_id, customer_name, vehicle_plate)
@@ -214,38 +232,38 @@ begin
     (select format('membego=%s tax=%s total=%s', membego_benefit_cents, tax_cents, total_cents)
        from public.work_orders where id = v_o1));
 
-  perform set_config('test.o1', v_o1::text, false);
+  perform test.set_var('o1', v_o1::text);
 end $$;
 
 -- Descuento superior al importe de la línea.
 select test.expect_error('rechaza un descuento mayor que el importe de la línea',
   format('insert into public.work_order_items (work_order_id, item_type, name, quantity, unit_price_cents, discount_cents)
-          values (%L, ''service'', ''Abuso'', 1, 1000, 5000)', current_setting('test.o1')));
+          values (%L, ''service'', ''Abuso'', 1, 1000, 5000)', test.var('o1')));
 
 select test.expect_error('rechaza un precio negativo',
   format('insert into public.work_order_items (work_order_id, item_type, name, quantity, unit_price_cents)
-          values (%L, ''service'', ''Negativo'', 1, -1000)', current_setting('test.o1')));
+          values (%L, ''service'', ''Negativo'', 1, -1000)', test.var('o1')));
 
 select test.expect_error('rechaza cantidad cero',
   format('insert into public.work_order_items (work_order_id, item_type, name, quantity, unit_price_cents)
-          values (%L, ''service'', ''Cero'', 0, 1000)', current_setting('test.o1')));
+          values (%L, ''service'', ''Cero'', 0, 1000)', test.var('o1')));
 
 -- Placa duplicada dentro de la empresa.
 select test.expect_error('rechaza una placa duplicada en la misma empresa',
   format('insert into public.vehicles (company_id, plate) values (%L, ''A000111'')',
-         current_setting('test.c_a')));
+         test.var('c_a')));
 
 -- =============================================================== Caja
 
 do $$
 declare v_s uuid; v_c uuid; v_b uuid;
 begin
-  v_c := current_setting('test.c_a')::uuid;
-  v_b := current_setting('test.b_a')::uuid;
+  v_c := test.var('c_a')::uuid;
+  v_b := test.var('b_a')::uuid;
   insert into public.cash_sessions (company_id, branch_id, cashier_id, initial_amount_cents)
-    values (v_c, v_b, current_setting('test.u_cashier_a')::uuid, 300000)
+    values (v_c, v_b, test.var('u_cashier_a')::uuid, 300000)
     returning id into v_s;
-  perform set_config('test.s1', v_s::text, false);
+  perform test.set_var('s1', v_s::text);
 
   insert into public.cash_movements (company_id, cash_session_id, type, method, amount_cents, reason)
     values (v_c, v_s, 'inflow', 'efectivo', 100000, 'Venta en efectivo');
@@ -273,16 +291,16 @@ end $$;
 select test.expect_error('solo se admite una caja abierta por sucursal',
   format('insert into public.cash_sessions (company_id, branch_id, cashier_id, initial_amount_cents)
           values (%L, %L, %L, 1000)',
-         current_setting('test.c_a'), current_setting('test.b_a'), current_setting('test.u_cashier_a')));
+         test.var('c_a'), test.var('b_a'), test.var('u_cashier_a')));
 
 -- =============================================================== Fiscalidad
 
 do $$
 declare n1 text; n2 text; n3 text;
 begin
-  n1 := app.allocate_ncf(current_setting('test.c_a')::uuid, 'B02');
-  n2 := app.allocate_ncf(current_setting('test.c_a')::uuid, 'B02');
-  n3 := app.allocate_ncf(current_setting('test.c_a')::uuid, 'B02');
+  n1 := app.allocate_ncf(test.var('c_a')::uuid, 'B02');
+  n2 := app.allocate_ncf(test.var('c_a')::uuid, 'B02');
+  n3 := app.allocate_ncf(test.var('c_a')::uuid, 'B02');
   perform test.check('los NCF son correlativos, sin huecos y con formato DGII',
     n1 = 'B0200000001' and n2 = 'B0200000002' and n3 = 'B0200000003',
     n1 || ' ' || n2 || ' ' || n3);
@@ -290,35 +308,35 @@ end $$;
 
 -- El rango sembrado era de 3: el cuarto debe fallar en lugar de inventar.
 select test.expect_error('al agotarse el rango NCF falla en vez de improvisar',
-  format('select app.allocate_ncf(%L, ''B02'')', current_setting('test.c_a')));
+  format('select app.allocate_ncf(%L, ''B02'')', test.var('c_a')));
 
 select test.expect_error('sin rango autorizado para ese tipo, no se emite NCF',
-  format('select app.allocate_ncf(%L, ''B01'')', current_setting('test.c_a')));
+  format('select app.allocate_ncf(%L, ''B01'')', test.var('c_a')));
 
 -- Numeración de facturas.
 do $$
 declare v_i uuid; f1 text;
 begin
   insert into public.invoices (company_id, branch_id, customer_name, cashier_id, cash_session_id)
-    values (current_setting('test.c_a')::uuid, current_setting('test.b_a')::uuid,
-            'Cliente', current_setting('test.u_cashier_a')::uuid, current_setting('test.s1')::uuid)
+    values (test.var('c_a')::uuid, test.var('b_a')::uuid,
+            'Cliente', test.var('u_cashier_a')::uuid, test.var('s1')::uuid)
     returning id, invoice_number into v_i, f1;
   perform test.check('la factura recibe numeración correlativa del servidor',
     f1 = 'FAC-00000001', f1);
-  perform set_config('test.i1', v_i::text, false);
+  perform test.set_var('i1', v_i::text);
 end $$;
 
 -- Anulación sin motivo: se prueba como propietario, que SÍ tiene permiso,
 -- para que lo que falle sea la restricción CHECK y no el filtro de RLS.
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_owner_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
 set role authenticated;
 
 select test.expect_error('no se puede anular sin motivo ni fecha',
-  format('update public.invoices set is_annulled = true where id = %L', current_setting('test.i1')));
+  format('update public.invoices set is_annulled = true where id = %L', test.var('i1')));
 
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_cashier_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
 set role authenticated;
 
 -- =============================================================== Auditoría
@@ -326,12 +344,12 @@ set role authenticated;
 do $$
 begin
   insert into public.audit_logs (company_id, action, entity, details)
-    values (current_setting('test.c_a')::uuid, 'PRUEBA', 'Test', 'entrada de prueba');
+    values (test.var('c_a')::uuid, 'PRUEBA', 'Test', 'entrada de prueba');
   -- El cajero puede escribir en la bitácora pero no leerla (política correcta),
   -- así que la comprobación se hace con un rol autorizado.
   set local role postgres;
   perform test.check('la bitácora sella al actor desde el perfil autenticado, no desde el cliente',
-    (select actor_id = current_setting('test.u_cashier_a')::uuid and actor_role = 'cajero'
+    (select actor_id = test.var('u_cashier_a')::uuid and actor_role = 'cajero'
        from public.audit_logs order by id desc limit 1),
     (select coalesce(actor_name,'(nulo)') from public.audit_logs order by id desc limit 1));
   set local role authenticated;
@@ -348,21 +366,21 @@ select test.expect_error('la bitácora rechaza DELETE',
 -- El cajero NO debe poder anular facturas (política restringida a mando).
 select test.expect_no_effect('un cajero NO puede anular una factura',
   format('update public.invoices set is_annulled = true, annulled_at = now(),
-          annulled_reason = ''intento'' where id = %L', current_setting('test.i1')),
-  format('(select not is_annulled from public.invoices where id = %L)', current_setting('test.i1')));
+          annulled_reason = ''intento'' where id = %L', test.var('i1')),
+  format('(select not is_annulled from public.invoices where id = %L)', test.var('i1')));
 
 -- El propietario sí.
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_owner_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
 set role authenticated;
 
 select test.expect_ok('un propietario sí puede anular una factura',
   format('update public.invoices set is_annulled = true, annulled_at = now(),
-          annulled_reason = ''anulación autorizada'' where id = %L', current_setting('test.i1')));
+          annulled_reason = ''anulación autorizada'' where id = %L', test.var('i1')));
 
 -- Un cajero no puede tocar los precios del catálogo.
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_cashier_a'), false);
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
 set role authenticated;
 
 select test.expect_no_effect('un cajero NO puede modificar el catálogo de servicios',
@@ -376,24 +394,24 @@ select test.expect_error('los contadores de numeración no son accesibles al cli
 -- Techo de concesión de roles: el administrador no puede crear propietarios.
 set role postgres;
 insert into auth.users (email) values ('admin.a@example.com');
-update public.profiles set company_id = current_setting('test.c_a')::uuid,
-       branch_id = current_setting('test.b_a')::uuid, role = 'administrador'
+update public.profiles set company_id = test.var('c_a')::uuid,
+       branch_id = test.var('b_a')::uuid, role = 'administrador'
  where email = 'admin.a@example.com';
-select set_config('test.u_admin_a', (select id::text from public.profiles where email='admin.a@example.com'), false);
-select set_config('request.jwt.claim.sub', current_setting('test.u_admin_a'), false);
+select test.set_var('u_admin_a', (select id::text from public.profiles where email='admin.a@example.com'));
+select set_config('request.jwt.claim.sub', test.var('u_admin_a'), false);
 set role authenticated;
 
 select test.expect_no_effect('un administrador NO puede ascender a nadie a propietario',
-  format('update public.profiles set role = ''propietario'' where id = %L', current_setting('test.u_cashier_a')),
-  format('(select role from public.profiles where id = %L) = ''cajero''', current_setting('test.u_cashier_a')));
+  format('update public.profiles set role = ''propietario'' where id = %L', test.var('u_cashier_a')),
+  format('(select role from public.profiles where id = %L) = ''cajero''', test.var('u_cashier_a')));
 
 select test.expect_no_effect('un administrador NO puede auto-ascenderse',
-  format('update public.profiles set role = ''propietario'' where id = %L', current_setting('test.u_admin_a')),
-  format('(select role from public.profiles where id = %L) = ''administrador''', current_setting('test.u_admin_a')));
+  format('update public.profiles set role = ''propietario'' where id = %L', test.var('u_admin_a')),
+  format('(select role from public.profiles where id = %L) = ''administrador''', test.var('u_admin_a')));
 
 -- La empresa Beta no ve nada de lo creado por Alfa.
 set role postgres;
-select set_config('request.jwt.claim.sub', current_setting('test.u_owner_b'), false);
+select set_config('request.jwt.claim.sub', test.var('u_owner_b'), false);
 set role authenticated;
 
 select test.check('la empresa Beta no ve las órdenes de Alfa',

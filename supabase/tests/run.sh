@@ -26,7 +26,9 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
     || { echo "FALLO al aplicar $(basename "$f")"; exit 1; }
 done
 
-"${PSQL[@]}" -d membego_test -q -f "$HERE/10_rls_tests.sql" >/dev/null 2>&1 || true
+for t in "$HERE"/[0-9][0-9]_*tests*.sql; do
+  "${PSQL[@]}" -d membego_test -q -f "$t" >/dev/null 2>&1 || true
+done
 
 "${PSQL[@]}" -d membego_test -tAF'|' -c \
   "select case when passed then 'PASA ' else 'FALLA' end, name, coalesce(nullif(detail,''),'')
