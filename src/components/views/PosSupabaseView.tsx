@@ -7,8 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, taxFromBps, bpsToPercent } from '../../lib/money';
 import {
-  fetchServices, fetchProducts, fetchOpenCashSession, createInvoice,
-  ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice
+  fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
+  ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice,
+  FiscalStatus
 } from '../../data/billingRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
@@ -46,6 +47,9 @@ export const PosSupabaseView: React.FC = () => {
   const [services, setServices] = useState<ServiceWithPrice[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [session, setSession] = useState<CashSession | null>(null);
+  // Facturación fiscal: mientras no haya rangos NCF cargados, el cobro queda
+  // desactivado y se avisa. Se enciende solo en cuanto existan (ver fiscal_status).
+  const [fiscal, setFiscal] = useState<FiscalStatus>({ ready: false, types: [] });
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -85,14 +89,16 @@ export const PosSupabaseView: React.FC = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [srv, prd, cash] = await Promise.all([
+      const [srv, prd, cash, fisc] = await Promise.all([
         fetchServices(category),
         fetchProducts(),
-        fetchOpenCashSession(branch.id)
+        fetchOpenCashSession(branch.id),
+        fetchFiscalStatus()
       ]);
       setServices(srv);
       setProducts(prd);
       setSession(cash);
+      setFiscal(fisc);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el catálogo');
     } finally {
@@ -156,6 +162,7 @@ export const PosSupabaseView: React.FC = () => {
   const canCheckout =
     lines.length > 0 &&
     !submitting &&
+    fiscal.ready &&
     can(profile, 'issueInvoice') &&
     (!needsCashSession || session !== null) &&
     effectiveTendered >= preview.total;
@@ -257,7 +264,19 @@ export const PosSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      {!session && (
+      {!fiscal.ready && (
+        <div role="status" className="bg-sky-950/40 border border-sky-500/40 rounded-xl px-4 py-3 text-xs text-sky-200 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-sky-400" />
+          <span>
+            <strong>Facturación pendiente de configuración fiscal.</strong> El cobro está
+            desactivado hasta cargar los rangos de comprobantes NCF autorizados por la DGII.
+            El resto de la operación (llegadas, taller, caja) funciona con normalidad. En
+            cuanto se carguen las secuencias, el punto de venta se activa solo.
+          </span>
+        </div>
+      )}
+
+      {fiscal.ready && !session && (
         <div role="status" className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 text-xs text-amber-200 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
           <span>
@@ -477,6 +496,7 @@ export const PosSupabaseView: React.FC = () => {
                 </div>
               )}
 
+              {fiscal.ready && (
               <label className="flex items-center gap-2 text-[11px] text-slate-400 pt-1 cursor-pointer">
                 <input
                   type="checkbox"
@@ -486,8 +506,9 @@ export const PosSupabaseView: React.FC = () => {
                 />
                 Emitir comprobante fiscal (NCF)
               </label>
+              )}
 
-              {wantsNcf && (
+              {fiscal.ready && wantsNcf && (
                 <input
                   type="text"
                   value={customerTaxId}
@@ -536,6 +557,12 @@ export const PosSupabaseView: React.FC = () => {
             {!can(profile, 'issueInvoice') && (
               <p className="text-[11px] text-amber-400 text-center">
                 Su rol no permite emitir facturas.
+              </p>
+            )}
+
+            {fiscal.ready === false && (
+              <p className="text-[11px] text-sky-300 text-center">
+                Cobro desactivado hasta configurar la facturación fiscal (rangos NCF).
               </p>
             )}
           </div>

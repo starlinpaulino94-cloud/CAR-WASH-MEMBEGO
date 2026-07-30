@@ -1709,6 +1709,10 @@ export interface Database {
         };
         Returns: Json;
       };
+      fiscal_status: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
     };
     Enums: {
       bay_status: "disponible" | "ocupada" | "mantenimiento" | "limpieza";

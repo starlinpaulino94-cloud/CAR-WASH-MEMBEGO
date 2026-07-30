@@ -7,8 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import {
-  fetchInvoicePage, fetchInvoiceTotals, annulInvoice,
-  Invoice, InvoiceKindFilter
+  fetchInvoicePage, fetchInvoiceTotals, annulInvoice, fetchFiscalStatus,
+  Invoice, InvoiceKindFilter, FiscalStatus
 } from '../../data/billingRepository';
 import { TicketSupabaseModal, AnnulInvoiceDialog } from '../modals/TicketSupabaseModal';
 
@@ -47,6 +47,7 @@ export const InvoicesSupabaseView: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [fiscal, setFiscal] = useState<FiscalStatus>({ ready: true, types: [] });
 
   const [ticket, setTicket] = useState<Invoice | null>(null);
   const [toAnnul, setToAnnul] = useState<Invoice | null>(null);
@@ -76,13 +77,15 @@ export const InvoicesSupabaseView: React.FC = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [pageData, totalsData] = await Promise.all([
+      const [pageData, totalsData, fisc] = await Promise.all([
         fetchInvoicePage({ branchId: branch.id, page, pageSize: PAGE_SIZE, search, kind }),
-        fetchInvoiceTotals(branch.id)
+        fetchInvoiceTotals(branch.id),
+        fetchFiscalStatus()
       ]);
       setRows(pageData.rows);
       setTotal(pageData.total);
       setTotals(totalsData);
+      setFiscal(fisc);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el historial');
     } finally {
@@ -156,6 +159,18 @@ export const InvoicesSupabaseView: React.FC = () => {
           {branch?.name} · Reimpresión, NCF fiscal y anulación con nota de crédito
         </p>
       </div>
+
+      {!fiscal.ready && (
+        <div role="status" className="bg-sky-950/40 border border-sky-500/40 rounded-xl px-4 py-3 text-xs text-sky-200 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-sky-400" />
+          <span>
+            <strong>Facturación pendiente de configuración fiscal.</strong> Aún no hay rangos
+            de comprobantes NCF autorizados por la DGII, así que todavía no se emiten facturas.
+            Este historial se irá llenando en cuanto se carguen las secuencias y se active el
+            punto de venta.
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {summary.map(s => (

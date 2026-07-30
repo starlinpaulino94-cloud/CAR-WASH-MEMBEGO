@@ -136,11 +136,66 @@ select test.expect_error('la bitácora Membego rechaza UPDATE',
 select test.expect_error('la bitácora Membego rechaza DELETE',
   'delete from public.membego_sync_logs');
 
+-- =============================================================== Estado fiscal
+
+-- Un cajero NO puede leer ncf_sequences (RLS lo reserva a la administración),
+-- pero fiscal_status —SECURITY DEFINER— debe decirle si puede facturar. El
+-- booleano y la realidad han de coincidir. Seguimos en contexto de cajero A.
+select test.check('un cajero no puede leer ncf_sequences directamente (RLS)',
+  (select count(*) = 0 from public.ncf_sequences));
+
+-- Estado controlado: sin secuencias utilizables → ready=false.
+set role postgres;
+update public.ncf_sequences set is_active = false where company_id = test.var('c_a')::uuid;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('sin rangos NCF vigentes, fiscal_status.ready es false',
+  (public.fiscal_status() ->> 'ready') = 'false', public.fiscal_status()::text);
+
+-- Cargar un rango vigente → ready=true e incluye el tipo.
+set role postgres;
+insert into public.ncf_sequences (company_id, ncf_type, range_start, range_end, next_value, authorized_until)
+  values (test.var('c_a')::uuid, 'B02', 1, 50, 1, current_date + 30);
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('con un rango vigente, fiscal_status.ready es true e incluye el tipo',
+  (public.fiscal_status() ->> 'ready') = 'true'
+  and (public.fiscal_status() -> 'types') ? 'B02',
+  public.fiscal_status()::text);
+
+-- Rango agotado (next_value > range_end) → ready=false.
+set role postgres;
+update public.ncf_sequences set next_value = range_end + 1
+  where company_id = test.var('c_a')::uuid and is_active;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('un rango agotado no cuenta como disponible',
+  (public.fiscal_status() ->> 'ready') = 'false');
+
+-- Rango vencido (authorized_until en el pasado) → ready=false.
+set role postgres;
+update public.ncf_sequences set next_value = 1, authorized_until = current_date - 1
+  where company_id = test.var('c_a')::uuid and is_active;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('un rango vencido no cuenta como disponible',
+  (public.fiscal_status() ->> 'ready') = 'false');
+
 -- =============================================================== Aislamiento
 
 set role postgres;
 select set_config('request.jwt.claim.sub', test.var('u_owner_b'), false);
 set role authenticated;
+
+-- Aislamiento fiscal: el propietario de Beta no ve el estado fiscal de Alfa.
+-- (Beta no tiene rangos propios, así que su fiscal_status es false pese a que
+-- Alfa tenga secuencias — la función filtra por la empresa del llamante.)
+select test.check('fiscal_status está acotado al tenant: Beta no hereda los NCF de Alfa',
+  (public.fiscal_status() ->> 'ready') = 'false', public.fiscal_status()::text);
 
 select test.check('la empresa Beta no ve los gastos de Alfa',
   (select count(*) = 0 from public.expenses));

@@ -196,6 +196,28 @@ export async function registerCashMovement(params: {
   if (error) throw error;
 }
 
+// -------------------------------------------------------- Estado fiscal
+
+export interface FiscalStatus {
+  ready: boolean;       // ¿hay al menos una secuencia NCF utilizable?
+  types: NcfType[];     // tipos NCF disponibles ahora mismo (B01, B02, ...)
+}
+
+/**
+ * ¿Puede la empresa emitir comprobantes fiscales?
+ *
+ * Se resuelve con la función `fiscal_status`, que es SECURITY DEFINER: un cajero
+ * no puede leer `ncf_sequences` (RLS), pero sí necesita saber si el cobro está
+ * habilitado. La función devuelve solo un booleano y los tipos disponibles,
+ * nada sensible. Fallo cerrado: sin empresa o sin rangos, `ready` es false.
+ */
+export async function fetchFiscalStatus(): Promise<FiscalStatus> {
+  const { data, error } = await requireSupabase().rpc('fiscal_status');
+  if (error) throw error;
+  const parsed = (data ?? {}) as { ready?: boolean; types?: NcfType[] };
+  return { ready: parsed.ready === true, types: parsed.types ?? [] };
+}
+
 // ------------------------------------------------------------ Facturación
 
 export interface CreateInvoiceParams {
