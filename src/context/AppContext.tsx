@@ -37,21 +37,8 @@ import {
   initialAuditLogs
 } from '../data/initialData';
 import { membegoApiService } from '../services/membegoApi';
-import {
-  initStorage,
-  loadState,
-  saveState,
-  getStorageUsageRatio,
-  isArray,
-  isObject,
-  isObjectOrNull,
-  StorageStatus
-} from '../lib/storage';
-
-// Debe resolverse antes de la primera hidratación: comprueba la versión del
-// esquema y aparta los datos incompatibles en lugar de dejar que revienten al
-// construir el estado del proveedor.
-initStorage();
+import { supabaseSyncService } from '../services/supabaseSync';
+import { getSupabaseClient } from '../lib/supabase';
 
 interface AppContextType {
   company: Company;
@@ -80,7 +67,7 @@ interface AppContextType {
   updateProduct: (product: Product) => void;
 
   workOrders: WorkOrder[];
-  addWorkOrder: (order: Omit<WorkOrder, 'id' | 'orderNumber' | 'companyId' | 'branchId' | 'subtotal' | 'discountTotal' | 'membegoBenefitDiscount' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }) => WorkOrder;
+  addWorkOrder: (order: Omit<WorkOrder, 'id' | 'orderNumber' | 'subtotal' | 'discountTotal' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }) => WorkOrder;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus, bayId?: string, employeeIds?: string[]) => void;
   assignWashersToOrder: (orderId: string, employeeIds: string[], employeeNames: string[]) => void;
 
@@ -115,10 +102,6 @@ interface AppContextType {
   isMembegoOnline: boolean;
   toggleMembegoOnline: () => void;
 
-  // Estado del almacenamiento local (ver StorageAlertBanner)
-  storageStatus: StorageStatus;
-  storageUsageRatio: number;
-
   // Modals & Active View state
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -128,56 +111,216 @@ interface AppContextType {
   setIsQrModalOpen: (open: boolean) => void;
   isArchModalOpen: boolean;
   setIsArchModalOpen: (open: boolean) => void;
+  isSupabaseModalOpen: boolean;
+  setIsSupabaseModalOpen: (open: boolean) => void;
+
+  // Authentication State & Actions
+  isAuthenticated: boolean;
+  loginWithUser: (user: User, pinCode?: string) => { success: boolean; message: string };
+  loginWithEmail: (email: string, password?: string) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [company, setCompany] = useState<Company>(() =>
-    loadState('membego_cw_company', initialCompany, isObject)
-  );
+  const [company, setCompany] = useState<Company>(() => {
+    const saved = localStorage.getItem('membego_cw_company');
+    return saved ? JSON.parse(saved) : initialCompany;
+  });
 
   const [branches] = useState<Branch[]>(initialBranches);
   const [currentBranch, setCurrentBranch] = useState<Branch>(initialBranches[0]);
 
   const [users] = useState<User[]>(initialUsers);
-  const [currentUser, setCurrentUser] = useState<User>(initialUsers[0]);
+  
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const saved = localStorage.getItem('membego_auth_user');
+    return saved ? JSON.parse(saved) : initialUsers[0];
+  });
 
-  const [customers, setCustomers] = useState<Customer[]>(() =>
-    loadState('membego_cw_customers', initialCustomers, isArray)
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() =>
-    loadState('membego_cw_vehicles', initialVehicles, isArray)
-  );
+  const loginWithUser = (user: User, pinCode?: string): { success: boolean; message: string } => {
+    if (user.pinCode && pinCode && user.pinCode !== pinCode) {
+      return { success: false, message: 'El PIN ingresado es incorrecto.' };
+    }
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    localStorage.setItem('membego_is_authenticated', 'true');
+    localStorage.setItem('membego_auth_user', JSON.stringify(user));
+    
+    // Log audit event
+    const newLog: AuditLog = {
+      id: `log-${Date.now()}`,
+      companyId: user.companyId,
+      branchId: user.branchId,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'INICIO_SESION_POS',
+      entity: 'Auth',
+      details: `Inicio de sesión rápido de personal POS: ${user.name} (${user.role})`,
+      timestamp: new Date().toISOString()
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+    supabaseSyncService.syncAuditLog(newLog);
 
-  const [services, setServices] = useState<Service[]>(() =>
-    loadState('membego_cw_services', initialServices, isArray)
-  );
+    return { success: true, message: `¡Bienvenido(a) ${user.name}!` };
+  };
 
-  const [products, setProducts] = useState<Product[]>(() =>
-    loadState('membego_cw_products', initialProducts, isArray)
-  );
+  const loginWithEmail = async (email: string, password?: string): Promise<{ success: boolean; message: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    
+    // Try Supabase Auth if client is available and password provided
+    const supabase = getSupabaseClient();
+    if (supabase && password) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+        if (!error && data.user) {
+          const matched = users.find(u => u.email.toLowerCase() === cleanEmail) || {
+            id: data.user.id,
+            companyId: company.id,
+            branchId: currentBranch.id,
+            name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Usuario Cloud',
+            email: data.user.email || cleanEmail,
+            phone: '',
+            role: 'administrador' as UserRole,
+            isActive: true
+          };
+          setCurrentUser(matched);
+          setIsAuthenticated(true);
+          localStorage.setItem('membego_is_authenticated', 'true');
+          localStorage.setItem('membego_auth_user', JSON.stringify(matched));
 
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() =>
-    loadState('membego_cw_workorders', initialWorkOrders, isArray)
-  );
+          const newLog: AuditLog = {
+            id: `log-${Date.now()}`,
+            companyId: matched.companyId,
+            branchId: matched.branchId,
+            userId: matched.id,
+            userName: matched.name,
+            userRole: matched.role,
+            action: 'INICIO_SESION_SUPABASE',
+            entity: 'Auth',
+            details: `Autenticación exitosa en Supabase Cloud (${cleanEmail})`,
+            timestamp: new Date().toISOString()
+          };
+          setAuditLogs(prev => [newLog, ...prev]);
+          supabaseSyncService.syncAuditLog(newLog);
 
-  const [bays, setBays] = useState<Bay[]>(() =>
-    loadState('membego_cw_bays', initialBays, isArray)
-  );
+          return { success: true, message: 'Autenticación con Supabase completada correctamente.' };
+        }
+      } catch (err) {
+        console.warn('Supabase auth exception:', err);
+      }
+    }
 
-  const [cashSession, setCashSession] = useState<CashSession | null>(() =>
-    loadState('membego_cw_cashsession', initialCashSession, isObjectOrNull)
-  );
+    // Local / PIN Fallback matching
+    const matchedUser = users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (matchedUser) {
+      if (matchedUser.pinCode && password && matchedUser.pinCode !== password) {
+        return { success: false, message: 'La contraseña / PIN es incorrecto.' };
+      }
+      setCurrentUser(matchedUser);
+      setIsAuthenticated(true);
+      localStorage.setItem('membego_is_authenticated', 'true');
+      localStorage.setItem('membego_auth_user', JSON.stringify(matchedUser));
 
-  const [invoices, setInvoices] = useState<Invoice[]>(() =>
-    loadState('membego_cw_invoices', initialInvoices, isArray)
-  );
+      const newLog: AuditLog = {
+        id: `log-${Date.now()}`,
+        companyId: matchedUser.companyId,
+        branchId: matchedUser.branchId,
+        userId: matchedUser.id,
+        userName: matchedUser.name,
+        userRole: matchedUser.role,
+        action: 'INICIO_SESION_LOCAL',
+        entity: 'Auth',
+        details: `Inicio de sesión por correo local: ${matchedUser.name}`,
+        timestamp: new Date().toISOString()
+      };
+      setAuditLogs(prev => [newLog, ...prev]);
+      supabaseSyncService.syncAuditLog(newLog);
 
-  const [expenses, setExpenses] = useState<Expense[]>(() =>
-    loadState('membego_cw_expenses', initialExpenses, isArray)
-  );
+      return { success: true, message: `¡Bienvenido(a) ${matchedUser.name}!` };
+    }
+
+    return { success: false, message: 'Usuario no encontrado. Verifique las credenciales ingresadas.' };
+  };
+
+  const logout = async (): Promise<void> => {
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn('Error closing Supabase session:', err);
+      }
+    }
+
+    const newLog: AuditLog = {
+      id: `log-${Date.now()}`,
+      companyId: currentUser.companyId,
+      branchId: currentUser.branchId,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      action: 'CERRAR_SESION',
+      entity: 'Auth',
+      details: `Sesión cerrada por ${currentUser.name}`,
+      timestamp: new Date().toISOString()
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+    supabaseSyncService.syncAuditLog(newLog);
+
+    setIsAuthenticated(false);
+    localStorage.removeItem('membego_is_authenticated');
+    localStorage.removeItem('membego_auth_user');
+  };
+
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('membego_cw_customers');
+    return saved ? JSON.parse(saved) : initialCustomers;
+  });
+
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
+    const saved = localStorage.getItem('membego_cw_vehicles');
+    return saved ? JSON.parse(saved) : initialVehicles;
+  });
+
+  const [services, setServices] = useState<Service[]>(() => {
+    const saved = localStorage.getItem('membego_cw_services');
+    return saved ? JSON.parse(saved) : initialServices;
+  });
+
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('membego_cw_products');
+    return saved ? JSON.parse(saved) : initialProducts;
+  });
+
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>(() => {
+    const saved = localStorage.getItem('membego_cw_workorders');
+    return saved ? JSON.parse(saved) : initialWorkOrders;
+  });
+
+  const [bays, setBays] = useState<Bay[]>(() => {
+    const saved = localStorage.getItem('membego_cw_bays');
+    return saved ? JSON.parse(saved) : initialBays;
+  });
+
+  const [cashSession, setCashSession] = useState<CashSession | null>(() => {
+    const saved = localStorage.getItem('membego_cw_cashsession');
+    return saved ? JSON.parse(saved) : initialCashSession;
+  });
+
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    const saved = localStorage.getItem('membego_cw_invoices');
+    return saved ? JSON.parse(saved) : initialInvoices;
+  });
+
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const saved = localStorage.getItem('membego_cw_expenses');
+    return saved ? JSON.parse(saved) : initialExpenses;
+  });
 
   const [commissions, setCommissions] = useState<CommissionEntry[]>(initialCommissionEntries);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
@@ -187,65 +330,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isNuevaLlegadaOpen, setIsNuevaLlegadaOpen] = useState<boolean>(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [isArchModalOpen, setIsArchModalOpen] = useState<boolean>(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
 
-  const [storageStatus, setStorageStatus] = useState<StorageStatus>({ kind: 'ok' });
-  const [storageUsageRatio, setStorageUsageRatio] = useState<number>(0);
-
-  /**
-   * Persiste una porción del estado y propaga el resultado.
-   *
-   * Antes estas escrituras eran `localStorage.setItem` desnudos: al agotarse la
-   * cuota lanzaban dentro del efecto y la transacción se perdía sin que nadie se
-   * enterara. Ahora un fallo queda reflejado en `storageStatus`, que el banner
-   * superior convierte en un aviso visible para el cajero.
-   */
-  const persist = (key: string, value: unknown) => {
-    const result = saveState(key, value);
-    setStorageStatus(prev => {
-      // Un fallo se mantiene visible hasta que una escritura vuelva a funcionar.
-      if (result.kind === 'ok') return prev.kind === 'ok' ? prev : result;
-      if (prev.kind === result.kind) return prev; // evita renders redundantes
-      return result;
-    });
-  };
+  // Load initial work orders from Supabase if configured & available
+  useEffect(() => {
+    (async () => {
+      const dbOrders = await supabaseSyncService.fetchWorkOrders();
+      if (dbOrders && dbOrders.length > 0) {
+        setWorkOrders(dbOrders);
+      }
+    })();
+  }, []);
 
   // Sync to localStorage
   useEffect(() => {
-    persist('membego_cw_workorders', workOrders);
+    localStorage.setItem('membego_cw_workorders', JSON.stringify(workOrders));
   }, [workOrders]);
 
   useEffect(() => {
-    persist('membego_cw_customers', customers);
+    localStorage.setItem('membego_cw_customers', JSON.stringify(customers));
   }, [customers]);
 
   useEffect(() => {
-    persist('membego_cw_vehicles', vehicles);
+    localStorage.setItem('membego_cw_vehicles', JSON.stringify(vehicles));
   }, [vehicles]);
 
   useEffect(() => {
-    persist('membego_cw_invoices', invoices);
+    localStorage.setItem('membego_cw_invoices', JSON.stringify(invoices));
   }, [invoices]);
 
   useEffect(() => {
-    persist('membego_cw_cashsession', cashSession);
+    localStorage.setItem('membego_cw_cashsession', JSON.stringify(cashSession));
   }, [cashSession]);
-
-  /**
-   * Vigilancia de ocupación, para avisar ANTES de que la escritura falle.
-   *
-   * Se muestrea con un intervalo en lugar de recalcular en cada escritura porque
-   * medir implica recorrer todos los valores del almacenamiento, y el camino de
-   * escritura ya es lo bastante costoso (ver sección 9 de la auditoría).
-   */
-  useEffect(() => {
-    const sample = () => {
-      // Redondeado a centésimas: evita renders por variaciones irrelevantes.
-      setStorageUsageRatio(Math.round(getStorageUsageRatio() * 100) / 100);
-    };
-    sample();
-    const id = window.setInterval(sample, 30_000);
-    return () => window.clearInterval(id);
-  }, []);
 
   const switchRole = (role: UserRole) => {
     const found = users.find(u => u.role === role);
@@ -291,6 +407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setCustomers(prev => [newCust, ...prev]);
     addAuditLog('CREAR_CLIENTE', 'Customer', `Cliente creado: ${newCust.name} (${newCust.phone || 'Sin tel'})`, newCust.id);
+    supabaseSyncService.syncCustomer(newCust);
     return newCust;
   };
 
@@ -330,7 +447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addWorkOrder = (
-    data: Omit<WorkOrder, 'id' | 'orderNumber' | 'companyId' | 'branchId' | 'subtotal' | 'discountTotal' | 'membegoBenefitDiscount' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }
+    data: Omit<WorkOrder, 'id' | 'orderNumber' | 'subtotal' | 'discountTotal' | 'taxTotal' | 'total' | 'arrivalTime'> & { items: WorkOrderItem[] }
   ): WorkOrder => {
     const now = new Date();
     const orderNum = `CW-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -383,6 +500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     addAuditLog('NUEVA_LLEGADA_ORDEN', 'WorkOrder', `Nueva orden de servicio creada: ${newOrder.orderNumber} para ${newOrder.vehiclePlate} (${newOrder.customerName})`, newOrder.id);
+    supabaseSyncService.syncWorkOrder(newOrder);
     return newOrder;
   };
 
@@ -580,6 +698,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     addAuditLog('EMITIR_FACTURA', 'Invoice', `Factura ${newInvoice.invoiceNumber} por RD$ ${total.toLocaleString()} (${customerName})`, newInvoice.id);
+    supabaseSyncService.syncInvoice(newInvoice);
 
     return newInvoice;
   };
@@ -660,8 +779,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addAuditLog,
         isMembegoOnline,
         toggleMembegoOnline,
-        storageStatus,
-        storageUsageRatio,
         activeTab,
         setActiveTab,
         isNuevaLlegadaOpen,
@@ -669,7 +786,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isQrModalOpen,
         setIsQrModalOpen,
         isArchModalOpen,
-        setIsArchModalOpen
+        setIsArchModalOpen,
+        isSupabaseModalOpen,
+        setIsSupabaseModalOpen,
+        isAuthenticated,
+        loginWithUser,
+        loginWithEmail,
+        logout
       }}
     >
       {children}

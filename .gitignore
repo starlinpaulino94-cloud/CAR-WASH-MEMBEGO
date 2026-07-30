@@ -6,7 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-
-# Binario y registros del ensayo E2E
-tests/e2e/postgrest
-tests/e2e/*.log

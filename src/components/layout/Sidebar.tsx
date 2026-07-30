@@ -19,21 +19,11 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
-import { useQueueCount } from '../../context/QueueCountContext';
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, workOrders, isMembegoOnline } = useApp();
-  const { phase } = useAuth();
-  const { count: liveQueueCount } = useQueueCount();
 
-  // Con sesión real el número viene de la base (una consulta que solo pide el
-  // total, sin traer filas). En modo demostración se calcula sobre el estado
-  // local. Mientras no se sepa, no se pinta nada: mejor sin badge que con una
-  // cifra inventada.
-  const activeQueueCount = phase === 'demo'
-    ? workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length
-    : liveQueueCount ?? undefined;
+  const activeQueueCount = workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length;
 
   const menuSections = [
     {
