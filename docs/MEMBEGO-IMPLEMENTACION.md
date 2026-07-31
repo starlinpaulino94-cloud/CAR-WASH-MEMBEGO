@@ -51,9 +51,32 @@ select public.membego_link_company('<TU_companyId_DE_MEMBEGO>');
 Sin esto, los eventos de tu empresa se ignoran (empresa no vinculada). Cada car
 wash del sistema hace su propio `membego_link_company` con su `companyId`.
 
-## ⏳ Pendiente — SSO de empleados (Fase 3)
+## ✅ Hecho — SSO de empleados
 
-`GET /sso/membego?token=...`: verificar el token HMAC de Membego (payload
-`sub/email/rol/companyId/exp`, vence en 90 s), crear/encontrar el usuario local
-y abrir su sesión de Supabase. Es la pieza más delicada (acuñar la sesión de
-Supabase Auth desde un token externo); se aborda como fase aparte.
+- **Endpoint:** `GET /sso/membego?token=...` (rewrite a `api/sso/membego.ts`).
+- Verifica el token HMAC de Membego (payload `sub/email/rol/companyId/exp`,
+  vence en 90 s) con el código exacto del contrato.
+- Asegura el usuario local y su perfil en la empresa del token (RPC
+  `membego_sso_upsert_user`, service_role local), con el rol mapeado:
+
+  | Rol Membego | Rol car wash |
+  |---|---|
+  | ADMIN_EMPRESA | administrador |
+  | GERENTE | supervisor |
+  | RECEPCION | recepcionista |
+  | EMPLEADO | operario |
+  | SUPERADMIN | superadmin |
+
+- Acuña la sesión de Supabase (magic link) y redirige al panel.
+- Verificado: 5 pruebas SQL (crea/actualiza el perfil, idempotencia por correo,
+  mapeo de rol, empresa no vinculada) + 5 de la verificación del token.
+
+### Para que el SSO funcione en producción
+
+1. En **Supabase → Authentication → URL Configuration → Redirect URLs**, agrega
+   tu dominio de Vercel (ej. `https://<tu-dominio>` y `https://<tu-dominio>/`).
+2. En Membego, `urlBase` del satélite = `https://<tu-dominio>`; el SSO cae en
+   `https://<tu-dominio>/sso/membego`.
+
+> El acuñado de la sesión (magic link admin) solo se puede probar contra Supabase
+> real: al desplegar, hagan una prueba de humo abriendo el SSO desde Membego.

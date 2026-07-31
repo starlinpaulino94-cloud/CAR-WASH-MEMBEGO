@@ -78,4 +78,31 @@ set role authenticated;
 select test.expect_error('un cajero no puede vincular la empresa de Membego',
   $q$select public.membego_link_company('MG-HACK')$q$);
 
+-- ---- SSO: Membego asegura un empleado en la empresa del token (rol mapeado).
+-- La RPC la llama service_role (como el borde); las aserciones que leen profiles
+-- o auth.users se hacen con el rol adecuado (propietario / postgres), porque en
+-- el shim service_role no tiene grants de tabla (en Supabase real sí).
+set role postgres;
+set role service_role;
+select test.set_var('sso_uid',  public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE')::text);
+select test.set_var('sso_uid1', public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE')::text);
+select test.set_var('sso_uid3', public.membego_sso_upsert_user('MG-A', 'mg-sub-2', 'adminemp@alfa.test', 'ADMIN_EMPRESA')::text);
+select test.expect_error('SSO rechaza una empresa de Membego no vinculada',
+  $q$select public.membego_sso_upsert_user('MG-DESCONOCIDA','s','x@y.com','EMPLEADO')$q$);
+
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
+select test.check('SSO crea el empleado en la empresa del token, con el rol mapeado',
+  (select company_id = test.var('c_a')::uuid and role = 'supervisor'
+     from public.profiles where id = test.var('sso_uid')::uuid));
+select test.check('SSO repetido reutiliza el mismo usuario (enlace por correo)',
+  test.var('sso_uid') = test.var('sso_uid1'));
+select test.check('SSO: ADMIN_EMPRESA se mapea a administrador',
+  (select role = 'administrador' from public.profiles where id = test.var('sso_uid3')::uuid));
+
+set role postgres;
+select test.check('SSO: el empleado queda con acceso (contraseña presente)',
+  (select encrypted_password is not null from auth.users where email = 'gerente@alfa.test'));
+
 reset role;
