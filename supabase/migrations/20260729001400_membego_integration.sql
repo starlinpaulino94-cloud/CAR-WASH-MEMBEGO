@@ -1,33 +1,36 @@
 -- =============================================================================
--- 0014 · Integración con Membego (lado receptor)
+-- 0014 · Integración con Membego (lado satélite receptor)
 -- =============================================================================
--- Membego es la capa de fidelización. Cada car wash es un "comercio" en Membego
--- con su propio id; aquí lo mapeamos a una empresa (company_id). Membego avisa a
--- este sistema (server-to-server) cuando un cliente SIGUE al comercio, o cuando
--- adquiere/canjea una membresía o promoción — y cada evento entra SOLO en la
--- empresa de ese comercio. Un cliente jamás aparece en un car wash por existir
--- en Membego: solo cuando tiene una relación real con ESE car wash.
+-- Membego es el hub de identidad y fidelización; este car wash es un satélite.
+-- Membego EMPUJA eventos firmados (HMAC) a un webhook; la función serverless de
+-- Vercel verifica la firma y reenvía el sobre a `membego_ingest_event`, que hace
+-- todo el trabajo con aislamiento por empresa.
 --
--- Este archivo construye el lado de este sistema (verificable con SQL). El lado
--- de Membego (llamar a estos endpoints) lo implementa el equipo de Membego según
--- el contrato en docs/INTEGRACION-MEMBEGO.md.
+-- Contrato: docs/INTEGRACIONES.md (lo entrega Membego). Cada evento trae un
+-- `companyId` de Membego que se mapea a UNA empresa de este sistema. Un cliente
+-- solo entra en un car wash cuando Membego emite un evento suyo para ESA empresa.
 -- =============================================================================
 
--- ---------------------------------------------- Mapa comercio Membego ↔ empresa
-create table public.membego_merchants (
-  company_id           uuid primary key references public.companies(id) on delete cascade,
-  membego_merchant_id  text not null,
-  -- Secreto de webhook, guardado HASHEADO (sha256). El texto plano se muestra
-  -- una sola vez al vincular; Membego lo envía en cada llamada.
-  webhook_secret_hash  text not null,
-  is_active            boolean not null default true,
-  created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now(),
-  unique (membego_merchant_id)   -- un comercio de Membego pertenece a UNA empresa
+-- ------------------------------------ Mapa empresa Membego (companyId) ↔ empresa
+create table public.membego_company_links (
+  company_id         uuid primary key references public.companies(id) on delete cascade,
+  membego_company_id text not null,
+  is_active          boolean not null default true,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now(),
+  unique (membego_company_id)   -- una empresa de Membego mapea a UNA empresa aquí
 );
 
-create trigger membego_merchants_touch before update on public.membego_merchants
+create trigger membego_company_links_touch before update on public.membego_company_links
   for each row execute function app.touch_updated_at();
+
+-- ------------------------------------------- Idempotencia de eventos de webhook
+create table public.membego_webhook_events (
+  event_id     text primary key,     -- id del evento en Membego (clave de idempotencia)
+  company_id   uuid not null references public.companies(id) on delete cascade,
+  tipo         text not null,
+  received_at  timestamptz not null default now()
+);
 
 -- --------------------------------------------------------------- Membresías
 create table public.memberships (
@@ -46,7 +49,6 @@ create table public.memberships (
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now(),
   unique (company_id, membego_membership_id),
-  -- Integridad de tenant: la membresía y su cliente comparten empresa.
   constraint memberships_customer_same_company
     foreign key (customer_id, company_id) references public.customers(id, company_id) on delete cascade
 );
@@ -65,7 +67,6 @@ create table public.customer_promotions (
   membego_promotion_id  text not null,
   code                  text,
   title                 text not null default '',
-  -- Gratis o de pago, como pidió el negocio.
   kind                  text not null default 'free' check (kind in ('free', 'paid')),
   status                text not null default 'available'
                           check (status in ('available', 'redeemed', 'expired', 'cancelled')),
@@ -81,289 +82,166 @@ create table public.customer_promotions (
     foreign key (customer_id, company_id) references public.customers(id, company_id) on delete cascade
 );
 
-create index promotions_customer_idx on public.customer_promotions (customer_id);
+create index promotions_customer_idx  on public.customer_promotions (customer_id);
 create index promotions_available_idx on public.customer_promotions (company_id) where status = 'available';
 
 create trigger customer_promotions_touch before update on public.customer_promotions
   for each row execute function app.touch_updated_at();
 
 -- ============================================================ RLS (solo lectura)
--- Las escrituras entran únicamente por las funciones de ingestión (más abajo),
--- que son SECURITY DEFINER. Desde el cliente estas tablas son de solo lectura y
--- acotadas al tenant, igual que el resto del sistema.
+-- Las escrituras entran solo por membego_ingest_event (SECURITY DEFINER). Desde
+-- el cliente estas tablas son de solo lectura y acotadas al tenant.
+alter table public.membego_company_links  enable row level security;
+alter table public.membego_company_links  force  row level security;
+alter table public.membego_webhook_events enable row level security;
+alter table public.membego_webhook_events force  row level security;
+alter table public.memberships            enable row level security;
+alter table public.memberships            force  row level security;
+alter table public.customer_promotions    enable row level security;
+alter table public.customer_promotions    force  row level security;
 
-alter table public.membego_merchants     enable row level security;
-alter table public.membego_merchants     force  row level security;
-alter table public.memberships           enable row level security;
-alter table public.memberships           force  row level security;
-alter table public.customer_promotions   enable row level security;
-alter table public.customer_promotions   force  row level security;
-
-create policy membego_merchants_select on public.membego_merchants
+create policy membego_company_links_select on public.membego_company_links
   for select to authenticated
   using (app.belongs_to_tenant(company_id)
          and app.has_role('propietario', 'administrador', 'superadmin'));
 
 create policy memberships_select on public.memberships
-  for select to authenticated
-  using (app.belongs_to_tenant(company_id));
+  for select to authenticated using (app.belongs_to_tenant(company_id));
 
 create policy customer_promotions_select on public.customer_promotions
-  for select to authenticated
-  using (app.belongs_to_tenant(company_id));
+  for select to authenticated using (app.belongs_to_tenant(company_id));
 
-grant select on public.membego_merchants, public.memberships, public.customer_promotions
+-- membego_webhook_events no se lee desde el cliente: sin políticas (acceso nulo).
+
+grant select on public.membego_company_links, public.memberships, public.customer_promotions
   to authenticated;
 
--- ============================================================ Resolución segura
--- Traduce (comercio Membego + secreto) a la empresa. Devuelve NULL si el comercio
--- no existe, está inactivo o el secreto no coincide. SECURITY DEFINER para poder
--- comprobar el hash sin exponer la tabla.
-create or replace function app.membego_merchant_company(p_merchant_id text, p_secret text)
+-- ============================================================ Resolución
+create or replace function app.membego_company(p_membego_company_id text)
 returns uuid
 language sql
 stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select company_id
-  from public.membego_merchants
-  where membego_merchant_id = p_merchant_id
-    and is_active
-    and webhook_secret_hash = encode(digest(p_secret, 'sha256'), 'hex')
+  select company_id from public.membego_company_links
+  where membego_company_id = p_membego_company_id and is_active
 $$;
 
 -- ============================================================ Vinculación (dueño)
--- El propietario/administrador vincula su comercio de Membego y obtiene el
--- secreto UNA vez (para configurarlo en Membego). Reejecutar rota el secreto.
-create or replace function public.membego_link_merchant(p_membego_merchant_id text)
-returns text
+-- El propietario mapea el companyId que Membego le asignó a SU empresa aquí.
+create or replace function public.membego_link_company(p_membego_company_id text)
+returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-  v_company uuid := app.current_company_id();
-  v_secret  text := encode(gen_random_bytes(24), 'hex');
+declare v_company uuid := app.current_company_id();
 begin
   if v_company is null or not app.has_role('propietario', 'administrador', 'superadmin') then
-    raise exception 'Solo el propietario o un administrador puede vincular el comercio de Membego.'
+    raise exception 'Solo el propietario o un administrador puede vincular la empresa de Membego.'
       using errcode = 'insufficient_privilege';
   end if;
-
-  insert into public.membego_merchants (company_id, membego_merchant_id, webhook_secret_hash)
-  values (v_company, trim(p_membego_merchant_id), encode(digest(v_secret, 'sha256'), 'hex'))
+  insert into public.membego_company_links (company_id, membego_company_id)
+  values (v_company, trim(p_membego_company_id))
   on conflict (company_id) do update
-    set membego_merchant_id = excluded.membego_merchant_id,
-        webhook_secret_hash = excluded.webhook_secret_hash,
-        is_active           = true,
-        updated_at          = now();
-
-  return v_secret;   -- se muestra una sola vez
+    set membego_company_id = excluded.membego_company_id, is_active = true, updated_at = now();
 end;
 $$;
 
-comment on function public.membego_link_merchant is
-  'Vincula el comercio de Membego a la empresa del llamante y devuelve el secreto de webhook (una sola vez).';
+grant execute on function public.membego_link_company(text) to authenticated;
 
--- ============================================================ Ingestión (Membego)
--- Estas funciones las llama el backend de Membego (server-to-server) con la
--- service_role y el secreto del comercio. Cada una resuelve la empresa a partir
--- del comercio y escribe SOLO en esa empresa.
-
--- 1) El cliente se registró en Membego y SIGUE a este comercio → alta/enlace.
-create or replace function public.membego_sync_customer(
-  p_merchant_id         text,
-  p_secret              text,
-  p_membego_customer_id text,
-  p_name                text,
-  p_phone               text default null,
-  p_email               text default null,
-  p_tier                text default null,
-  p_status              app.membego_status default 'active'
+-- ============================================================ Ingestión (webhook)
+-- La llama la función de Vercel (service_role) DESPUÉS de verificar la firma HMAC.
+-- Idempotente por event_id; enruta por companyId al tenant; despacha por tipo.
+-- Devuelve {handled, reason, ...}. Nunca lanza por un tipo desconocido: lo ignora.
+create or replace function public.membego_ingest_event(
+  p_event_id           text,
+  p_tipo               text,
+  p_membego_company_id text,
+  p_payload            jsonb
 )
-returns uuid
+returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_company  uuid := app.membego_merchant_company(p_merchant_id, p_secret);
-  v_customer uuid;
-begin
-  if v_company is null then
-    raise exception 'Comercio o secreto de Membego inválido.' using errcode = 'insufficient_privilege';
-  end if;
-
-  insert into public.customers
-    (company_id, name, phone, email, membego_customer_id, membego_status, membego_tier)
-  values
-    (v_company, coalesce(nullif(trim(p_name), ''), 'Cliente Membego'),
-     p_phone, p_email, p_membego_customer_id, p_status, p_tier)
-  on conflict (company_id, membego_customer_id) where membego_customer_id is not null
-    do update set
-      name           = excluded.name,
-      phone          = coalesce(excluded.phone, public.customers.phone),
-      email          = coalesce(excluded.email, public.customers.email),
-      membego_status = excluded.membego_status,
-      membego_tier   = excluded.membego_tier,
-      updated_at     = now()
-  returning id into v_customer;
-
-  insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
-  values (v_company, 'sync_customer', p_merchant_id || ':' || p_membego_customer_id, 'success',
-          jsonb_build_object('membego_customer_id', p_membego_customer_id));
-
-  return v_customer;
-end;
-$$;
-
--- 2) El cliente adquirió/renovó una membresía en este comercio.
-create or replace function public.membego_grant_membership(
-  p_merchant_id         text,
-  p_secret              text,
-  p_membego_customer_id text,
-  p_membership_id       text,
-  p_plan_name           text,
-  p_tier                text    default null,
-  p_status              text    default 'active',
-  p_is_paid             boolean default false,
-  p_valid_from          date    default null,
-  p_valid_until         date    default null
-)
-returns uuid
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_company    uuid := app.membego_merchant_company(p_merchant_id, p_secret);
-  v_customer   uuid;
-  v_membership uuid;
-begin
-  if v_company is null then
-    raise exception 'Comercio o secreto de Membego inválido.' using errcode = 'insufficient_privilege';
-  end if;
-
-  -- El cliente debe existir en ESTA empresa (haber seguido antes). Si no, se crea
-  -- el enlace mínimo: adquirir una membresía es, de hecho, una relación.
-  v_customer := public.membego_sync_customer(p_merchant_id, p_secret, p_membego_customer_id, 'Cliente Membego');
-
-  insert into public.memberships
-    (company_id, customer_id, membego_membership_id, plan_name, tier, status, is_paid, valid_from, valid_until)
-  values
-    (v_company, v_customer, p_membership_id, coalesce(p_plan_name, ''), p_tier,
-     coalesce(p_status, 'active'), coalesce(p_is_paid, false), p_valid_from, p_valid_until)
-  on conflict (company_id, membego_membership_id) do update
-    set plan_name = excluded.plan_name, tier = excluded.tier, status = excluded.status,
-        is_paid = excluded.is_paid, valid_from = excluded.valid_from,
-        valid_until = excluded.valid_until, updated_at = now()
-  returning id into v_membership;
-
-  insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
-  values (v_company, 'grant_membership', p_merchant_id || ':' || p_membership_id, 'success',
-          jsonb_build_object('membership_id', p_membership_id, 'plan', p_plan_name));
-
-  return v_membership;
-end;
-$$;
-
--- 3) El cliente adquirió una promoción/oferta (gratis o de pago) en este comercio.
-create or replace function public.membego_grant_promotion(
-  p_merchant_id         text,
-  p_secret              text,
-  p_membego_customer_id text,
-  p_promotion_id        text,
-  p_title               text,
-  p_kind                text    default 'free',
-  p_code                text    default null,
-  p_value_cents         bigint  default 0,
-  p_expires_at          timestamptz default null
-)
-returns uuid
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_company   uuid := app.membego_merchant_company(p_merchant_id, p_secret);
+  v_company   uuid := app.membego_company(p_membego_company_id);
+  v_cliente   text := p_payload ->> 'clienteId';
+  v_nombre    text := coalesce(nullif(trim(p_payload #>> '{cliente,nombre}'), ''), 'Cliente Membego');
+  v_phone     text := coalesce(p_payload #>> '{cliente,telefono}', p_payload #>> '{cliente,phone}');
+  v_plan      text := p_payload #>> '{membresia,plan}';
+  v_compratipo text := lower(coalesce(p_payload #>> '{compra,tipo}', ''));
+  v_is_paid   boolean := v_compratipo in ('pago', 'paid', 'membresia', 'membresía');
+  v_monto     numeric := nullif(p_payload #>> '{compra,monto}', '')::numeric;
+  v_value     bigint := coalesce(round(v_monto * 100), 0);
   v_customer  uuid;
-  v_promotion uuid;
+  v_new       integer;
 begin
   if v_company is null then
-    raise exception 'Comercio o secreto de Membego inválido.' using errcode = 'insufficient_privilege';
-  end if;
-  if p_kind not in ('free', 'paid') then
-    raise exception 'El tipo de promoción debe ser free o paid.' using errcode = 'check_violation';
+    -- Empresa no vinculada aún en este sistema: se ignora (200), sin registrar.
+    return jsonb_build_object('handled', false, 'reason', 'unknown_company');
   end if;
 
-  v_customer := public.membego_sync_customer(p_merchant_id, p_secret, p_membego_customer_id, 'Cliente Membego');
+  -- Idempotencia: si ya procesamos este evento, no repetimos el efecto.
+  insert into public.membego_webhook_events (event_id, company_id, tipo)
+  values (p_event_id, v_company, p_tipo)
+  on conflict (event_id) do nothing;
+  get diagnostics v_new = row_count;
+  if v_new = 0 then
+    return jsonb_build_object('handled', false, 'reason', 'duplicate');
+  end if;
 
-  insert into public.customer_promotions
-    (company_id, customer_id, membego_promotion_id, code, title, kind, value_cents, expires_at)
-  values
-    (v_company, v_customer, p_promotion_id, p_code, coalesce(p_title, ''), p_kind,
-     coalesce(p_value_cents, 0), p_expires_at)
-  on conflict (company_id, membego_promotion_id) do update
-    set code = excluded.code, title = excluded.title, kind = excluded.kind,
-        value_cents = excluded.value_cents, expires_at = excluded.expires_at,
-        -- No revive una promoción ya canjeada.
-        status = case when public.customer_promotions.status = 'redeemed'
-                      then public.customer_promotions.status else 'available' end,
-        updated_at = now()
-  returning id into v_promotion;
+  -- Casi todos los eventos giran en torno a un cliente: se crea/enlaza en ESTA
+  -- empresa. Aquí es donde el cliente "aparece" en el car wash.
+  if v_cliente is not null then
+    insert into public.customers (company_id, name, phone, membego_customer_id, membego_status)
+    values (v_company, v_nombre, v_phone, v_cliente, 'active')
+    on conflict (company_id, membego_customer_id) where membego_customer_id is not null
+      do update set
+        name           = coalesce(nullif(trim(excluded.name), 'Cliente Membego'), public.customers.name),
+        phone          = coalesce(excluded.phone, public.customers.phone),
+        membego_status = 'active',
+        updated_at     = now()
+    returning id into v_customer;
+  end if;
+
+  -- Membresía: activación o compra de una membresía.
+  if v_customer is not null and (p_tipo = 'membresia.activada'
+       or (p_tipo in ('cliente.compro_servicio', 'cliente.primera_compra') and v_plan is not null)) then
+    insert into public.memberships
+      (company_id, customer_id, membego_membership_id, plan_name, status, is_paid, raw)
+    values
+      (v_company, v_customer,
+       coalesce(p_payload #>> '{membresia,id}', 'plan:' || coalesce(v_plan, '') || ':' || v_cliente),
+       coalesce(v_plan, ''), 'active', v_is_paid, p_payload)
+    on conflict (company_id, membego_membership_id) do update
+      set plan_name = excluded.plan_name, status = 'active',
+          is_paid = excluded.is_paid, raw = excluded.raw, updated_at = now();
+
+  -- Compra de una oferta (no membresía) → promoción.
+  elsif v_customer is not null and p_tipo in ('cliente.compro_servicio', 'cliente.primera_compra') then
+    insert into public.customer_promotions
+      (company_id, customer_id, membego_promotion_id, title, kind, value_cents, raw)
+    values
+      (v_company, v_customer,
+       coalesce(p_payload #>> '{oferta,id}', p_payload #>> '{compra,id}', p_event_id),
+       coalesce(nullif(p_payload #>> '{oferta,titulo}', ''), 'Compra Membego'),
+       case when v_is_paid then 'paid' else 'free' end, v_value, p_payload)
+    on conflict (company_id, membego_promotion_id) do update
+      set title = excluded.title, value_cents = excluded.value_cents, raw = excluded.raw, updated_at = now();
+  end if;
 
   insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
-  values (v_company, 'grant_promotion', p_merchant_id || ':' || p_promotion_id, 'success',
-          jsonb_build_object('promotion_id', p_promotion_id, 'kind', p_kind));
+  values (v_company, p_tipo, p_event_id, 'success', p_payload);
 
-  return v_promotion;
+  return jsonb_build_object('handled', true, 'company_id', v_company, 'customer_id', v_customer, 'tipo', p_tipo);
 end;
 $$;
 
--- 4) Membego marca una promoción como canjeada (o la cancela/expira).
-create or replace function public.membego_set_promotion_status(
-  p_merchant_id  text,
-  p_secret       text,
-  p_promotion_id text,
-  p_status       text
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_company uuid := app.membego_merchant_company(p_merchant_id, p_secret);
-  v_rows    integer;
-begin
-  if v_company is null then
-    raise exception 'Comercio o secreto de Membego inválido.' using errcode = 'insufficient_privilege';
-  end if;
-  if p_status not in ('available', 'redeemed', 'expired', 'cancelled') then
-    raise exception 'Estado de promoción inválido.' using errcode = 'check_violation';
-  end if;
+comment on function public.membego_ingest_event is
+  'Procesa un evento de webhook de Membego: idempotente por event_id, acotado al '
+  'tenant por companyId, despacha por tipo. La firma HMAC la verifica el borde (Vercel).';
 
-  update public.customer_promotions
-    set status      = p_status,
-        redeemed_at = case when p_status = 'redeemed' then now() else redeemed_at end,
-        updated_at  = now()
-  where company_id = v_company and membego_promotion_id = p_promotion_id;
-  get diagnostics v_rows = row_count;
-
-  insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
-  values (v_company, 'set_promotion_status', p_merchant_id || ':' || p_promotion_id, 'success',
-          jsonb_build_object('promotion_id', p_promotion_id, 'status', p_status));
-
-  return v_rows > 0;
-end;
-$$;
-
--- Vinculación: la usa el dueño desde la app (rol authenticated).
-grant execute on function public.membego_link_merchant(text) to authenticated;
-
--- Ingestión: la usa el backend de Membego con la service_role.
-grant execute on function public.membego_sync_customer(text, text, text, text, text, text, text, app.membego_status) to service_role;
-grant execute on function public.membego_grant_membership(text, text, text, text, text, text, text, boolean, date, date) to service_role;
-grant execute on function public.membego_grant_promotion(text, text, text, text, text, text, text, bigint, timestamptz) to service_role;
-grant execute on function public.membego_set_promotion_status(text, text, text, text) to service_role;
+grant execute on function public.membego_ingest_event(text, text, text, jsonb) to service_role;

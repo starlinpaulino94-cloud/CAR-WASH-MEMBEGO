@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Building,
-  CheckCircle2, Loader2, AlertCircle, RefreshCw, Receipt
+  CheckCircle2, Loader2, AlertCircle, RefreshCw, Receipt, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, taxFromBps, bpsToPercent } from '../../lib/money';
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
+  lookupMembegoByPhone,
   ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice,
-  FiscalStatus
+  FiscalStatus, MembegoBenefitSummary
 } from '../../data/billingRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
@@ -65,6 +66,28 @@ export const PosSupabaseView: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
+
+  // Búsqueda de beneficios Membego por teléfono (aviso al cajero).
+  const [membegoPhone, setMembegoPhone] = useState('');
+  const [membegoSummary, setMembegoSummary] = useState<MembegoBenefitSummary | null>(null);
+  const [membegoBusy, setMembegoBusy] = useState(false);
+  const [membegoSearched, setMembegoSearched] = useState(false);
+
+  const checkMembego = async () => {
+    if (!membegoPhone.trim() || membegoBusy) return;
+    setMembegoBusy(true);
+    setMembegoSummary(null);
+    try {
+      const s = await lookupMembegoByPhone(membegoPhone);
+      setMembegoSummary(s);
+      if (s) setCustomerName(s.customerName);
+    } catch {
+      setMembegoSummary(null);
+    } finally {
+      setMembegoSearched(true);
+      setMembegoBusy(false);
+    }
+  };
 
   /**
    * Clave de idempotencia de la venta EN CURSO.
@@ -198,6 +221,7 @@ export const PosSupabaseView: React.FC = () => {
       setVehiclePlate('');
       setCustomerTaxId('');
       setTenderedInput('');
+      setMembegoPhone(''); setMembegoSummary(null); setMembegoSearched(false);
       void load();     // refresca stock y caja
     } catch (err) {
       // NO se limpia requestIdRef: un reintento debe llevar la MISMA clave.
@@ -404,6 +428,39 @@ export const PosSupabaseView: React.FC = () => {
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white uppercase font-bold"
               />
             </div>
+          </div>
+
+          {/* Consulta de beneficios Membego por teléfono */}
+          <div className="space-y-1.5">
+            <div className="flex gap-1.5">
+              <input
+                type="tel" value={membegoPhone}
+                onChange={e => { setMembegoPhone(e.target.value); setMembegoSearched(false); }}
+                onKeyDown={e => { if (e.key === 'Enter') void checkMembego(); }}
+                placeholder="Teléfono para ver beneficios Membego"
+                aria-label="Teléfono para buscar beneficios Membego"
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white placeholder-slate-600"
+              />
+              <button onClick={() => void checkMembego()} disabled={membegoBusy || !membegoPhone.trim()}
+                className="px-2.5 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-40 text-xs font-bold flex items-center gap-1">
+                {membegoBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
+                Membego
+              </button>
+            </div>
+            {membegoSummary && (
+              <div role="status" className="flex items-center gap-2 p-2 bg-amber-950/30 border border-amber-500/40 rounded-lg text-[11px] text-amber-200">
+                <BadgeCheck className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                <span>
+                  <strong>{membegoSummary.customerName}</strong>
+                  {membegoSummary.tier && <> · {membegoSummary.tier}</>}
+                  {' · '}{membegoSummary.activeMemberships} membresía(s)
+                  {' · '}<strong>{membegoSummary.availablePromotions} oferta(s) disponible(s)</strong>
+                </span>
+              </div>
+            )}
+            {membegoSearched && !membegoSummary && !membegoBusy && (
+              <p className="text-[10px] text-slate-500">Sin beneficios de Membego para ese teléfono.</p>
+            )}
           </div>
 
           <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 flex-1">

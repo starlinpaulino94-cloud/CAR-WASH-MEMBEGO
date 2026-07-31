@@ -55,6 +55,33 @@ export async function fetchCustomerPage(
   return { rows: data ?? [], total: count ?? 0 };
 }
 
+export type Membership = Tables<'memberships'>;
+export type CustomerPromotion = Tables<'customer_promotions'>;
+
+export interface CustomerMembego {
+  memberships: Membership[];
+  promotions: CustomerPromotion[];
+}
+
+/**
+ * Beneficios de Membego de un cliente: membresías y promociones.
+ *
+ * Los alimenta el webhook de Membego (server-to-server). RLS acota todo a la
+ * empresa, así que un car wash solo ve los beneficios de SUS clientes.
+ */
+export async function fetchCustomerMembego(customerId: string): Promise<CustomerMembego> {
+  const supabase = requireSupabase();
+  const [m, p] = await Promise.all([
+    supabase.from('memberships').select('*').eq('customer_id', customerId)
+      .order('created_at', { ascending: false }),
+    supabase.from('customer_promotions').select('*').eq('customer_id', customerId)
+      .order('acquired_at', { ascending: false })
+  ]);
+  if (m.error) throw m.error;
+  if (p.error) throw p.error;
+  return { memberships: m.data ?? [], promotions: p.data ?? [] };
+}
+
 export async function createCustomer(input: {
   companyId: string; branchId: string | null; name: string;
   phone?: string | null; email?: string | null; taxId?: string | null; notes?: string | null;

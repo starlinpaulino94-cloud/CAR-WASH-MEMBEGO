@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Users, Plus, Loader2, Car } from 'lucide-react';
+import { Users, Plus, Loader2, Car, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
-import { fetchCustomerPage, createCustomer, Customer } from '../../data/adminRepository';
+import {
+  fetchCustomerPage, createCustomer, fetchCustomerMembego,
+  Customer, CustomerMembego
+} from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert
 } from '../common/DataViewShell';
+import { MembegoCustomerModal } from '../modals/MembegoCustomerModal';
 
 const PAGE_SIZE = 25;
 
@@ -29,6 +33,26 @@ export const CustomersSupabaseView: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Panel de beneficios Membego del cliente seleccionado.
+  const [selected, setSelected] = useState<Customer | null>(null);
+  const [membego, setMembego] = useState<CustomerMembego | null>(null);
+  const [membegoLoading, setMembegoLoading] = useState(false);
+  const [membegoError, setMembegoError] = useState<string | null>(null);
+
+  const openMembego = async (customer: Customer) => {
+    setSelected(customer);
+    setMembego(null);
+    setMembegoError(null);
+    setMembegoLoading(true);
+    try {
+      setMembego(await fetchCustomerMembego(customer.id));
+    } catch (err) {
+      setMembegoError(err instanceof Error ? err.message : 'No se pudieron cargar los beneficios');
+    } finally {
+      setMembegoLoading(false);
+    }
+  };
 
   const handleAdd = async () => {
     if (!company || busy) return;
@@ -96,10 +120,12 @@ export const CustomersSupabaseView: React.FC = () => {
                           {c.email && <div className="text-[10px] truncate max-w-[180px]">{c.email}</div>}
                         </td>
                         <td className="p-3">
-                          {c.membego_tier ? (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">
-                              {c.membego_tier}
-                            </span>
+                          {c.membego_customer_id ? (
+                            <button onClick={() => void openMembego(c)}
+                              className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2 py-0.5 rounded font-bold">
+                              <BadgeCheck className="w-3 h-3" />
+                              {c.membego_tier || 'Membego'}
+                            </button>
                           ) : <span className="text-slate-600">Local</span>}
                         </td>
                         <td className="p-3 text-slate-300 font-bold text-right tabular-nums">{c.total_visits}</td>
@@ -149,6 +175,18 @@ export const CustomersSupabaseView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selected && (
+        <MembegoCustomerModal
+          customerName={selected.name}
+          tier={selected.membego_tier}
+          data={membego}
+          loading={membegoLoading}
+          error={membegoError}
+          symbol={symbol}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 };

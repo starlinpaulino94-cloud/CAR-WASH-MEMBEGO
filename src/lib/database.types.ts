@@ -26,6 +26,119 @@ export type Enums = {
 export interface Database {
   public: {
     Tables: {
+      memberships: {
+        Row: {
+          id: string;
+          company_id: string;
+          customer_id: string;
+          membego_membership_id: string;
+          plan_name: string;
+          tier: string | null;
+          status: "active" | "paused" | "cancelled" | "expired";
+          is_paid: boolean;
+          valid_from: string | null;
+          valid_until: string | null;
+          raw: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          customer_id: string;
+          membego_membership_id: string;
+          plan_name?: string;
+          tier?: string | null;
+          status?: "active" | "paused" | "cancelled" | "expired";
+          is_paid?: boolean;
+          valid_from?: string | null;
+          valid_until?: string | null;
+          raw?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: "active" | "paused" | "cancelled" | "expired";
+          plan_name?: string;
+          tier?: string | null;
+          is_paid?: boolean;
+          valid_from?: string | null;
+          valid_until?: string | null;
+          raw?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      customer_promotions: {
+        Row: {
+          id: string;
+          company_id: string;
+          customer_id: string;
+          membego_promotion_id: string;
+          code: string | null;
+          title: string;
+          kind: "free" | "paid";
+          status: "available" | "redeemed" | "expired" | "cancelled";
+          value_cents: number;
+          acquired_at: string;
+          redeemed_at: string | null;
+          expires_at: string | null;
+          raw: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          customer_id: string;
+          membego_promotion_id: string;
+          code?: string | null;
+          title?: string;
+          kind?: "free" | "paid";
+          status?: "available" | "redeemed" | "expired" | "cancelled";
+          value_cents?: number;
+          acquired_at?: string;
+          redeemed_at?: string | null;
+          expires_at?: string | null;
+          raw?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          code?: string | null;
+          title?: string;
+          kind?: "free" | "paid";
+          status?: "available" | "redeemed" | "expired" | "cancelled";
+          value_cents?: number;
+          redeemed_at?: string | null;
+          expires_at?: string | null;
+          raw?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_company_links: {
+        Row: {
+          company_id: string;
+          membego_company_id: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_company_id: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          membego_company_id?: string;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       audit_logs: {
         Row: {
           id: number;
