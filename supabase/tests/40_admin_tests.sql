@@ -18,11 +18,23 @@ select test.expect_error('un importe de gasto no positivo se rechaza',
 do $$
 declare v_sess uuid; v_before bigint; v_exp public.expenses;
 begin
-  -- Reabrir caja: las pruebas de facturación la dejaron cerrada.
+  -- Reabrir caja: las pruebas de facturación la dejaron cerrada. Se deja
+  -- EXACTAMENTE una sesión abierta para b_a y se elige esa —con filtro de
+  -- sucursal y orden explícito—, no una cualquiera: sin eso, un `limit 1` sin
+  -- orden podía tomar la caja de otra sucursal y volver la prueba intermitente.
   set local role postgres;
-  update public.cash_sessions set status='open', closed_at=null, counted_cash_cents=null,
-         difference_cents=null where branch_id = test.var('b_a')::uuid;
-  select id into v_sess from public.cash_sessions where status='open' limit 1;
+  update public.cash_sessions
+     set status='closed', closed_at=coalesce(closed_at, now()),
+         counted_cash_cents=coalesce(counted_cash_cents, 0)
+   where branch_id = test.var('b_a')::uuid and status='open';
+  update public.cash_sessions
+     set status='open', closed_at=null, counted_cash_cents=null, difference_cents=null
+   where id = (select id from public.cash_sessions
+                where branch_id = test.var('b_a')::uuid
+                order by opened_at desc limit 1);
+  select id into v_sess from public.cash_sessions
+   where branch_id = test.var('b_a')::uuid and status='open'
+   order by opened_at desc limit 1;
   perform test.set_var('sess2', v_sess::text);
   select expected_cash_cents into v_before from public.cash_sessions where id = v_sess;
   perform test.set_var('cash_before_exp', v_before::text);
