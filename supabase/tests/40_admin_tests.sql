@@ -216,4 +216,59 @@ begin
     v_m::text);
 end $$;
 
+-- =============================================================== Alta de empleados
+
+-- El propietario de Alfa da de alta un cajero: el perfil queda en SU empresa y
+-- el usuario de acceso puede iniciar sesión (contraseña bcrypt + identidad).
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
+
+do $$
+declare v_p public.profiles;
+begin
+  v_p := public.create_employee('nuevo.cajero@alfa.test', 'clave-segura', 'Nuevo Cajero',
+                                 'cajero', test.var('b_a')::uuid, '809-555-0199', 500);
+  perform test.check('el propietario da de alta un empleado en su propia empresa',
+    v_p.company_id = test.var('c_a')::uuid and v_p.role = 'cajero' and v_p.is_active);
+end $$;
+
+select test.check('el empleado nuevo puede iniciar sesión (contraseña bcrypt verificable)',
+  (select encrypted_password = crypt('clave-segura', encrypted_password)
+     from auth.users where email = 'nuevo.cajero@alfa.test'));
+
+select test.check('el alta creó la identidad de correo del empleado',
+  (select count(*) = 1 from auth.identities i
+     join auth.users u on u.id = i.user_id
+    where u.email = 'nuevo.cajero@alfa.test' and i.provider = 'email'));
+
+select test.expect_error('no se puede dar de alta dos veces el mismo correo',
+  $q$select public.create_employee('nuevo.cajero@alfa.test','otra-clave','Otro','operario')$q$);
+
+-- El id de la sucursal de Beta se resuelve como postgres (saltando RLS): como
+-- owner_a no puede ver las sucursales ajenas, una subconsulta bajo RLS daría
+-- NULL y la prueba no demostraría nada.
+set role postgres;
+select test.set_var('branch_b',
+  (select id::text from public.branches where company_id = test.var('c_b')::uuid limit 1));
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
+select test.expect_error('el propietario no crea empleados en la sucursal de otra empresa',
+  format($q$select public.create_employee('cross@alfa.test','clave-segura','Cross','cajero',%L::uuid)$q$,
+    test.var('branch_b')));
+
+-- Un administrador no puede fabricar un propietario (techo de rol).
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_admin_a'), false);
+set role authenticated;
+select test.expect_error('un administrador no puede fabricar un propietario (techo de rol)',
+  $q$select public.create_employee('jefe@alfa.test','clave-segura','Jefe','propietario')$q$);
+
+-- Un cajero no puede dar de alta a nadie.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+select test.expect_error('un cajero no puede dar de alta empleados',
+  $q$select public.create_employee('x@alfa.test','clave-segura','X','operario')$q$);
+
 reset role;

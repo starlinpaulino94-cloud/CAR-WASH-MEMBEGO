@@ -1713,6 +1713,18 @@ export interface Database {
         Args: Record<string, never>;
         Returns: Json;
       };
+      create_employee: {
+        Args: {
+          p_email: string;
+          p_password: string;
+          p_full_name: string;
+          p_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
+          p_branch_id?: string;
+          p_phone?: string;
+          p_commission_bps?: number;
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
     };
     Enums: {
       bay_status: "disponible" | "ocupada" | "mantenimiento" | "limpieza";

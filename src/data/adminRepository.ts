@@ -242,11 +242,51 @@ export async function createProduct(input: {
 
 // --------------------------------------------------------------- Equipo
 
+export type UserRole = Enums['user_role'];
+export type Branch = Tables<'branches'>;
+
 export async function fetchTeam(): Promise<Profile[]> {
   const { data, error } = await requireSupabase()
     .from('profiles').select('*').order('full_name');
   if (error) throw error;
   return data ?? [];
+}
+
+export async function fetchBranches(): Promise<Branch[]> {
+  const { data, error } = await requireSupabase()
+    .from('branches').select('*').eq('is_active', true).order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Alta de empleado.
+ *
+ * Crear el usuario de acceso de otra persona no puede hacerse con seguridad
+ * desde el navegador (exigiría la service_role). Se delega en la función
+ * `create_employee` del servidor, que verifica el rol de quien llama, aplica el
+ * techo de rol y fuerza el tenant. Los mensajes de error ya vienen en claro.
+ */
+export async function createEmployee(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role: UserRole;
+  branchId?: string | null;
+  phone?: string | null;
+  commissionBps?: number | null;
+}): Promise<Profile> {
+  const { data, error } = await requireSupabase().rpc('create_employee', {
+    p_email: input.email,
+    p_password: input.password,
+    p_full_name: input.fullName,
+    p_role: input.role,
+    p_branch_id: input.branchId ?? undefined,
+    p_phone: input.phone ?? undefined,
+    p_commission_bps: input.commissionBps ?? undefined
+  });
+  if (error) throw new Error(error.message);
+  return data as unknown as Profile;
 }
 
 export interface CommissionSummary {

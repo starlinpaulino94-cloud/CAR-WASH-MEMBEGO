@@ -1,16 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Briefcase, Loader2 } from 'lucide-react';
+import { Briefcase, Loader2, Plus, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, bpsToPercent } from '../../lib/money';
 import {
-  fetchTeam, fetchCommissionSummary, Profile, CommissionSummary
+  fetchTeam, fetchCommissionSummary, fetchBranches, createEmployee,
+  Profile, CommissionSummary, Branch, UserRole
 } from '../../data/adminRepository';
 import {
-  ViewHeader, ErrorState, StatCard, FilterChips, ReadOnlyNotice
+  ViewHeader, ErrorState, StatCard, FilterChips, ReadOnlyNotice, InlineAlert
 } from '../common/DataViewShell';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
 
 type RangeId = 'month' | 'week' | 'all';
+
+const ROLE_OPTIONS: { id: UserRole; label: string }[] = [
+  { id: 'cajero', label: 'Cajero' },
+  { id: 'operario', label: 'Operario (lavador)' },
+  { id: 'recepcionista', label: 'Recepcionista' },
+  { id: 'supervisor', label: 'Supervisor' },
+  { id: 'contador', label: 'Contador' },
+  { id: 'administrador', label: 'Administrador' }
+];
+
+const emptyEmployeeForm = {
+  fullName: '', email: '', password: '', role: 'cajero' as UserRole,
+  branchId: '', phone: '', commission: ''
+};
 
 const RANGES: { id: RangeId; label: string }[] = [
   { id: 'week', label: 'Últimos 7 días' },
@@ -35,15 +51,23 @@ function bounds(id: RangeId): { from: string; to: string } {
  * nada más.
  */
 export const TeamSupabaseView: React.FC = () => {
-  const { company, profile } = useAuth();
+  const { company, branch, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const seesAll = can(profile, 'viewAllCommissions');
+  const canManageStaff = can(profile, 'manageStaff');
 
   const [range, setRange] = useState<RangeId>('month');
   const [team, setTeam] = useState<Profile[]>([]);
   const [summary, setSummary] = useState<Map<string, CommissionSummary>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(emptyEmployeeForm);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const period = useMemo(() => bounds(range), [range]);
 
@@ -65,6 +89,43 @@ export const TeamSupabaseView: React.FC = () => {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    if (canManageStaff) fetchBranches().then(setBranches).catch(() => { /* no bloquea la vista */ });
+  }, [canManageStaff]);
+
+  const openCreate = () => {
+    setForm({ ...emptyEmployeeForm, branchId: branch?.id ?? '' });
+    setCreateError(null);
+    setShowCreate(true);
+  };
+
+  const submitCreate = async () => {
+    if (!form.fullName.trim() || !form.email.trim() || !form.password) {
+      setCreateError('Nombre, correo y contraseña son obligatorios.'); return;
+    }
+    if (form.password.length < 6) { setCreateError('La contraseña debe tener al menos 6 caracteres.'); return; }
+    const commissionPct = form.commission.trim() ? Number(form.commission) : null;
+    if (commissionPct !== null && (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100)) {
+      setCreateError('La comisión debe estar entre 0 y 100 %.'); return;
+    }
+    setCreateBusy(true); setCreateError(null);
+    try {
+      const created = await createEmployee({
+        email: form.email.trim(), password: form.password, fullName: form.fullName,
+        role: form.role, branchId: form.branchId || null,
+        phone: form.phone.trim() || null,
+        commissionBps: commissionPct !== null ? Math.round(commissionPct * 100) : null
+      });
+      setShowCreate(false);
+      setNotice(`${created.full_name} dado de alta como ${created.role}. Ya puede iniciar sesión con su correo y contraseña.`);
+      await load();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo dar de alta al empleado');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
+
   const totals = useMemo(() => {
     let total = 0, unpaid = 0;
     for (const s of summary.values()) { total += s.totalCents; unpaid += s.unpaidCents; }
@@ -79,8 +140,22 @@ export const TeamSupabaseView: React.FC = () => {
         icon={<Briefcase className="w-5 h-5 text-indigo-400" />}
         title="Equipo y comisiones"
         subtitle="Personal de la sucursal y comisiones generadas al entregar"
-        actions={<FilterChips options={RANGES} value={range} onChange={setRange} />}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            <FilterChips options={RANGES} value={range} onChange={setRange} />
+            {canManageStaff && (
+              <button onClick={openCreate}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                <Plus className="w-4 h-4" /> Nuevo empleado
+              </button>
+            )}
+          </div>
+        }
       />
+
+      {notice && (
+        <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>
+      )}
 
       {!seesAll && (
         <ReadOnlyNotice>
@@ -162,6 +237,78 @@ export const TeamSupabaseView: React.FC = () => {
         Las comisiones se generan al entregar el vehículo, repartiendo cada servicio entre
         los operarios asignados con la tasa de cada uno.
       </p>
+
+      {showCreate && (
+        <FormModal
+          title="Nuevo empleado"
+          submitLabel="Dar de alta"
+          busy={createBusy}
+          error={createError}
+          onSubmit={() => void submitCreate()}
+          onClose={() => setShowCreate(false)}
+          onDismissError={() => setCreateError(null)}
+        >
+          <div className="flex items-start gap-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-[11px] text-slate-300">
+            <UserCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-indigo-400" />
+            <span>
+              Se crea el acceso del empleado (correo y contraseña) y su rol dentro de tu
+              empresa. Podrá iniciar sesión de inmediato con esos datos.
+            </span>
+          </div>
+
+          <Field label="Nombre completo *" htmlFor="emp-name">
+            <input id="emp-name" className={textInputClass} value={form.fullName} autoFocus
+              onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+              placeholder="María Pérez" />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Correo *" htmlFor="emp-email" hint="Con esto inicia sesión.">
+              <input id="emp-email" type="email" className={textInputClass} value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="maria@correo.com" />
+            </Field>
+            <Field label="Contraseña *" htmlFor="emp-pass" hint="Mínimo 6 caracteres.">
+              <input id="emp-pass" type="text" className={textInputClass} value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="clave temporal" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Rol" htmlFor="emp-role">
+              <select id="emp-role" className={textInputClass} value={form.role}
+                onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
+                {ROLE_OPTIONS.map(r => (
+                  <option key={r.id} value={r.id} className="bg-slate-900">{r.label}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Sucursal" htmlFor="emp-branch">
+              <select id="emp-branch" className={textInputClass} value={form.branchId}
+                onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}>
+                <option value="" className="bg-slate-900">Sin asignar</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Teléfono" htmlFor="emp-phone">
+              <input id="emp-phone" className={textInputClass} value={form.phone}
+                onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="809-555-0000" />
+            </Field>
+            <Field label="Comisión (%)" htmlFor="emp-com" hint="Para lavadores; opcional.">
+              <input id="emp-com" type="number" min={0} max={100} step="0.5" className={textInputClass} value={form.commission}
+                onChange={e => setForm(f => ({ ...f, commission: e.target.value }))}
+                placeholder="0" />
+            </Field>
+          </div>
+        </FormModal>
+      )}
     </div>
   );
 };
