@@ -196,6 +196,49 @@ export async function registerCashMovement(params: {
   if (error) throw error;
 }
 
+// -------------------------------------------------------- Beneficios Membego
+
+export interface MembegoBenefitSummary {
+  customerName: string;
+  tier: string | null;
+  activeMemberships: number;
+  availablePromotions: number;
+}
+
+/**
+ * Busca, por teléfono, un cliente de Membego de ESTA empresa y resume sus
+ * beneficios (membresías activas y promociones disponibles). Sirve para avisar
+ * al cajero en el mostrador. RLS acota todo a la empresa.
+ */
+export async function lookupMembegoByPhone(phone: string): Promise<MembegoBenefitSummary | null> {
+  const supabase = requireSupabase();
+  const { data: cust, error } = await supabase
+    .from('customers')
+    .select('id, name, membego_tier')
+    .eq('phone', phone.trim())
+    .not('membego_customer_id', 'is', null)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!cust) return null;
+
+  const [m, p] = await Promise.all([
+    supabase.from('memberships').select('id', { count: 'exact', head: true })
+      .eq('customer_id', cust.id).eq('status', 'active'),
+    supabase.from('customer_promotions').select('id', { count: 'exact', head: true })
+      .eq('customer_id', cust.id).eq('status', 'available')
+  ]);
+  if (m.error) throw m.error;
+  if (p.error) throw p.error;
+
+  return {
+    customerName: cust.name,
+    tier: cust.membego_tier,
+    activeMemberships: m.count ?? 0,
+    availablePromotions: p.count ?? 0
+  };
+}
+
 // -------------------------------------------------------- Estado fiscal
 
 export interface FiscalStatus {

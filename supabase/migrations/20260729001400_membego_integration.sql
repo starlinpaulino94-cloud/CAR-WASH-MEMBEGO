@@ -170,6 +170,7 @@ declare
   v_company   uuid := app.membego_company(p_membego_company_id);
   v_cliente   text := p_payload ->> 'clienteId';
   v_nombre    text := coalesce(nullif(trim(p_payload #>> '{cliente,nombre}'), ''), 'Cliente Membego');
+  v_phone     text := coalesce(p_payload #>> '{cliente,telefono}', p_payload #>> '{cliente,phone}');
   v_plan      text := p_payload #>> '{membresia,plan}';
   v_compratipo text := lower(coalesce(p_payload #>> '{compra,tipo}', ''));
   v_is_paid   boolean := v_compratipo in ('pago', 'paid', 'membresia', 'membresía');
@@ -195,11 +196,12 @@ begin
   -- Casi todos los eventos giran en torno a un cliente: se crea/enlaza en ESTA
   -- empresa. Aquí es donde el cliente "aparece" en el car wash.
   if v_cliente is not null then
-    insert into public.customers (company_id, name, membego_customer_id, membego_status)
-    values (v_company, v_nombre, v_cliente, 'active')
+    insert into public.customers (company_id, name, phone, membego_customer_id, membego_status)
+    values (v_company, v_nombre, v_phone, v_cliente, 'active')
     on conflict (company_id, membego_customer_id) where membego_customer_id is not null
       do update set
         name           = coalesce(nullif(trim(excluded.name), 'Cliente Membego'), public.customers.name),
+        phone          = coalesce(excluded.phone, public.customers.phone),
         membego_status = 'active',
         updated_at     = now()
     returning id into v_customer;
