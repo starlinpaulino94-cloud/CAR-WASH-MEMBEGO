@@ -71,15 +71,17 @@ const AppContent: React.FC = () => {
   const onSupabase = phase === 'ready';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
       <StorageAlertBanner />
       <DemoModeBanner />
       <Navbar />
 
-      <div className="flex flex-1">
+      {/* min-h-0 permite que la barra lateral y el contenido tengan CADA UNO su
+          propio scroll, en vez de arrastrarse juntos con el scroll de la página. */}
+      <div className="flex flex-1 min-h-0">
         <Sidebar />
 
-        <main className="flex-1 overflow-y-auto min-h-[calc(100vh-57px)]">
+        <main className="flex-1 overflow-y-auto min-h-0">
           <Suspense fallback={<ChunkFallback />}>
             {activeTab === 'dashboard' && (onSupabase ? <DashboardSupabaseView /> : <DashboardView />)}
             {activeTab === 'orders'    && (onSupabase ? <OrdersSupabaseView />    : <OrdersView />)}
