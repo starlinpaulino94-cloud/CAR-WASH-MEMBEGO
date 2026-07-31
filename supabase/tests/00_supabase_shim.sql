@@ -11,11 +11,35 @@ end $$;
 create schema if not exists auth;
 grant usage on schema auth to anon, authenticated, service_role;
 
+-- Modela las columnas de GoTrue que usa el alta de empleados (create_employee).
+-- En Supabase real ya existen; aquí las reproducimos para poder probar en local.
 create table auth.users (
-  id                    uuid primary key default gen_random_uuid(),
-  email                 text unique,
-  raw_user_meta_data    jsonb not null default '{}'::jsonb,
-  created_at            timestamptz not null default now()
+  instance_id            uuid default '00000000-0000-0000-0000-000000000000',
+  id                     uuid primary key default gen_random_uuid(),
+  aud                    varchar(255) default 'authenticated',
+  role                   varchar(255) default 'authenticated',
+  email                  text unique,
+  encrypted_password     varchar(255),
+  email_confirmed_at     timestamptz,
+  raw_app_meta_data      jsonb not null default '{}'::jsonb,
+  raw_user_meta_data     jsonb not null default '{}'::jsonb,
+  confirmation_token     varchar(255) default '',
+  recovery_token         varchar(255) default '',
+  email_change           varchar(255) default '',
+  email_change_token_new varchar(255) default '',
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+
+create table auth.identities (
+  provider_id     text not null,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  identity_data   jsonb not null,
+  provider        text not null,
+  last_sign_in_at timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  primary key (provider, provider_id)
 );
 
 -- En Supabase auth.uid() lee el claim `sub` del JWT. Localmente lo simulamos
