@@ -1,8 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Warehouse, Loader2, Wrench, CheckCircle2 } from 'lucide-react';
+import { Warehouse, Loader2, Wrench, CheckCircle2, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchAllBays, setBayStatus, Bay, BayStatus } from '../../data/adminRepository';
+import { can } from '../../lib/auth';
+import { fetchAllBays, setBayStatus, createBay, Bay, BayStatus, BayType } from '../../data/adminRepository';
 import { ViewHeader, ErrorState, InlineAlert } from '../common/DataViewShell';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
+
+const BAY_TYPES: { id: BayType; label: string }[] = [
+  { id: 'prelavado', label: 'Prelavado' },
+  { id: 'lavado', label: 'Lavado' },
+  { id: 'aspirado', label: 'Aspirado' },
+  { id: 'secado', label: 'Secado' },
+  { id: 'detallado', label: 'Detallado' },
+  { id: 'qc', label: 'Control de calidad' }
+];
 
 const TONE: Record<BayStatus, string> = {
   disponible:    'bg-slate-900 border-slate-800',
@@ -27,12 +38,18 @@ const BADGE: Record<BayStatus, string> = {
  * eso significaría abandonar un vehículo dentro sin cerrar su orden.
  */
 export const BaysSupabaseView: React.FC = () => {
-  const { branch } = useAuth();
+  const { company, branch, profile } = useAuth();
+  const editable = can(profile, 'manageCatalog');
   const [bays, setBays] = useState<Bay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState<{ name: string; type: BayType }>({ name: '', type: 'lavado' });
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!branch) return;
@@ -51,6 +68,23 @@ export const BaysSupabaseView: React.FC = () => {
     finally { setBusyId(null); }
   };
 
+  const openCreate = () => { setForm({ name: '', type: 'lavado' }); setCreateError(null); setShowCreate(true); };
+
+  const submitCreate = async () => {
+    if (!company || !branch) return;
+    if (!form.name.trim()) { setCreateError('El nombre de la bahía es obligatorio.'); return; }
+    setCreateBusy(true); setCreateError(null);
+    try {
+      await createBay({ companyId: company.id, branchId: branch.id, name: form.name, type: form.type });
+      setShowCreate(false);
+      await load();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear la bahía');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
+
   if (error) return <ErrorState message={error} onRetry={() => void load()} title="No se pudieron cargar las bahías" />;
 
   const free = bays.filter(b => b.status === 'disponible').length;
@@ -61,6 +95,12 @@ export const BaysSupabaseView: React.FC = () => {
         icon={<Warehouse className="w-5 h-5 text-indigo-400" />}
         title="Bahías y estaciones"
         subtitle={loading ? branch?.name : `${branch?.name} · ${free} de ${bays.length} libres`}
+        actions={editable ? (
+          <button onClick={openCreate}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            <Plus className="w-4 h-4" /> Nueva bahía
+          </button>
+        ) : undefined}
       />
 
       {actionError && <InlineAlert tone="error" onDismiss={() => setActionError(null)}>{actionError}</InlineAlert>}
@@ -121,6 +161,32 @@ export const BaysSupabaseView: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {showCreate && (
+        <FormModal
+          title="Nueva bahía"
+          submitLabel="Crear bahía"
+          busy={createBusy}
+          error={createError}
+          onSubmit={() => void submitCreate()}
+          onClose={() => setShowCreate(false)}
+          onDismissError={() => setCreateError(null)}
+        >
+          <Field label="Nombre *" htmlFor="bay-name" hint="Único dentro de la sucursal.">
+            <input id="bay-name" className={textInputClass} value={form.name} autoFocus
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="Bahía 1" />
+          </Field>
+          <Field label="Tipo de estación" htmlFor="bay-type">
+            <select id="bay-type" className={textInputClass} value={form.type}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value as BayType }))}>
+              {BAY_TYPES.map(t => (
+                <option key={t.id} value={t.id} className="bg-slate-900">{t.label}</option>
+              ))}
+            </select>
+          </Field>
+        </FormModal>
       )}
     </div>
   );

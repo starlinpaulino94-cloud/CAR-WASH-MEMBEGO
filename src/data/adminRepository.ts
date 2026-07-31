@@ -26,8 +26,17 @@ export type VehicleCategory = Enums['vehicle_category'];
 export type ExpenseCategory = Enums['expense_category'];
 export type PaymentMethod = Enums['payment_method'];
 export type BayStatus = Enums['bay_status'];
+export type BayType = Enums['bay_type'];
 
 const escape = (term: string) => term.replace(/[%,()]/g, '');
+
+// Traduce la violación de clave única (código '23505') a un mensaje accionable.
+function friendlyDuplicate(error: unknown, kind: string, field: string): Error {
+  if (error && typeof error === 'object' && (error as { code?: string }).code === '23505') {
+    return new Error(`Ya existe un ${kind} con ese ${field}.`);
+  }
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 // --------------------------------------------------------------- Clientes
 
@@ -136,6 +145,42 @@ export async function updateService(id: string, patch: Partial<Service>): Promis
   if (!data || data.length === 0) throw new Error('Su rol no permite modificar el catálogo.');
 }
 
+export async function createService(input: {
+  companyId: string;
+  code: string;
+  name: string;
+  description?: string;
+  category?: string;
+  estimatedMinutes: number;
+  commissionBps: number;
+  includedInMembego?: boolean;
+  // Precio por categoría de vehículo; solo se guardan los mayores que cero. Un
+  // servicio sin precio para una categoría no se ofrece en esa categoría.
+  prices: { category: VehicleCategory; priceCents: number }[];
+}): Promise<Service> {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase.from('services').insert({
+    company_id: input.companyId,
+    code: input.code.trim(),
+    name: input.name.trim(),
+    description: input.description?.trim() ?? '',
+    category: input.category?.trim() ?? '',
+    estimated_minutes: input.estimatedMinutes,
+    commission_bps: input.commissionBps,
+    included_in_membego: input.includedInMembego ?? false
+  }).select().single();
+  if (error) throw friendlyDuplicate(error, 'servicio', 'código');
+
+  const priceRows = input.prices
+    .filter(p => p.priceCents > 0)
+    .map(p => ({ service_id: data.id, vehicle_category: p.category, price_cents: p.priceCents }));
+  if (priceRows.length > 0) {
+    const { error: priceError } = await supabase.from('service_prices').insert(priceRows);
+    if (priceError) throw priceError;
+  }
+  return data;
+}
+
 // --------------------------------------------------------------- Productos
 
 export async function fetchProductPage(
@@ -163,6 +208,36 @@ export async function updateProduct(id: string, patch: Partial<Product>): Promis
     .from('products').update(patch).eq('id', id).select();
   if (error) throw error;
   if (!data || data.length === 0) throw new Error('Su rol no permite modificar el inventario.');
+}
+
+export async function createProduct(input: {
+  companyId: string;
+  branchId: string | null;
+  code: string;
+  name: string;
+  category?: string;
+  costCents: number;
+  priceCents: number;
+  stock: number;
+  minStock: number;
+  unit: string;
+  isForSale: boolean;
+}): Promise<Product> {
+  const { data, error } = await requireSupabase().from('products').insert({
+    company_id: input.companyId,
+    branch_id: input.branchId,
+    code: input.code.trim(),
+    name: input.name.trim(),
+    category: input.category?.trim() ?? '',
+    cost_cents: input.costCents,
+    price_cents: input.priceCents,
+    stock: input.stock,
+    min_stock: input.minStock,
+    unit: input.unit.trim() || 'Unidad',
+    is_for_sale: input.isForSale
+  }).select().single();
+  if (error) throw friendlyDuplicate(error, 'producto', 'código');
+  return data;
 }
 
 // --------------------------------------------------------------- Equipo
@@ -266,6 +341,22 @@ export async function setBayStatus(id: string, status: BayStatus): Promise<void>
     .from('bays').update({ status }).eq('id', id).select();
   if (error) throw error;
   if (!data || data.length === 0) throw new Error('No se pudo cambiar el estado de la bahía.');
+}
+
+export async function createBay(input: {
+  companyId: string;
+  branchId: string;
+  name: string;
+  type: BayType;
+}): Promise<Bay> {
+  const { data, error } = await requireSupabase().from('bays').insert({
+    company_id: input.companyId,
+    branch_id: input.branchId,
+    name: input.name.trim(),
+    type: input.type
+  }).select().single();
+  if (error) throw friendlyDuplicate(error, 'bahía', 'nombre');
+  return data;
 }
 
 // --------------------------------------------------------------- Reportes

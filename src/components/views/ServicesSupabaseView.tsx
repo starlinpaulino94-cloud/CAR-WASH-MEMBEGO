@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Layers, Loader2, Check, X, Pencil } from 'lucide-react';
+import { Layers, Loader2, Check, X, Pencil, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
 import {
-  fetchServicesWithPrices, upsertServicePrice, ServiceWithPrices, VehicleCategory
+  fetchServicesWithPrices, upsertServicePrice, createService, ServiceWithPrices, VehicleCategory
 } from '../../data/adminRepository';
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
+
+const emptyServiceForm = {
+  name: '', code: '', description: '', minutes: '30', commission: '0',
+  membego: false, prices: {} as Record<string, string>
+};
 
 const COLUMNS: { id: VehicleCategory; label: string }[] = [
   { id: 'sedan', label: 'Sedán' },
@@ -37,6 +43,11 @@ export const ServicesSupabaseView: React.FC = () => {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(emptyServiceForm);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try { setRows(await fetchServicesWithPrices()); }
@@ -45,6 +56,37 @@ export const ServicesSupabaseView: React.FC = () => {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  const openCreate = () => { setForm(emptyServiceForm); setCreateError(null); setShowCreate(true); };
+
+  const submitCreate = async () => {
+    if (!company) return;
+    if (!form.name.trim() || !form.code.trim()) { setCreateError('El nombre y el código son obligatorios.'); return; }
+    const minutes = Number(form.minutes);
+    if (!Number.isInteger(minutes) || minutes <= 0) { setCreateError('La duración debe ser un número de minutos mayor que cero.'); return; }
+    const commissionPct = Number(form.commission);
+    if (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100) { setCreateError('La comisión debe estar entre 0 y 100 %.'); return; }
+
+    const prices = COLUMNS.map(c => ({
+      category: c.id,
+      priceCents: parseAmountToCents(form.prices[c.id] ?? '') ?? 0
+    }));
+    setCreateBusy(true); setCreateError(null);
+    try {
+      await createService({
+        companyId: company.id, code: form.code, name: form.name,
+        description: form.description, estimatedMinutes: minutes,
+        commissionBps: Math.round(commissionPct * 100),
+        includedInMembego: form.membego, prices
+      });
+      setShowCreate(false); setForm(emptyServiceForm);
+      await load();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el servicio');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
 
   const startEdit = (serviceId: string, category: VehicleCategory, current?: number) => {
     if (!editable) return;
@@ -77,6 +119,12 @@ export const ServicesSupabaseView: React.FC = () => {
         icon={<Layers className="w-5 h-5 text-indigo-400" />}
         title="Servicios y matriz de precios"
         subtitle="Tarifa por categoría de vehículo y comisión por lavador"
+        actions={editable ? (
+          <button onClick={openCreate}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            <Plus className="w-4 h-4" /> Nuevo servicio
+          </button>
+        ) : undefined}
       />
 
       {!editable && (
@@ -184,6 +232,74 @@ export const ServicesSupabaseView: React.FC = () => {
         Un servicio sin precio para una categoría no se ofrece en el punto de venta ni al
         registrar la llegada: facturarlo fallaría.
       </p>
+
+      {showCreate && (
+        <FormModal
+          title="Nuevo servicio"
+          submitLabel="Crear servicio"
+          busy={createBusy}
+          error={createError}
+          onSubmit={() => void submitCreate()}
+          onClose={() => setShowCreate(false)}
+          onDismissError={() => setCreateError(null)}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nombre *" htmlFor="svc-name">
+              <input id="svc-name" className={textInputClass} value={form.name} autoFocus
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Lavado completo" />
+            </Field>
+            <Field label="Código *" htmlFor="svc-code" hint="Único en la empresa.">
+              <input id="svc-code" className={textInputClass} value={form.code}
+                onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="LAV-01" />
+            </Field>
+          </div>
+
+          <Field label="Descripción" htmlFor="svc-desc">
+            <input id="svc-desc" className={textInputClass} value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Exterior + interior + aromatizante" />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Duración (min)" htmlFor="svc-min">
+              <input id="svc-min" type="number" min={1} className={textInputClass} value={form.minutes}
+                onChange={e => setForm(f => ({ ...f, minutes: e.target.value }))} />
+            </Field>
+            <Field label="Comisión (%)" htmlFor="svc-com" hint="Del lavador, sobre el servicio.">
+              <input id="svc-com" type="number" min={0} max={100} step="0.5" className={textInputClass} value={form.commission}
+                onChange={e => setForm(f => ({ ...f, commission: e.target.value }))} />
+            </Field>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" checked={form.membego} className="accent-indigo-600"
+              onChange={e => setForm(f => ({ ...f, membego: e.target.checked }))} />
+            Incluido en el beneficio Membego
+          </label>
+
+          <div className="space-y-2 pt-1">
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+              Precio por categoría ({symbol})
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Deje en blanco las categorías que este servicio no cubre.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {COLUMNS.map(c => (
+                <div key={c.id} className="space-y-1">
+                  <label htmlFor={`svc-price-${c.id}`} className="block text-[10px] text-slate-400">{c.label}</label>
+                  <input id={`svc-price-${c.id}`} type="text" inputMode="decimal"
+                    className={textInputClass} value={form.prices[c.id] ?? ''}
+                    onChange={e => setForm(f => ({ ...f, prices: { ...f.prices, [c.id]: e.target.value } }))}
+                    placeholder="0.00" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </FormModal>
+      )}
     </div>
   );
 };
