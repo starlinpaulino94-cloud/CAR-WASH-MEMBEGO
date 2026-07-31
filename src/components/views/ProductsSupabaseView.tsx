@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { Package, Loader2, Check, X, Pencil, AlertTriangle } from 'lucide-react';
+import { Package, Loader2, Check, X, Pencil, AlertTriangle, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
-import { formatCents } from '../../lib/money';
+import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
-import { fetchProductPage, updateProduct, Product } from '../../data/adminRepository';
+import { fetchProductPage, updateProduct, createProduct, Product } from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
   InlineAlert, ReadOnlyNotice, FilterChips
 } from '../common/DataViewShell';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
 
 const PAGE_SIZE = 25;
+
+const emptyProductForm = {
+  name: '', code: '', category: '', cost: '', price: '',
+  stock: '0', minStock: '0', unit: 'Unidad', forSale: true
+};
 
 type StockFilter = 'all' | 'low';
 const STOCK_FILTERS: { id: StockFilter; label: string }[] = [
@@ -27,7 +33,7 @@ const STOCK_FILTERS: { id: StockFilter; label: string }[] = [
  * es peor que dejarlo visible en rojo para que alguien lo corrija.
  */
 export const ProductsSupabaseView: React.FC = () => {
-  const { company, profile } = useAuth();
+  const { company, branch, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const editable = can(profile, 'manageCatalog');
 
@@ -42,6 +48,39 @@ export const ProductsSupabaseView: React.FC = () => {
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState(emptyProductForm);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const openCreate = () => { setForm(emptyProductForm); setCreateError(null); setShowCreate(true); };
+
+  const submitCreate = async () => {
+    if (!company) return;
+    if (!form.name.trim() || !form.code.trim()) { setCreateError('El nombre y el código son obligatorios.'); return; }
+    const stock = Number(form.stock);
+    const minStock = Number(form.minStock);
+    if (!Number.isInteger(stock)) { setCreateError('La existencia debe ser un número entero.'); return; }
+    if (!Number.isInteger(minStock) || minStock < 0) { setCreateError('El mínimo debe ser un entero no negativo.'); return; }
+
+    setCreateBusy(true); setCreateError(null);
+    try {
+      await createProduct({
+        companyId: company.id, branchId: branch?.id ?? null,
+        code: form.code, name: form.name, category: form.category,
+        costCents: parseAmountToCents(form.cost) ?? 0,
+        priceCents: parseAmountToCents(form.price) ?? 0,
+        stock, minStock, unit: form.unit, isForSale: form.forSale
+      });
+      setShowCreate(false); setForm(emptyProductForm);
+      q.reload();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el producto');
+    } finally {
+      setCreateBusy(false);
+    }
+  };
 
   const commit = async (product: Product) => {
     if (busy) return;
@@ -70,6 +109,12 @@ export const ProductsSupabaseView: React.FC = () => {
         icon={<Package className="w-5 h-5 text-indigo-400" />}
         title="Productos e insumos"
         subtitle="Existencias, costo y precio de venta"
+        actions={editable ? (
+          <button onClick={openCreate}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            <Plus className="w-4 h-4" /> Nuevo producto
+          </button>
+        ) : undefined}
       />
 
       {!editable && <ReadOnlyNotice>Su rol permite consultar el inventario, pero no ajustarlo.</ReadOnlyNotice>}
@@ -182,6 +227,72 @@ export const ProductsSupabaseView: React.FC = () => {
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
       </div>
+
+      {showCreate && (
+        <FormModal
+          title="Nuevo producto"
+          submitLabel="Crear producto"
+          busy={createBusy}
+          error={createError}
+          onSubmit={() => void submitCreate()}
+          onClose={() => setShowCreate(false)}
+          onDismissError={() => setCreateError(null)}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nombre *" htmlFor="prod-name">
+              <input id="prod-name" className={textInputClass} value={form.name} autoFocus
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Aromatizante" />
+            </Field>
+            <Field label="Código *" htmlFor="prod-code" hint="Único en la empresa.">
+              <input id="prod-code" className={textInputClass} value={form.code}
+                onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="ARO-01" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Categoría" htmlFor="prod-cat">
+              <input id="prod-cat" className={textInputClass} value={form.category}
+                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                placeholder="Insumos" />
+            </Field>
+            <Field label="Unidad" htmlFor="prod-unit">
+              <input id="prod-unit" className={textInputClass} value={form.unit}
+                onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
+                placeholder="Unidad" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`Costo (${symbol})`} htmlFor="prod-cost">
+              <input id="prod-cost" type="text" inputMode="decimal" className={textInputClass} value={form.cost}
+                onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} placeholder="0.00" />
+            </Field>
+            <Field label={`Precio de venta (${symbol})`} htmlFor="prod-price">
+              <input id="prod-price" type="text" inputMode="decimal" className={textInputClass} value={form.price}
+                onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Existencia inicial" htmlFor="prod-stock">
+              <input id="prod-stock" type="number" className={textInputClass} value={form.stock}
+                onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} />
+            </Field>
+            <Field label="Stock mínimo" htmlFor="prod-min" hint="Avisa cuando baje de aquí.">
+              <input id="prod-min" type="number" min={0} className={textInputClass} value={form.minStock}
+                onChange={e => setForm(f => ({ ...f, minStock: e.target.value }))} />
+            </Field>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" checked={form.forSale} className="accent-indigo-600"
+              onChange={e => setForm(f => ({ ...f, forSale: e.target.checked }))} />
+            A la venta en el punto de venta (desmarque si es solo de uso interno)
+          </label>
+        </FormModal>
+      )}
     </div>
   );
 };

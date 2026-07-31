@@ -159,10 +159,12 @@ export const PosSupabaseView: React.FC = () => {
   const change = Math.max(0, effectiveTendered - preview.total);
 
   const needsCashSession = method === 'efectivo';
+  // El cobro NO depende de la facturación fiscal: sin NCF configurado se emite un
+  // recibo interno (sin comprobante fiscal). Si hay rangos NCF, se ofrece además
+  // emitir el comprobante fiscal.
   const canCheckout =
     lines.length > 0 &&
     !submitting &&
-    fiscal.ready &&
     can(profile, 'issueInvoice') &&
     (!needsCashSession || session !== null) &&
     effectiveTendered >= preview.total;
@@ -265,18 +267,18 @@ export const PosSupabaseView: React.FC = () => {
       </div>
 
       {!fiscal.ready && (
-        <div role="status" className="bg-sky-950/40 border border-sky-500/40 rounded-xl px-4 py-3 text-xs text-sky-200 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-sky-400" />
+        <div role="status" className="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 text-xs text-slate-300 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-400" />
           <span>
-            <strong>Facturación pendiente de configuración fiscal.</strong> El cobro está
-            desactivado hasta cargar los rangos de comprobantes NCF autorizados por la DGII.
-            El resto de la operación (llegadas, taller, caja) funciona con normalidad. En
-            cuanto se carguen las secuencias, el punto de venta se activa solo.
+            <strong>Modo recibo interno.</strong> Las ventas se cobran y registran con
+            normalidad (inventario y caja incluidos), pero <strong>sin comprobante fiscal
+            (NCF)</strong>. Si algún día cargas rangos NCF autorizados por la DGII, aquí
+            aparecerá la opción de emitir el comprobante fiscal.
           </span>
         </div>
       )}
 
-      {fiscal.ready && !session && (
+      {!session && (
         <div role="status" className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 text-xs text-amber-200 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
           <span>
@@ -557,12 +559,6 @@ export const PosSupabaseView: React.FC = () => {
             {!can(profile, 'issueInvoice') && (
               <p className="text-[11px] text-amber-400 text-center">
                 Su rol no permite emitir facturas.
-              </p>
-            )}
-
-            {fiscal.ready === false && (
-              <p className="text-[11px] text-sky-300 text-center">
-                Cobro desactivado hasta configurar la facturación fiscal (rangos NCF).
               </p>
             )}
           </div>

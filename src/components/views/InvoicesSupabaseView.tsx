@@ -161,13 +161,13 @@ export const InvoicesSupabaseView: React.FC = () => {
       </div>
 
       {!fiscal.ready && (
-        <div role="status" className="bg-sky-950/40 border border-sky-500/40 rounded-xl px-4 py-3 text-xs text-sky-200 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-sky-400" />
+        <div role="status" className="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-3 text-xs text-slate-300 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-400" />
           <span>
-            <strong>Facturación pendiente de configuración fiscal.</strong> Aún no hay rangos
-            de comprobantes NCF autorizados por la DGII, así que todavía no se emiten facturas.
-            Este historial se irá llenando en cuanto se carguen las secuencias y se active el
-            punto de venta.
+            <strong>Comprobantes sin NCF.</strong> La facturación fiscal (DGII) no está
+            configurada, así que las ventas se registran como <strong>recibos internos</strong>
+            {' '}sin número fiscal. El historial y la anulación funcionan igual. Si cargas
+            rangos NCF, los nuevos comprobantes podrán llevar NCF.
           </span>
         </div>
       )}

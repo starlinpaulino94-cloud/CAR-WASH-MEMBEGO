@@ -12,18 +12,15 @@ import {
   Layers,
   Package,
   DollarSign,
-  QrCode,
   BarChart3,
-  Settings,
-  ShieldCheck,
-  ChevronRight
+  Settings
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, workOrders, isMembegoOnline } = useApp();
+  const { activeTab, setActiveTab, workOrders } = useApp();
   const { phase } = useAuth();
   const { count: liveQueueCount } = useQueueCount();
 
@@ -80,12 +77,6 @@ export const Sidebar: React.FC = () => {
       ]
     },
     {
-      title: 'Fidelización',
-      items: [
-        { id: 'membego', label: 'Membego API Hub', icon: QrCode, highlight: true }
-      ]
-    },
-    {
       title: 'Analítica & Ajustes',
       items: [
         { id: 'reports', label: 'Reportes & Auditoría', icon: BarChart3 },
@@ -95,7 +86,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col flex-shrink-0 min-h-[calc(100vh-57px)]">
+    <aside className="w-64 bg-slate-900/90 border-r-2 border-slate-800 flex flex-col flex-shrink-0 h-full">
       <div className="p-3 space-y-5 overflow-y-auto flex-1">
         {menuSections.map((sec, idx) => (
           <div key={idx} className="space-y-1">
@@ -112,13 +103,11 @@ export const Sidebar: React.FC = () => {
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                      : item.highlight
-                      ? 'text-indigo-400 bg-indigo-950/40 border border-indigo-500/30 hover:bg-indigo-900/40'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-indigo-400' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge !== undefined && item.badge > 0 && (
@@ -131,19 +120,6 @@ export const Sidebar: React.FC = () => {
             })}
           </div>
         ))}
-      </div>
-
-      {/* Footer Banner */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-        <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isMembegoOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <div className="text-[11px] font-medium text-slate-300">
-              {isMembegoOnline ? 'Membego Sync On' : 'Offline Mode'}
-            </div>
-          </div>
-          <span className="text-[10px] text-slate-500 font-mono">v1.0</span>
-        </div>
       </div>
     </aside>
   );

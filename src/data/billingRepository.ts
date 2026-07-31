@@ -212,10 +212,20 @@ export interface FiscalStatus {
  * nada sensible. Fallo cerrado: sin empresa o sin rangos, `ready` es false.
  */
 export async function fetchFiscalStatus(): Promise<FiscalStatus> {
-  const { data, error } = await requireSupabase().rpc('fiscal_status');
-  if (error) throw error;
-  const parsed = (data ?? {}) as { ready?: boolean; types?: NcfType[] };
-  return { ready: parsed.ready === true, types: parsed.types ?? [] };
+  // Resiliente a propósito: si la comprobación fiscal falla (por ejemplo, la
+  // función aún no está en la base, o un fallo transitorio), NO debe tumbar la
+  // vista entera. Degradamos a "sin facturación" —el catálogo y el historial se
+  // cargan igual, con el aviso de configuración pendiente— en vez de mostrar
+  // "No se pudo cargar". El cobro se reactiva solo cuando la función responde.
+  try {
+    const { data, error } = await requireSupabase().rpc('fiscal_status');
+    if (error) throw error;
+    const parsed = (data ?? {}) as { ready?: boolean; types?: NcfType[] };
+    return { ready: parsed.ready === true, types: parsed.types ?? [] };
+  } catch (err) {
+    console.warn('fiscal_status no disponible; se asume facturación no configurada.', err);
+    return { ready: false, types: [] };
+  }
 }
 
 // ------------------------------------------------------------ Facturación

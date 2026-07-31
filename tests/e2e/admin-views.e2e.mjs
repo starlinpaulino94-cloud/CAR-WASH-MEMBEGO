@@ -137,22 +137,9 @@ await go(page, /^Empleados & Comisiones/);
 check('el cajero solo ve sus propias comisiones',
   await page.getByText(/solo permite ver sus propias comisiones/).isVisible().catch(() => false));
 
-// ======================================================= Membego
-console.log('\n[5] Integración Membego');
-await go(page, /^Membego API Hub/);
-
-check('la pantalla declara que NO consulta a Membego',
-  await page.getByText(/Esto no consulta a Membego/).isVisible().catch(() => false));
-
-const logsBefore = Number(sql('select count(*) from membego_sync_logs'));
-await page.getByRole('button', { name: /Probar/ }).click();
-await page.waitForTimeout(2500);
-
-check('el intento queda persistido en la base (antes se perdía al refrescar)',
-  Number(sql('select count(*) from membego_sync_logs')) === logsBefore + 1);
-check('el actor del registro es el usuario autenticado',
-  sql("select actor_id from membego_sync_logs order by id desc limit 1")
-    === '33333333-3333-3333-3333-333333333333');
+// El hub de Membego se retiró del menú para la operación real (sigue siendo un
+// simulador). La persistencia de membego_sync_logs se cubre en las pruebas SQL
+// (40_admin_tests.sql), no por la interfaz.
 
 await ctx.close();
 
