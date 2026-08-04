@@ -1,23 +1,18 @@
 /**
- * SSO desde Membego (función serverless de Vercel).
+ * SSO desde Membego (función de Vercel — formato Web Handler oficial).
  *
- * Membego, tras validar la sesión del empleado, lo redirige a
- *   GET /sso/membego?token=<TOKEN>
+ * Membego redirige al empleado a  GET /sso/membego?token=<TOKEN>
  * El token es `base64url(JSON) + "." + hmacSha256Hex(base64url(JSON), secreto)`
  * con payload { sub, email, rol, companyId, exp } y vence en 90 s.
  *
- * Este borde: verifica la firma (código del contrato de Membego), asegura el
- * usuario local en la empresa del token (RPC con service_role local), acuña una
- * sesión de Supabase (magic link) y redirige al panel. La service_role nunca
- * sale de aquí.
+ * Verifica la firma, asegura el usuario local en la empresa del token (RPC con
+ * service_role local), acuña una sesión de Supabase (magic link) y redirige.
  *
  * Variables (Vercel, sin VITE_): MEMBEGO_SECRETO, SUPABASE_URL,
- * SUPABASE_SERVICE_ROLE_KEY. El dominio de esta app debe estar en las Redirect
- * URLs de Supabase (Auth → URL Configuration).
+ * SUPABASE_SERVICE_ROLE_KEY. El dominio debe estar en las Redirect URLs de
+ * Supabase (Auth → URL Configuration).
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
-
-export const config = { runtime: 'nodejs' };
 
 const SECRET = process.env.MEMBEGO_SECRETO ?? '';
 const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
@@ -53,8 +48,8 @@ export function verificarTokenMembego(token: string): TokenMembego | null {
   return datos;
 }
 
-export default async function handler(req: Request): Promise<Response> {
-  const url = new URL(req.url);
+export async function GET(request: Request): Promise<Response> {
+  const url = new URL(request.url);
   const token = url.searchParams.get('token') ?? '';
   const datos = verificarTokenMembego(token);
   if (!datos) return new Response('Token de Membego inválido o vencido.', { status: 401 });
