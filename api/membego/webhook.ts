@@ -32,8 +32,9 @@ function json(body: unknown, status: number): Response {
   });
 }
 
-/** Un GET sirve para comprobar que la ruta existe: debe dar 405, no 404. */
-export function GET(): Response {
+/** Un GET sirve para comprobar que la ruta existe: debe dar 405, no 404.
+ *  Mismo formato que /api/sso/membego (async + Request), que sí despliega bien. */
+export async function GET(_request?: Request): Promise<Response> {
   return json({ error: 'method_not_allowed', hint: 'use POST' }, 405);
 }
 
