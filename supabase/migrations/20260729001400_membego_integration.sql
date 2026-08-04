@@ -233,10 +233,37 @@ begin
       set title = excluded.title, value_cents = excluded.value_cents, raw = excluded.raw, updated_at = now();
   end if;
 
-  insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
-  values (v_company, p_tipo, p_event_id, 'success', p_payload);
+  -- La bitácora es secundaria: si su tabla no está o cambia, NO debe tumbar la
+  -- ingestión ya hecha. Sub-bloque con su propio manejador para no revertir el
+  -- efecto real (cliente/membresía/promoción) por un fallo de auditoría.
+  begin
+    insert into public.membego_sync_logs (company_id, action, idempotency_key, status, request_payload)
+    values (v_company, p_tipo, p_event_id, 'success', p_payload);
+  exception when others then
+    null;  -- auditoría best-effort
+  end;
 
   return jsonb_build_object('handled', true, 'company_id', v_company, 'customer_id', v_customer, 'tipo', p_tipo);
+
+exception
+  -- Regla de Membego: 5xx SOLO si un reintento puede ayudar. Estas clases son
+  -- fallos PERMANENTES (nunca entrarán reintentando): las reportamos como
+  -- procesadas (2xx) con el detalle, para no dejar a Membego reintentando 8
+  -- veces y marcando el evento como perdido. El detalle queda para diagnóstico.
+  when unique_violation
+    or check_violation
+    or not_null_violation
+    or foreign_key_violation
+    or invalid_text_representation
+    or undefined_table
+    or undefined_column
+    or undefined_function
+    or undefined_object then
+    return jsonb_build_object(
+      'handled', false, 'reason', 'error_permanente',
+      'sqlstate', sqlstate, 'detail', left(sqlerrm, 200));
+  -- Cualquier otra cosa (deadlock, conexión, timeout) SÍ puede ser transitoria:
+  -- se propaga para que el borde devuelva 5xx y Membego reintente.
 end;
 $$;
 

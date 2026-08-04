@@ -55,5 +55,26 @@ check('GET → 405 (ruta publicada)', (await GET()).status === 405);
   check('sobre sin id/companyId → 400', res.status === 400);
 }
 
+// 4. Fallo de PostgREST (5xx) → 502 (transitorio, Membego reintenta) con detalle
+{
+  (globalThis as any).fetch = async () =>
+    new Response('boom', { status: 500 });
+  const raw = JSON.stringify({ id: 'E4', tipo: 'cliente.registrado', companyId: 'MG-A', payload: {} });
+  const res = await POST(new Request('http://x', { method: 'POST', body: raw, headers: { 'x-membego-firma': sign(raw) } }));
+  check('PostgREST 5xx → 502', res.status === 502);
+  const body = await res.json();
+  check('502 incluye detalle para diagnóstico', typeof body.detalle === 'string');
+}
+
+// 5. Excepción no controlada (fetch lanza) → 502, no un 500 opaco
+{
+  (globalThis as any).fetch = async () => { throw new Error('red caída'); };
+  const raw = JSON.stringify({ id: 'E5', tipo: 'cliente.registrado', companyId: 'MG-A', payload: {} });
+  const res = await POST(new Request('http://x', { method: 'POST', body: raw, headers: { 'x-membego-firma': sign(raw) } }));
+  check('excepción interna → 502 (no 500)', res.status === 502);
+  const body = await res.json();
+  check('502 nombra la causa', body.error === 'excepcion_no_controlada');
+}
+
 console.log(`\n  ${pass}/${pass + fail} comprobaciones del webhook`);
 if (fail) process.exit(1);
