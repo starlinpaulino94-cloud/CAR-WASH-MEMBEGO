@@ -1838,6 +1838,10 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['profiles']['Row'];
       };
+      membego_link_company: {
+        Args: { p_membego_company_id: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       bay_status: "disponible" | "ocupada" | "mantenimiento" | "limpieza";

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Loader2, Save } from 'lucide-react';
+import { Settings, Loader2, Save, BadgeCheck, Link2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
-import { updateCompany } from '../../data/adminRepository';
+import {
+  updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink
+} from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 
 /**
@@ -16,6 +18,7 @@ import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell
 export const SettingsSupabaseView: React.FC = () => {
   const { company, branch, profile, reload } = useAuth();
   const editable = can(profile, 'manageCatalog') && profile?.role === 'propietario';
+  const canManageMembego = can(profile, 'manageStaff');
 
   const [tradeName, setTradeName] = useState('');
   const [legalName, setLegalName] = useState('');
@@ -28,6 +31,13 @@ export const SettingsSupabaseView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Vínculo con Membego.
+  const [membegoLink, setMembegoLink] = useState<MembegoLink | null>(null);
+  const [membegoInput, setMembegoInput] = useState('');
+  const [membegoBusy, setMembegoBusy] = useState(false);
+  const [membegoError, setMembegoError] = useState<string | null>(null);
+  const [membegoNotice, setMembegoNotice] = useState<string | null>(null);
+
   useEffect(() => {
     if (!company) return;
     setTradeName(company.trade_name);
@@ -37,6 +47,27 @@ export const SettingsSupabaseView: React.FC = () => {
     setFooterNote(company.footer_note ?? '');
     setPrinterWidth(company.thermal_printer_width);
   }, [company]);
+
+  useEffect(() => {
+    if (!canManageMembego) return;
+    fetchMembegoLink()
+      .then(link => { setMembegoLink(link); if (link) setMembegoInput(link.membegoCompanyId); })
+      .catch(() => { /* no bloquea la vista */ });
+  }, [canManageMembego]);
+
+  const linkMembego = async () => {
+    if (!membegoInput.trim() || membegoBusy) return;
+    setMembegoBusy(true); setMembegoError(null); setMembegoNotice(null);
+    try {
+      await linkMembegoCompany(membegoInput);
+      setMembegoLink(await fetchMembegoLink());
+      setMembegoNotice('Comercio de Membego vinculado. Los eventos de esta empresa ya entran.');
+    } catch (err) {
+      setMembegoError(err instanceof Error ? err.message : 'No se pudo vincular');
+    } finally {
+      setMembegoBusy(false);
+    }
+  };
 
   const save = async () => {
     if (!company || busy) return;
@@ -145,6 +176,49 @@ export const SettingsSupabaseView: React.FC = () => {
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Guardar cambios
         </button>
+      )}
+
+      {canManageMembego && (
+        <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2 flex items-center gap-2">
+            <BadgeCheck className="w-4 h-4 text-amber-400" /> Integración Membego
+          </h3>
+
+          <div className={`flex items-center gap-2 p-3 rounded-xl border text-xs ${
+            membegoLink?.isActive
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+              : 'bg-slate-950 border-slate-800 text-slate-400'
+          }`}>
+            {membegoLink?.isActive ? <BadgeCheck className="w-4 h-4 text-emerald-400" /> : <Link2 className="w-4 h-4" />}
+            {membegoLink
+              ? <span>Vinculada al comercio <strong className="font-mono">{membegoLink.membegoCompanyId}</strong>{!membegoLink.isActive && ' (inactiva)'}.</span>
+              : <span>Todavía no vinculada. Los eventos de Membego se ignoran hasta vincular.</span>}
+          </div>
+
+          {membegoNotice && <InlineAlert tone="success" onDismiss={() => setMembegoNotice(null)}>{membegoNotice}</InlineAlert>}
+          {membegoError && <InlineAlert tone="error" onDismiss={() => setMembegoError(null)}>{membegoError}</InlineAlert>}
+
+          <div className="space-y-1">
+            <label htmlFor="s-membego" className="text-xs font-semibold text-slate-400 uppercase">
+              companyId de Membego
+            </label>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input id="s-membego" type="text" value={membegoInput} disabled={membegoBusy}
+                onChange={e => setMembegoInput(e.target.value)}
+                placeholder="ej. cmre1hz570000jp04ad5i0roi"
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white text-xs font-mono focus:outline-none focus:border-indigo-500 disabled:opacity-60" />
+              <button onClick={() => void linkMembego()} disabled={membegoBusy || !membegoInput.trim()}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2">
+                {membegoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                {membegoLink ? 'Actualizar vínculo' : 'Vincular'}
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              El <span className="font-mono">companyId</span> te lo da Membego. Vincula esta empresa para que
+              sus clientes, membresías y promociones entren solo aquí.
+            </p>
+          </div>
+        </section>
       )}
     </div>
   );
