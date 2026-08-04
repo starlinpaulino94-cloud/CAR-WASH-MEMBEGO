@@ -464,6 +464,35 @@ export async function fetchDashboardMetrics(
 
 // --------------------------------------------------------------- Ajustes
 
+// --------------------------------------------------------------- Membego
+
+export interface MembegoLink {
+  membegoCompanyId: string;
+  isActive: boolean;
+}
+
+/** Vínculo actual de esta empresa con su comercio de Membego (o null). */
+export async function fetchMembegoLink(): Promise<MembegoLink | null> {
+  const { data, error } = await requireSupabase()
+    .from('membego_company_links')
+    .select('membego_company_id, is_active')
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { membegoCompanyId: data.membego_company_id, isActive: data.is_active } : null;
+}
+
+/**
+ * Vincula el comercio de Membego a la empresa del usuario. Lo hace por RPC con la
+ * sesión del dueño (auth.uid()), no como el editor SQL: la función comprueba el
+ * rol. Reejecutar cambia el companyId.
+ */
+export async function linkMembegoCompany(membegoCompanyId: string): Promise<void> {
+  const { error } = await requireSupabase().rpc('membego_link_company', {
+    p_membego_company_id: membegoCompanyId.trim()
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function updateCompany(id: string, patch: Partial<Company>): Promise<Company> {
   const { data, error } = await requireSupabase()
     .from('companies').update(patch).eq('id', id).select();
