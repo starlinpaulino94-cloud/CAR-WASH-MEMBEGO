@@ -113,7 +113,7 @@ export const MembegoHubSupabaseView: React.FC = () => {
             {result !== null && (
               <div className="space-y-1">
                 <span className="text-slate-400">Respuesta del simulador:</span>
-                <pre className="text-emerald-400 overflow-x-auto p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] max-h-64">
+                <pre className="text-emerald-400 overflow-x-auto p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs max-h-64">
                   {JSON.stringify(result, null, 2)}
                 </pre>
               </div>
@@ -138,7 +138,7 @@ export const MembegoHubSupabaseView: React.FC = () => {
               <article key={log.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1">
                 <div className="flex justify-between items-center gap-2">
                   <span className="font-bold text-indigo-300 uppercase">{log.action}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${
                     log.status === 'success'
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : 'bg-rose-500/20 text-rose-400'
@@ -147,9 +147,9 @@ export const MembegoHubSupabaseView: React.FC = () => {
                   </span>
                 </div>
                 {log.error_message && (
-                  <p className="text-[11px] text-rose-300/90">{log.error_message}</p>
+                  <p className="text-xs text-rose-300/90">{log.error_message}</p>
                 )}
-                <div className="text-[10px] text-slate-500 flex justify-between gap-2">
+                <div className="text-xs text-slate-500 flex justify-between gap-2">
                   <span>{new Date(log.occurred_at).toLocaleString('es-DO')}</span>
                   {log.idempotency_key && <span className="font-mono truncate">{log.idempotency_key}</span>}
                 </div>

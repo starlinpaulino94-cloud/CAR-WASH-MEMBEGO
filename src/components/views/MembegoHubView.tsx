@@ -79,7 +79,7 @@ export const MembegoHubView: React.FC = () => {
             </div>
 
             {testResult && (
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 font-mono text-[11px]">
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2 font-mono text-xs">
                 <div className="text-slate-400">Respuesta de api.membego.com:</div>
                 <pre className="text-emerald-400 overflow-x-auto p-2 bg-slate-900 rounded border border-slate-800">
                   {JSON.stringify(testResult, null, 2)}
@@ -103,12 +103,12 @@ export const MembegoHubView: React.FC = () => {
                 <div key={log.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-indigo-300 uppercase">{log.action}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${log.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${log.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
                       {log.status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono">IdempotencyKey: {log.idempotencyKey}</div>
-                  <div className="text-[10px] text-slate-500">{new Date(log.timestamp).toLocaleString()}</div>
+                  <div className="text-xs text-slate-400 font-mono">IdempotencyKey: {log.idempotencyKey}</div>
+                  <div className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleString()}</div>
                 </div>
               ))
             )}

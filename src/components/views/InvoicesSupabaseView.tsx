@@ -258,12 +258,12 @@ export const InvoicesSupabaseView: React.FC = () => {
                     <td className="p-3">
                       <div className="font-bold text-indigo-300">{inv.invoice_number}</div>
                       {isCredit && (
-                        <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-bold">
                           NOTA DE CRÉDITO
                         </span>
                       )}
                       {inv.is_annulled && (
-                        <span className="text-[9px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-bold">
                           ANULADA
                         </span>
                       )}
@@ -274,10 +274,10 @@ export const InvoicesSupabaseView: React.FC = () => {
                     <td className="p-3">
                       <div className="text-white font-medium">{inv.customer_name}</div>
                       {inv.vehicle_plate && (
-                        <div className="text-[10px] text-slate-500">{inv.vehicle_plate}</div>
+                        <div className="text-xs text-slate-500">{inv.vehicle_plate}</div>
                       )}
                     </td>
-                    <td className="p-3 text-slate-300 font-mono text-[11px]">
+                    <td className="p-3 text-slate-300 font-mono text-xs">
                       {inv.ncf ?? <span className="text-slate-600">Sin NCF</span>}
                     </td>
                     <td className={`p-3 font-bold text-right whitespace-nowrap ${isCredit ? 'text-amber-400' : 'text-white'}`}>
@@ -287,7 +287,7 @@ export const InvoicesSupabaseView: React.FC = () => {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => setTicket(inv)}
-                          className="px-2 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[11px] flex items-center gap-1 font-semibold"
+                          className="px-2 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs flex items-center gap-1 font-semibold"
                         >
                           <Printer className="w-3.5 h-3.5" /> Ticket
                         </button>
@@ -296,7 +296,7 @@ export const InvoicesSupabaseView: React.FC = () => {
                             onClick={() => openAnnul(inv)}
                             disabled={!canAnnul}
                             title={canAnnul ? undefined : 'Su rol no permite anular facturas'}
-                            className="px-2 py-1.5 bg-rose-600/30 text-rose-300 hover:bg-rose-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded text-[11px] flex items-center gap-1 font-semibold border border-rose-500/30"
+                            className="px-2 py-1.5 bg-rose-600/30 text-rose-300 hover:bg-rose-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed rounded text-xs flex items-center gap-1 font-semibold border border-rose-500/30"
                           >
                             <Ban className="w-3.5 h-3.5" /> Anular
                           </button>

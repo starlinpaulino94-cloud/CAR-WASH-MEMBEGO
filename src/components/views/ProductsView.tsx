@@ -36,11 +36,11 @@ export const ProductsView: React.FC = () => {
                 <td className="p-3 font-extrabold text-white">{p.stock} {p.unit}</td>
                 <td className="p-3">
                   {p.stock <= p.minStock ? (
-                    <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-[10px]">
+                    <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs">
                       Bajo Stock
                     </span>
                   ) : (
-                    <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px]">
+                    <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">
                       Normal
                     </span>
                   )}

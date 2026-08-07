@@ -14,6 +14,7 @@ import {
   Play
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../../context/NavigationContext';
 
 export const DashboardView: React.FC = () => {
   const {
@@ -22,10 +23,10 @@ export const DashboardView: React.FC = () => {
     invoices,
     cashSession,
     setIsNuevaLlegadaOpen,
-    setActiveTab,
     setIsArchModalOpen,
     updateOrderStatus
   } = useApp();
+  const { navigate } = useNavigation();
 
   const totalInQueue = workOrders.filter(w => w.status === 'pendiente' || w.status === 'en_espera').length;
   const totalInProcess = workOrders.filter(w => w.status === 'en_proceso' || w.status === 'asignada').length;
@@ -68,7 +69,7 @@ export const DashboardView: React.FC = () => {
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-2xl font-black text-white">{totalInQueue}</div>
-          <div className="text-[11px] text-amber-400 font-medium">Llegadas sin lavar en cola</div>
+          <div className="text-xs text-amber-400 font-medium">Llegadas sin lavar en cola</div>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-2">
@@ -77,7 +78,7 @@ export const DashboardView: React.FC = () => {
             <Car className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-2xl font-black text-white">{totalInProcess}</div>
-          <div className="text-[11px] text-indigo-400 font-medium">Bahías ocupadas actualmente</div>
+          <div className="text-xs text-indigo-400 font-medium">Bahías ocupadas actualmente</div>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-2">
@@ -86,7 +87,7 @@ export const DashboardView: React.FC = () => {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-black text-white">{totalFinishedToday}</div>
-          <div className="text-[11px] text-emerald-400 font-medium">{membegoRedemptionsCount} con beneficio Membego</div>
+          <div className="text-xs text-emerald-400 font-medium">{membegoRedemptionsCount} con beneficio Membego</div>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl space-y-2">
@@ -95,7 +96,7 @@ export const DashboardView: React.FC = () => {
             <DollarSign className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-black text-white">{company.currencySymbol} {todaySales.toLocaleString()}</div>
-          <div className="text-[11px] text-slate-400 font-medium">Ticket promedio: {company.currencySymbol} {avgTicket.toLocaleString()}</div>
+          <div className="text-xs text-slate-400 font-medium">Ticket promedio: {company.currencySymbol} {avgTicket.toLocaleString()}</div>
         </div>
       </div>
 
@@ -112,7 +113,7 @@ export const DashboardView: React.FC = () => {
               <p className="text-xs text-slate-400">Cola activa de servicios en ejecución</p>
             </div>
             <button
-              onClick={() => setActiveTab('kanban')}
+              onClick={() => navigate('kanban')}
               className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1"
             >
               Ver Tablero Kanban <ArrowRight className="w-3.5 h-3.5" />
@@ -137,18 +138,18 @@ export const DashboardView: React.FC = () => {
                     <td className="py-2.5 px-3 font-bold text-indigo-300">{order.orderNumber}</td>
                     <td className="py-2.5 px-3 font-bold text-white">
                       {order.vehiclePlate}
-                      <div className="text-[10px] text-slate-400 font-normal">{order.vehicleMakeModel}</div>
+                      <div className="text-xs text-slate-400 font-normal">{order.vehicleMakeModel}</div>
                     </td>
                     <td className="py-2.5 px-3">
                       <div className="text-slate-200">{order.customerName}</div>
                       {order.membegoBenefitId && (
-                        <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 rounded font-semibold">
+                        <span className="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.2 rounded font-semibold">
                           VIP Membego
                         </span>
                       )}
                     </td>
                     <td className="py-2.5 px-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                         order.status === 'pendiente' ? 'bg-amber-500/20 text-amber-300' :
                         order.status === 'en_proceso' ? 'bg-indigo-500/20 text-indigo-300' :
                         order.status === 'listo' ? 'bg-emerald-500/20 text-emerald-300' :
@@ -164,7 +165,7 @@ export const DashboardView: React.FC = () => {
                       {order.status === 'pendiente' && (
                         <button
                           onClick={() => updateOrderStatus(order.id, 'en_proceso')}
-                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded text-[11px] transition-colors flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded text-xs transition-colors flex items-center gap-1 ml-auto"
                         >
                           <Play className="w-3 h-3" /> Iniciar
                         </button>
@@ -172,7 +173,7 @@ export const DashboardView: React.FC = () => {
                       {order.status === 'en_proceso' && (
                         <button
                           onClick={() => updateOrderStatus(order.id, 'listo')}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-[11px] transition-colors flex items-center gap-1 ml-auto"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-xs transition-colors flex items-center gap-1 ml-auto"
                         >
                           <CheckCircle2 className="w-3 h-3" /> Marcar Listo
                         </button>
@@ -205,7 +206,7 @@ export const DashboardView: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('pos')}
+              onClick={() => navigate('pos')}
               className="w-full p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-between transition-all"
             >
               <div className="flex items-center gap-2.5">
@@ -216,7 +217,7 @@ export const DashboardView: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('membego')}
+              onClick={() => navigate('membego')}
               className="w-full p-3 bg-indigo-950/40 hover:bg-indigo-900/40 border border-indigo-500/30 text-indigo-300 font-bold rounded-xl text-xs flex items-center justify-between transition-all"
             >
               <div className="flex items-center gap-2.5">
@@ -233,8 +234,8 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-emerald-400">Caja Abierta (RD$ {cashSession?.expectedCash.toLocaleString()})</span>
               <button
-                onClick={() => setActiveTab('cash')}
-                className="text-[11px] text-indigo-400 hover:underline"
+                onClick={() => navigate('cash')}
+                className="text-xs text-indigo-400 hover:underline"
               >
                 Arqueo / Cierre
               </button>

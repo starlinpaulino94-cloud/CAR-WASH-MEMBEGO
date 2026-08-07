@@ -70,10 +70,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </p>
 
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                 Detalle técnico
               </div>
-              <code className="text-[11px] text-rose-300 font-mono break-words">
+              <code className="text-xs text-rose-300 font-mono break-words">
                 {error.name}: {error.message}
               </code>
             </div>
@@ -93,7 +93,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               </button>
             </div>
 
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 leading-relaxed">
               Restablecer aparta los datos actuales bajo un nombre de respaldo en el
               almacenamiento del navegador en lugar de eliminarlos, de modo que un técnico
               todavía pueda recuperarlos.

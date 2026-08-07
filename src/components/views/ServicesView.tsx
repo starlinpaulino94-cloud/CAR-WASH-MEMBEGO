@@ -33,7 +33,7 @@ export const ServicesView: React.FC = () => {
                 <tr key={s.id} className="hover:bg-slate-800/40">
                   <td className="p-3">
                     <div className="font-bold text-white">{s.name}</div>
-                    <div className="text-[10px] text-slate-400">{s.code} • {s.category}</div>
+                    <div className="text-xs text-slate-400">{s.code} • {s.category}</div>
                   </td>
                   <td className="p-3 font-bold text-slate-200">{company.currencySymbol} {s.priceByVehicle.sedan}</td>
                   <td className="p-3 font-bold text-slate-200">{company.currencySymbol} {s.priceByVehicle.suv}</td>
@@ -42,9 +42,9 @@ export const ServicesView: React.FC = () => {
                   <td className="p-3 font-bold text-indigo-400">{s.commissionPercent}%</td>
                   <td className="p-3">
                     {s.includedInMembego ? (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded">SÍ</span>
+                      <span className="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded">SÍ</span>
                     ) : (
-                      <span className="text-[10px] text-slate-500">NO</span>
+                      <span className="text-xs text-slate-500">NO</span>
                     )}
                   </td>
                 </tr>

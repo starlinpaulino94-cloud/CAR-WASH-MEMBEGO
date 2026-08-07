@@ -162,7 +162,7 @@ export const ProductsSupabaseView: React.FC = () => {
                     <tr key={p.id} className="hover:bg-slate-800/40">
                       <td className="p-3">
                         <div className="font-bold text-white">{p.name}</div>
-                        <div className="text-[10px] text-slate-500">{p.code}</div>
+                        <div className="text-xs text-slate-500">{p.code}</div>
                       </td>
                       <td className="p-3 text-slate-400">{p.category || '—'}</td>
                       <td className="p-3 text-slate-300 text-right whitespace-nowrap">
@@ -205,15 +205,15 @@ export const ProductsSupabaseView: React.FC = () => {
                       </td>
                       <td className="p-3">
                         {p.stock < 0 ? (
-                          <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-[10px] inline-flex items-center gap-1">
+                          <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs inline-flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" /> Negativo
                           </span>
                         ) : low ? (
-                          <span className="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px]">
+                          <span className="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-xs">
                             Bajo (mín. {p.min_stock})
                           </span>
                         ) : (
-                          <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px]">
+                          <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">
                             Normal
                           </span>
                         )}

@@ -151,12 +151,12 @@ export const ExpensesSupabaseView: React.FC = () => {
                         </td>
                         <td className="p-3">
                           <div className="font-bold text-white">{e.description}</div>
-                          {e.supplier_name && <div className="text-[10px] text-slate-500">{e.supplier_name}</div>}
+                          {e.supplier_name && <div className="text-xs text-slate-500">{e.supplier_name}</div>}
                         </td>
                         <td className="p-3 text-slate-400">
                           {CATEGORY_FILTERS.find(c => c.id === e.category)?.label ?? e.category}
                         </td>
-                        <td className="p-3 text-slate-300 uppercase text-[10px]">{e.payment_method}</td>
+                        <td className="p-3 text-slate-300 uppercase text-xs">{e.payment_method}</td>
                         <td className="p-3 font-extrabold text-rose-400 text-right whitespace-nowrap">
                           −{formatCents(e.amount_cents, symbol)}
                         </td>
@@ -205,7 +205,7 @@ export const ExpensesSupabaseView: React.FC = () => {
                     <button key={m.id} onClick={() => setMethod(m.id)} disabled={busy || !allowed || blocked}
                       aria-pressed={method === m.id}
                       title={blocked ? 'Requiere caja abierta' : undefined}
-                      className={`py-1.5 rounded-lg text-[11px] font-bold border transition-all disabled:opacity-30 ${
+                      className={`py-1.5 rounded-lg text-xs font-bold border transition-all disabled:opacity-30 ${
                         method === m.id
                           ? 'bg-indigo-600 text-white border-indigo-500'
                           : 'bg-slate-950 text-slate-400 border-slate-800'
@@ -230,7 +230,7 @@ export const ExpensesSupabaseView: React.FC = () => {
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Registrar gasto
             </button>
 
-            <p className="text-[10px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Un gasto en efectivo descuenta la gaveta en la misma operación: o se registran
               las dos cosas o ninguna.
             </p>

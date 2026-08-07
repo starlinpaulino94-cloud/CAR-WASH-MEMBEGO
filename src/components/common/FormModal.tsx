@@ -68,14 +68,14 @@ export const FormModal: React.FC<{
               type="button"
               onClick={() => { if (!busy) onClose(); }}
               disabled={busy}
-              className="px-4 py-2 text-xs font-bold text-slate-300 hover:text-white disabled:opacity-40"
+              className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white disabled:opacity-40"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-white font-bold text-xs rounded-xl flex items-center gap-2"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-white font-bold text-sm rounded-xl flex items-center gap-2"
             >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando…</> : submitLabel}
             </button>
@@ -94,11 +94,11 @@ export const Field: React.FC<{
   htmlFor?: string;
 }> = ({ label, children, hint, htmlFor }) => (
   <div className="space-y-1">
-    <label htmlFor={htmlFor} className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+    <label htmlFor={htmlFor} className="block text-sm font-semibold text-slate-400 uppercase tracking-wide">
       {label}
     </label>
     {children}
-    {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+    {hint && <p className="text-sm text-slate-500">{hint}</p>}
   </div>
 );
 

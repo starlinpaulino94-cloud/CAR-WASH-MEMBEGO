@@ -294,7 +294,7 @@ export const CashSupabaseView: React.FC = () => {
               </div>
               <button
                 onClick={() => setRevealExpected(v => !v)}
-                className="text-[10px] text-slate-500 hover:text-slate-300 flex items-center gap-1"
+                className="text-xs text-slate-500 hover:text-slate-300 flex items-center gap-1"
               >
                 <EyeOff className="w-3 h-3" />
                 {revealExpected ? 'Ocultar' : 'Revelar (solo tras contar el efectivo)'}
@@ -308,7 +308,7 @@ export const CashSupabaseView: React.FC = () => {
               <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2">
                 Arqueo ciego y cierre
               </h3>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Cuente el efectivo físico y anótelo <strong>antes</strong> de revelar el esperado.
                 Esa es la razón de ser del arqueo ciego.
               </p>
@@ -328,10 +328,10 @@ export const CashSupabaseView: React.FC = () => {
 
                 {difference !== null && revealExpected && (
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Diferencia</span>
+                    <span className="text-xs text-slate-400 uppercase font-semibold">Diferencia</span>
                     <p className={`text-base font-black ${difference === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {formatCents(difference, symbol)}
-                      <span className="text-[11px] font-semibold ml-2">
+                      <span className="text-xs font-semibold ml-2">
                         {difference === 0 ? '(cuadra)' : difference > 0 ? '(sobrante)' : '(faltante)'}
                       </span>
                     </p>
@@ -367,7 +367,7 @@ export const CashSupabaseView: React.FC = () => {
                     key={t}
                     onClick={() => setMovementType(t)}
                     aria-pressed={movementType === t}
-                    className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold border transition-all flex items-center justify-center gap-1 ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1 ${
                       movementType === t
                         ? 'bg-indigo-600 text-white border-indigo-500'
                         : 'bg-slate-950 text-slate-400 border-slate-800'

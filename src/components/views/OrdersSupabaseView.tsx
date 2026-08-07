@@ -187,7 +187,7 @@ export const OrdersSupabaseView: React.FC = () => {
                   <td className="p-3 font-bold text-indigo-300 whitespace-nowrap">{order.order_number}</td>
                   <td className="p-3">
                     <div className="font-bold text-white uppercase">{order.vehicle_plate}</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs text-slate-400">
                       {order.vehicle_make_model || '—'} ({order.vehicle_category})
                     </div>
                   </td>
@@ -196,7 +196,7 @@ export const OrdersSupabaseView: React.FC = () => {
                     {new Date(order.arrival_at).toLocaleString('es-DO')}
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_TONE[order.status]}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_TONE[order.status]}`}>
                       {STATUS_LABEL[order.status]}
                     </span>
                   </td>

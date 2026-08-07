@@ -32,7 +32,7 @@ export const VehiclesView: React.FC = () => {
                 <td className="p-3 font-bold text-slate-200">{v.make} {v.model} ({v.year || ''})</td>
                 <td className="p-3 text-slate-400">{v.color}</td>
                 <td className="p-3">
-                  <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
+                  <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-xs uppercase">
                     {v.category}
                   </span>
                 </td>

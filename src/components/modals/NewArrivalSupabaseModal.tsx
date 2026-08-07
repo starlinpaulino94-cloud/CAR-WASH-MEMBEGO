@@ -258,7 +258,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                           {formatCents(s.price_cents, symbol)}
                         </span>
                       </span>
-                      <span className="block text-[11px] text-slate-500 mt-0.5">
+                      <span className="block text-xs text-slate-500 mt-0.5">
                         ~{s.estimated_minutes} min
                       </span>
                     </button>
@@ -281,7 +281,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
               <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
               <div className="space-y-1">
                 <p>{error}</p>
-                <p className="text-[10px] text-rose-300/80">
+                <p className="text-xs text-rose-300/80">
                   Puede reintentar: la llegada conserva su identificador y no se registrará dos veces.
                 </p>
               </div>

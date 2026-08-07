@@ -38,7 +38,7 @@ async function login(page, email, view) {
   await page.getByRole('button', { name: /Entrar/ }).click();
   // El nombre accesible incluye el badge de la cola cuando hay vehículos, así
   // que se busca por prefijo en lugar de coincidencia exacta.
-  const nav = page.getByRole('button', { name: view });
+  const nav = page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: view });
   await nav.waitFor({ timeout: 15000 });
   await nav.click();
   await page.waitForTimeout(1800);
@@ -50,7 +50,7 @@ const page = await ctx.newPage();
 
 // ============================================================ Registro
 console.log('\n[1] Órdenes — registrar llegada');
-await login(page, 'cajero@example.com', /^Órdenes de Servicio/);
+await login(page, 'cajero@example.com', /^Operaciones/);
 
 check('la vista arranca sin vehículos en taller',
   await page.getByText('No hay vehículos en el taller ahora mismo.').isVisible().catch(() => false));
@@ -84,7 +84,7 @@ check('la orden nace pendiente',
 
 // El badge de la cola sale de una consulta de solo-conteo contra la base.
 const sidebarBadge = async () => {
-  const txt = await page.getByRole('button', { name: /^Órdenes de Servicio/ }).innerText();
+  const txt = await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Operaciones/ }).innerText();
   return txt.replace(/[^0-9]/g, '');
 };
 check('el badge de la barra lateral refleja el dato REAL de la base',
@@ -96,7 +96,7 @@ check('la interfaz confirma el registro',
 
 // ============================================================ Kanban
 console.log('\n[2] Kanban — flujo de operación');
-await page.getByRole('button', { name: /^Fila & Cola Kanban/ }).click();
+await page.locator('nav[aria-label="Submódulos"]').getByRole('link', { name: /^Cola/ }).click();
 await page.waitForTimeout(2000);
 
 check('la tarjeta aparece en la columna de llegadas',
@@ -181,7 +181,7 @@ check('la orden quedó entregada',
 // Al entregar sale de la cola: el badge debe bajar sin recargar la página.
 await page.waitForTimeout(900);
 check('el badge baja al salir el vehículo de la cola',
-  (await page.getByRole('button', { name: /^Órdenes de Servicio/ }).innerText()).replace(/[^0-9]/g, '') === '1',
+  (await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Operaciones/ }).innerText()).replace(/[^0-9]/g, '') === '1',
   `en taller según la base: ${sql("select count(*) from work_orders where status not in ('entregado','cancelado')")}`);
 check('al entregar se generó la comisión del operario',
   sql("select count(*) from commissions") === '1');
@@ -217,7 +217,7 @@ check('la orden conserva su estado tras el intento',
 
 // ============================================================ Órdenes
 console.log('\n[4] Órdenes — filtros y paginación');
-await page.getByRole('button', { name: /^Órdenes de Servicio/ }).click();
+await page.locator('nav[aria-label="Submódulos"]').getByRole('link', { name: /^Órdenes/ }).click();
 await page.waitForTimeout(1800);
 
 check('el filtro "En taller" excluye lo entregado',

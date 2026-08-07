@@ -51,9 +51,9 @@ async function login(page, email) {
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill('clave-de-prueba');
   await page.getByRole('button', { name: /Entrar/ }).click();
-  await page.getByRole('button', { name: 'Facturas & Comprobantes', exact: true })
-    .waitFor({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Facturas & Comprobantes', exact: true }).click();
+  const modFacturacion = page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: 'Facturación' });
+  await modFacturacion.waitFor({ timeout: 15000 });
+  await modFacturacion.click();
   await page.waitForTimeout(1800);
 }
 

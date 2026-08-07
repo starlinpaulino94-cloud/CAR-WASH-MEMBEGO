@@ -240,19 +240,19 @@ export const PhaseArchitectureReportModal: React.FC<Props> = ({ isOpen, onClose 
               <div className="space-y-2 text-xs">
                 <div className="p-2.5 bg-indigo-950/40 border border-indigo-800/60 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-indigo-300">Fase 0: Descubrimiento & Arquitectura</span>
-                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px]">COMPLETADO</span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs">COMPLETADO</span>
                 </div>
                 <div className="p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-slate-200">Fase 1: Núcleo Operacional & Llegadas</span>
-                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px]">IMPLEMENTADO Y ACTIVO</span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs">IMPLEMENTADO Y ACTIVO</span>
                 </div>
                 <div className="p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-slate-200">Fase 2: POS, Caja & Facturación Térmica</span>
-                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px]">IMPLEMENTADO Y ACTIVO</span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs">IMPLEMENTADO Y ACTIVO</span>
                 </div>
                 <div className="p-2.5 bg-slate-800/40 border border-slate-700/60 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-slate-200">Fase 3: Integración Membego API & Contingencia</span>
-                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px]">IMPLEMENTADO Y ACTIVO</span>
+                  <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs">IMPLEMENTADO Y ACTIVO</span>
                 </div>
               </div>
             </div>

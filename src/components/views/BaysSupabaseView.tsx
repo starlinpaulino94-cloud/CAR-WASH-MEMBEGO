@@ -129,11 +129,11 @@ export const BaysSupabaseView: React.FC = () => {
               <article key={bay.id} className={`p-4 rounded-2xl border space-y-3 ${TONE[bay.status]}`}>
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-bold text-sm text-white">{bay.name}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${BADGE[bay.status]}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${BADGE[bay.status]}`}>
                     {bay.status}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 uppercase">{bay.type}</p>
+                <p className="text-xs text-slate-500 uppercase">{bay.type}</p>
 
                 {occupied && (
                   <p className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300">
