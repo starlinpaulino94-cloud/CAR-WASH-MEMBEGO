@@ -1,7 +1,11 @@
 import React from 'react';
-import { Building2, User, Plus, LogOut } from 'lucide-react';
+import { Building2, User, Plus, LogOut, ExternalLink } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+
+// Portal de Membego (el hub de fidelización). Se abre en pestaña nueva para no
+// perder la sesión del car wash. Si algún día cambia la URL, se ajusta aquí.
+const MEMBEGO_URL = 'https://membego.com';
 
 export const Navbar: React.FC = () => {
   const { phase, profile, company: realCompany, branch: realBranch, signOut } = useAuth();
@@ -73,6 +77,19 @@ export const Navbar: React.FC = () => {
           <Plus className="w-4 h-4" />
           <span>Nueva Llegada</span>
         </button>
+
+        {/* Acceso directo a Membego. Ámbar para que resalte y se distinga de la
+            acción principal (morada). Abre en pestaña nueva. */}
+        <a
+          href={MEMBEGO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir Membego en una pestaña nueva"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-900 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/30 transition-all transform hover:scale-[1.02]"
+        >
+          <ExternalLink className="w-4 h-4" />
+          <span>Ir a Membego</span>
+        </a>
       </div>
 
       {/* Right Controls: Identidad */}
