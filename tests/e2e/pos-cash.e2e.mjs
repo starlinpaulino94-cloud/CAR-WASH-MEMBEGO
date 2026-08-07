@@ -111,6 +111,10 @@ check('se asignó un NCF correlativo de la DGII',
 check('el cambio se calculó una sola vez',
   sql('select change_cents from invoices order by created_at desc limit 1') === '23000',
   sql('select change_cents from invoices order by created_at desc limit 1'));
+check('la venta quedó en el kardex como movimiento «venta» ligado a la factura',
+  sql(`select count(*) from inventory_movements m
+       join products p on p.id = m.product_id
+       where p.code='AR1' and m.kind='venta' and m.invoice_id is not null and m.qty_change=-2`) === '1');
 check('el inventario se descontó',
   sql("select stock from products where code='AR1'") === '8',
   `${sql("select stock from products where code='AR1'")} unidades`);

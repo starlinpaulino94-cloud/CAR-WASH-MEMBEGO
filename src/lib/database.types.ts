@@ -12,6 +12,7 @@ export type Enums = {
   cash_session_status: "open" | "closed";
   expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
   fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+  inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
   item_type: "service" | "package" | "product";
   membego_status: "active" | "inactive" | "none";
   ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";
@@ -1178,6 +1179,34 @@ export interface Database {
           },
         ];
       };
+      inventory_movements: {
+        Row: {
+          id: number;
+          company_id: string;
+          branch_id: string | null;
+          product_id: string;
+          kind: Database['public']['Enums']['inventory_movement_kind'];
+          qty_change: number;
+          qty_before: number;
+          qty_after: number;
+          reason: string | null;
+          invoice_id: string | null;
+          work_order_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       products: {
         Row: {
           id: string;
@@ -1838,6 +1867,10 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['profiles']['Row'];
       };
+      adjust_stock: {
+        Args: { p_product_id: string; p_new_qty: number; p_reason: string };
+        Returns: Database['public']['Tables']['products']['Row'];
+      };
       membego_link_company: {
         Args: { p_membego_company_id: string };
         Returns: undefined;
@@ -1851,6 +1884,7 @@ export interface Database {
       cash_session_status: "open" | "closed";
       expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
       fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+      inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
       item_type: "service" | "package" | "product";
       membego_status: "active" | "inactive" | "none";
       ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";

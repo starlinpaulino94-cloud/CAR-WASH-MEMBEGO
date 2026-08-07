@@ -237,6 +237,43 @@ export async function updateProduct(id: string, patch: Partial<Product>): Promis
   if (!data || data.length === 0) throw new Error('Su rol no permite modificar el inventario.');
 }
 
+/**
+ * Ajuste manual de existencia. La ÚNICA vía: el servidor exige motivo y rol,
+ * y deja el movimiento en el kardex y la acción en la bitácora. Editar
+ * `products.stock` directo está bloqueado por trigger desde 0019.
+ */
+export async function adjustStock(productId: string, newQty: number, reason: string): Promise<Product> {
+  const { data, error } = await requireSupabase().rpc('adjust_stock', {
+    p_product_id: productId, p_new_qty: newQty, p_reason: reason
+  });
+  if (error) throw error;
+  return data as Product;
+}
+
+export type InventoryMovement = Tables<'inventory_movements'> & {
+  products: { name: string; code: string; unit: string } | null;
+};
+export type InventoryMovementKind = Enums['inventory_movement_kind'];
+
+/** Kardex paginado. `kind` filtra por clase; la búsqueda es por producto. */
+export async function fetchInventoryMovementPage(
+  page: number, pageSize: number, search: string, kind: InventoryMovementKind | 'all'
+): Promise<PagedResult<InventoryMovement>> {
+  let query = requireSupabase()
+    .from('inventory_movements')
+    .select('*, products!inner(name, code, unit)', { count: 'exact' });
+  if (kind !== 'all') query = query.eq('kind', kind);
+  if (search.trim()) {
+    const t = escape(search.trim());
+    query = query.or(`name.ilike.%${t}%,code.ilike.%${t}%`, { referencedTable: 'products' });
+  }
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, page * pageSize + pageSize - 1);
+  if (error) throw error;
+  return { rows: (data ?? []) as InventoryMovement[], total: count ?? 0 };
+}
+
 export async function createProduct(input: {
   companyId: string;
   branchId: string | null;
