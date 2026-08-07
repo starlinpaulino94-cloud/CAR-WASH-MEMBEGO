@@ -173,16 +173,21 @@ check('el precio nuevo se guardó en centavos',
   sql(`select coalesce(price_cents::text,'(sin fila)') from service_prices
        where vehicle_category='jeep' and service_id='44444444-4444-4444-4444-444444444444'`));
 
-// --- Productos: ajustar existencia
+// --- Productos: ajustar existencia (desde 0019 exige modal con motivo)
 await go(page, /^Inventario/);
 await page.getByRole('button', { name: /Existencia de Aromatizante/ }).click();
 await page.waitForTimeout(400);
-await page.getByLabel(/Existencia de Aromatizante/).fill('42');
-await page.keyboard.press('Enter');
+await page.getByLabel(/Nueva existencia de Aromatizante/).fill('42');
+await page.getByLabel(/Motivo del ajuste/).fill('Conteo físico E2E');
+await page.getByRole('button', { name: 'Registrar ajuste' }).click();
 await page.waitForTimeout(2000);
 check('la existencia ajustada se guardó',
   sql("select stock from products where code='AR1'") === '42',
   sql("select stock from products where code='AR1'"));
+check('el ajuste quedó en el kardex con su motivo',
+  sql(`select count(*) from inventory_movements m
+       join products p on p.id = m.product_id
+       where p.code='AR1' and m.kind='ajuste' and m.reason='Conteo físico E2E'`) === '1');
 
 // --- Bahías
 await go(page, /^Operaciones/, /^Bahías/);

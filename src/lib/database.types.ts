@@ -12,6 +12,7 @@ export type Enums = {
   cash_session_status: "open" | "closed";
   expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
   fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+  inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
   item_type: "service" | "package" | "product";
   membego_status: "active" | "inactive" | "none";
   ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";
@@ -1178,6 +1179,214 @@ export interface Database {
           },
         ];
       };
+      inventory_movements: {
+        Row: {
+          id: number;
+          company_id: string;
+          branch_id: string | null;
+          product_id: string;
+          kind: Database['public']['Enums']['inventory_movement_kind'];
+          qty_change: number;
+          qty_before: number;
+          qty_after: number;
+          reason: string | null;
+          invoice_id: string | null;
+          work_order_id: string | null;
+          purchase_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      service_recipes: {
+        Row: {
+          id: string;
+          company_id: string;
+          service_id: string;
+          product_id: string;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          quantity: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          service_id: string;
+          product_id: string;
+          vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          quantity: number;
+        };
+        Update: {
+          vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_recipes_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      service_consumptions: {
+        Row: {
+          id: number;
+          company_id: string;
+          work_order_id: string;
+          service_id: string | null;
+          product_id: string;
+          quantity: number;
+          cost_cents: number;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "service_consumptions_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      suppliers: {
+        Row: {
+          id: string;
+          company_id: string;
+          name: string;
+          tax_id: string | null;
+          phone: string | null;
+          email: string | null;
+          address: string | null;
+          notes: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          name: string;
+          tax_id?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+        };
+        Update: {
+          name?: string;
+          tax_id?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+        };
+        Relationships: [];
+      };
+      purchases: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          supplier_id: string;
+          invoice_ref: string | null;
+          purchase_date: string;
+          is_credit: boolean;
+          due_date: string | null;
+          payment_method: Database['public']['Enums']['payment_method'];
+          subtotal_cents: number;
+          tax_cents: number;
+          total_cents: number;
+          paid_cents: number;
+          status: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "purchases_supplier_same_company";
+            columns: ["supplier_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "suppliers";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      purchase_items: {
+        Row: {
+          id: string;
+          purchase_id: string;
+          company_id: string;
+          product_id: string;
+          quantity: number;
+          unit_cost_cents: number;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_purchase_same_company";
+            columns: ["purchase_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "purchases";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "purchase_items_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      supplier_payments: {
+        Row: {
+          id: string;
+          company_id: string;
+          purchase_id: string;
+          amount_cents: number;
+          payment_method: Database['public']['Enums']['payment_method'];
+          reference: string | null;
+          notes: string | null;
+          cash_session_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_purchase_same_company";
+            columns: ["purchase_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "purchases";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       products: {
         Row: {
           id: string;
@@ -1190,6 +1399,7 @@ export interface Database {
           cost_cents: number;
           price_cents: number;
           stock: number;
+          stock_frac: number;
           min_stock: number;
           unit: string;
           is_for_sale: boolean;
@@ -1838,6 +2048,45 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['profiles']['Row'];
       };
+      adjust_stock: {
+        Args: { p_product_id: string; p_new_qty: number; p_reason: string };
+        Returns: Database['public']['Tables']['products']['Row'];
+      };
+      register_purchase: {
+        Args: {
+          p_supplier_id: string;
+          p_items: Json;
+          p_is_credit?: boolean;
+          p_due_date?: string | null;
+          p_payment_method?: Database['public']['Enums']['payment_method'];
+          p_invoice_ref?: string | null;
+          p_tax_cents?: number;
+          p_notes?: string | null;
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['purchases']['Row'];
+      };
+      management_report: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      service_recipe_cost: {
+        Args: {
+          p_service_id: string;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+        };
+        Returns: number;
+      };
+      pay_supplier: {
+        Args: {
+          p_purchase_id: string;
+          p_amount_cents: number;
+          p_payment_method?: Database['public']['Enums']['payment_method'];
+          p_reference?: string | null;
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['purchases']['Row'];
+      };
       membego_link_company: {
         Args: { p_membego_company_id: string };
         Returns: undefined;
@@ -1851,6 +2100,7 @@ export interface Database {
       cash_session_status: "open" | "closed";
       expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
       fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+      inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
       item_type: "service" | "package" | "product";
       membego_status: "active" | "inactive" | "none";
       ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";

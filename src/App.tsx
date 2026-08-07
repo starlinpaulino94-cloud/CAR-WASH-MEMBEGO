@@ -32,6 +32,11 @@ const ProductsSupabaseView  = lazyView(() => import('./components/views/Products
 const TeamSupabaseView      = lazyView(() => import('./components/views/TeamSupabaseView'), 'TeamSupabaseView');
 const ExpensesSupabaseView  = lazyView(() => import('./components/views/ExpensesSupabaseView'), 'ExpensesSupabaseView');
 const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsSupabaseView'), 'ReportsSupabaseView');
+const InventoryMovesView    = lazyView(() => import('./components/views/InventoryMovementsSupabaseView'), 'InventoryMovementsSupabaseView');
+const PurchasesView         = lazyView(() => import('./components/views/PurchasesSupabaseView'), 'PurchasesSupabaseView');
+const SuppliersView         = lazyView(() => import('./components/views/SuppliersSupabaseView'), 'SuppliersSupabaseView');
+const SalesReportView       = lazyView(() => import('./components/views/SalesReportSupabaseView'), 'SalesReportSupabaseView');
+const ProfitReportView      = lazyView(() => import('./components/views/ProfitReportSupabaseView'), 'ProfitReportSupabaseView');
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
 
 // --- Vistas de demostración (sin base de datos conectada)
@@ -72,8 +77,13 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   customers: { ready: <CustomersSupabaseView />, demo: <CustomersView /> },
   vehicles:  { ready: <VehiclesSupabaseView />,  demo: <VehiclesView /> },
   products:  { ready: <ProductsSupabaseView />,  demo: <ProductsView /> },
+  'inventory-moves': { ready: <InventoryMovesView />, demo: <InventoryMovesView /> },
+  purchases: { ready: <PurchasesView />, demo: <PurchasesView /> },
+  suppliers: { ready: <SuppliersView />, demo: <SuppliersView /> },
   team:      { ready: <TeamSupabaseView />,      demo: <TeamView /> },
   reports:   { ready: <ReportsSupabaseView />,   demo: <ReportsView /> },
+  'report-sales':  { ready: <SalesReportView />,  demo: <SalesReportView /> },
+  'report-margin': { ready: <ProfitReportView />, demo: <ProfitReportView /> },
   'settings-empresa':   { ready: <SettingsSupabaseView seccion="empresa" />,   demo: <SettingsView /> },
   'settings-impresion': { ready: <SettingsSupabaseView seccion="impresion" />, demo: <SettingsView /> },
   'settings-membego':   { ready: <SettingsSupabaseView seccion="membego" />,   demo: <SettingsView /> }

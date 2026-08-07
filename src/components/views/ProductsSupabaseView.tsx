@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Package, Loader2, Check, X, Pencil, AlertTriangle, Plus } from 'lucide-react';
+import { Package, Pencil, AlertTriangle, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
-import { fetchProductPage, updateProduct, createProduct, Product } from '../../data/adminRepository';
+import { fetchProductPage, adjustStock, createProduct, Product } from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
   InlineAlert, ReadOnlyNotice, FilterChips
@@ -27,10 +27,11 @@ const STOCK_FILTERS: { id: StockFilter; label: string }[] = [
 /**
  * Inventario.
  *
- * El stock se ajusta aquí a mano; las ventas lo descuentan y las anulaciones lo
- * devuelven, ambas desde el servidor. Se admite existencia negativa a
- * propósito: bloquear una venta en el mostrador por un descuadre de inventario
- * es peor que dejarlo visible en rojo para que alguien lo corrija.
+ * La existencia NO se edita a mano: desde 0019 todo cambio es un MOVIMIENTO
+ * (venta, devolución, ajuste, consumo…). El botón de la existencia abre el
+ * ajuste con motivo obligatorio, que el servidor registra en el kardex y en la
+ * bitácora. Se admite existencia negativa a propósito: bloquear una venta en
+ * el mostrador por un descuadre es peor que dejarlo visible en rojo.
  */
 export const ProductsSupabaseView: React.FC = () => {
   const { company, branch, profile } = useAuth();
@@ -44,8 +45,10 @@ export const ProductsSupabaseView: React.FC = () => {
     deps: [lowOnly]
   });
 
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
+  // Ajuste de existencia: modal con cantidad nueva y motivo (obligatorio).
+  const [adjusting, setAdjusting] = useState<Product | null>(null);
+  const [adjustQty, setAdjustQty] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -82,17 +85,28 @@ export const ProductsSupabaseView: React.FC = () => {
     }
   };
 
-  const commit = async (product: Product) => {
-    if (busy) return;
-    const value = Number(draft);
+  const openAdjust = (product: Product) => {
+    setAdjusting(product);
+    setAdjustQty(String(product.stock));
+    setAdjustReason('');
+    setActionError(null);
+  };
+
+  const submitAdjust = async () => {
+    if (!adjusting || busy) return;
+    const value = Number(adjustQty);
     if (!Number.isFinite(value) || !Number.isInteger(value)) {
       setActionError('La existencia debe ser un número entero.');
       return;
     }
+    if (adjustReason.trim().length < 5) {
+      setActionError('Explique el motivo del ajuste (mínimo 5 caracteres).');
+      return;
+    }
     setBusy(true); setActionError(null);
     try {
-      await updateProduct(product.id, { stock: value });
-      setEditing(null);
+      await adjustStock(adjusting.id, value, adjustReason.trim());
+      setAdjusting(null);
       q.reload();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'No se pudo ajustar la existencia');
@@ -157,7 +171,6 @@ export const ProductsSupabaseView: React.FC = () => {
                   </EmptyRow>
                 ) : q.rows.map(p => {
                   const low = p.stock <= p.min_stock;
-                  const isEditing = editing === p.id;
                   return (
                     <tr key={p.id} className="hover:bg-slate-800/40">
                       <td className="p-3">
@@ -172,36 +185,18 @@ export const ProductsSupabaseView: React.FC = () => {
                         {p.is_for_sale ? formatCents(p.price_cents, symbol) : 'Uso interno'}
                       </td>
                       <td className="p-3 text-right">
-                        {isEditing ? (
-                          <span className="flex items-center gap-1 justify-end">
-                            <input autoFocus type="number" value={draft} disabled={busy}
-                              onChange={e => setDraft(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') void commit(p);
-                                if (e.key === 'Escape') setEditing(null);
-                              }}
-                              aria-label={`Existencia de ${p.name}`}
-                              className="w-20 bg-slate-950 border border-indigo-500 rounded p-1 text-right text-white" />
-                            <button onClick={() => void commit(p)} disabled={busy} aria-label="Guardar"
-                              className="p-1 text-emerald-400">
-                              {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            </button>
-                            <button onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
-                              className="p-1 text-slate-500"><X className="w-3.5 h-3.5" /></button>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => { if (editable) { setEditing(p.id); setDraft(String(p.stock)); } }}
-                            disabled={!editable}
-                            aria-label={`Existencia de ${p.name}`}
-                            className={`px-2 py-1 rounded font-extrabold tabular-nums ${
-                              p.stock < 0 ? 'text-rose-400' : 'text-white'
-                            } ${editable ? 'hover:bg-slate-800' : 'cursor-default'}`}
-                          >
-                            {p.stock} {p.unit}
-                            {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => { if (editable) openAdjust(p); }}
+                          disabled={!editable}
+                          aria-label={`Existencia de ${p.name}`}
+                          title={editable ? 'Ajustar existencia (queda en el kardex)' : undefined}
+                          className={`px-2 py-1 rounded font-extrabold tabular-nums ${
+                            p.stock < 0 ? 'text-rose-400' : 'text-white'
+                          } ${editable ? 'hover:bg-slate-800' : 'cursor-default'}`}
+                        >
+                          {p.stock} {p.unit}
+                          {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
+                        </button>
                       </td>
                       <td className="p-3">
                         {p.stock < 0 ? (
@@ -227,6 +222,34 @@ export const ProductsSupabaseView: React.FC = () => {
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
       </div>
+
+      {adjusting && (
+        <FormModal
+          title={`Ajustar existencia — ${adjusting.name}`}
+          submitLabel="Registrar ajuste"
+          busy={busy}
+          error={actionError}
+          onSubmit={() => void submitAdjust()}
+          onClose={() => setAdjusting(null)}
+          onDismissError={() => setActionError(null)}
+        >
+          <p className="text-sm text-slate-400">
+            Existencia actual: <strong className="text-white tabular-nums">{adjusting.stock} {adjusting.unit}</strong>.
+            El ajuste queda registrado en el kardex con su motivo, autor y fecha.
+          </p>
+          <Field label="Nueva existencia *" htmlFor="adj-qty">
+            <input id="adj-qty" type="number" autoFocus className={textInputClass} value={adjustQty}
+              aria-label={`Nueva existencia de ${adjusting.name}`}
+              onChange={e => setAdjustQty(e.target.value)} />
+          </Field>
+          <Field label="Motivo del ajuste *" htmlFor="adj-reason"
+            hint="Ej.: conteo físico, merma, derrame, corrección de entrada.">
+            <input id="adj-reason" className={textInputClass} value={adjustReason}
+              onChange={e => setAdjustReason(e.target.value)}
+              placeholder="Conteo físico: diferencia de almacén" />
+          </Field>
+        </FormModal>
+      )}
 
       {showCreate && (
         <FormModal

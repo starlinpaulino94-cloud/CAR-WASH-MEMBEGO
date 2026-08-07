@@ -24,9 +24,9 @@ export type ViewKey =
   | 'invoices'
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles'
-  | 'products'
+  | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team'
-  | 'reports'
+  | 'reports' | 'report-sales' | 'report-margin'
   | 'settings-empresa' | 'settings-impresion' | 'settings-membego';
 
 export interface SubModule {
@@ -121,10 +121,9 @@ export const NAVIGATION: Module[] = [
     description: 'Productos, insumos y compras',
     items: [
       { slug: 'productos', label: 'Productos', view: 'products' },
-      { slug: 'compras', label: 'Compras', pronto: true,
-        hint: 'Órdenes de compra y entradas de inventario, planificado.' },
-      { slug: 'proveedores', label: 'Proveedores', pronto: true,
-        hint: 'Directorio de proveedores, planificado.' }
+      { slug: 'movimientos', label: 'Movimientos', view: 'inventory-moves' },
+      { slug: 'compras', label: 'Compras', view: 'purchases' },
+      { slug: 'proveedores', label: 'Proveedores', view: 'suppliers' }
     ]
   },
   {
@@ -142,11 +141,9 @@ export const NAVIGATION: Module[] = [
     id: 'reportes', pathId: 'reportes', label: 'Reportes', icon: BarChart3,
     description: 'Analítica y bitácora de auditoría',
     items: [
-      { slug: 'auditoria', label: 'Auditoría', view: 'reports', permission: 'viewAuditLog' },
-      { slug: 'ventas', label: 'Ventas', pronto: true,
-        hint: 'Reporte comparativo de ventas por periodo, planificado. El resumen del día vive en Inicio.' },
-      { slug: 'rentabilidad', label: 'Rentabilidad', pronto: true,
-        hint: 'Margen por servicio y por sucursal, planificado.' }
+      { slug: 'ventas', label: 'Ventas', view: 'report-sales', permission: 'viewAuditLog' },
+      { slug: 'rentabilidad', label: 'Rentabilidad', view: 'report-margin', permission: 'viewAuditLog' },
+      { slug: 'auditoria', label: 'Auditoría', view: 'reports', permission: 'viewAuditLog' }
     ]
   },
   {
