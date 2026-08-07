@@ -1208,6 +1208,62 @@ export interface Database {
           },
         ];
       };
+      service_recipes: {
+        Row: {
+          id: string;
+          company_id: string;
+          service_id: string;
+          product_id: string;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          quantity: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          service_id: string;
+          product_id: string;
+          vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          quantity: number;
+        };
+        Update: {
+          vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "service_recipes_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      service_consumptions: {
+        Row: {
+          id: number;
+          company_id: string;
+          work_order_id: string;
+          service_id: string | null;
+          product_id: string;
+          quantity: number;
+          cost_cents: number;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "service_consumptions_product_same_company";
+            columns: ["product_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       suppliers: {
         Row: {
           id: string;
@@ -1343,6 +1399,7 @@ export interface Database {
           cost_cents: number;
           price_cents: number;
           stock: number;
+          stock_frac: number;
           min_stock: number;
           unit: string;
           is_for_sale: boolean;
@@ -2008,6 +2065,13 @@ export interface Database {
           p_cash_session_id?: string | null;
         };
         Returns: Database['public']['Tables']['purchases']['Row'];
+      };
+      service_recipe_cost: {
+        Args: {
+          p_service_id: string;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+        };
+        Returns: number;
       };
       pay_supplier: {
         Args: {

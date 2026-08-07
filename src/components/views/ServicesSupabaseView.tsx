@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Layers, Loader2, Check, X, Pencil, Plus } from 'lucide-react';
+import { Layers, Loader2, Check, X, Pencil, Plus, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
@@ -8,6 +8,7 @@ import {
 } from '../../data/adminRepository';
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { RecipeModal } from '../modals/RecipeModal';
 
 const emptyServiceForm = {
   name: '', code: '', description: '', minutes: '30', commission: '0',
@@ -34,6 +35,7 @@ export const ServicesSupabaseView: React.FC = () => {
   const { company, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const editable = can(profile, 'manageCatalog');
+  const [recipeFor, setRecipeFor] = useState<{ id: string; name: string } | null>(null);
 
   const [rows, setRows] = useState<ServiceWithPrices[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,20 +154,21 @@ export const ServicesSupabaseView: React.FC = () => {
                   </th>
                 ))}
                 <th scope="col" className="p-3 font-semibold text-right">COMISIÓN</th>
+                <th scope="col" className="p-3 font-semibold text-right">RECETA</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} aria-hidden="true">
-                    <td colSpan={COLUMNS.length + 2} className="p-3">
+                    <td colSpan={COLUMNS.length + 3} className="p-3">
                       <div className="h-5 bg-slate-800/60 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={COLUMNS.length + 2} className="p-10 text-center text-slate-500 italic">
+                  <td colSpan={COLUMNS.length + 3} className="p-10 text-center text-slate-500 italic">
                     Todavía no hay servicios en el catálogo.
                   </td>
                 </tr>
@@ -221,6 +224,15 @@ export const ServicesSupabaseView: React.FC = () => {
                     );
                   })}
                   <td className="p-3 font-bold text-indigo-400 text-right">{bpsToPercent(s.commission_bps)}</td>
+                  <td className="p-3 text-right">
+                    <button
+                      onClick={() => setRecipeFor({ id: s.id, name: s.name })}
+                      aria-label={`Receta de ${s.name}`}
+                      title="Insumos que consume este servicio"
+                      className="p-1.5 text-purple-400 hover:text-purple-300 rounded-lg hover:bg-slate-800">
+                      <FlaskConical className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -232,6 +244,11 @@ export const ServicesSupabaseView: React.FC = () => {
         Un servicio sin precio para una categoría no se ofrece en el punto de venta ni al
         registrar la llegada: facturarlo fallaría.
       </p>
+
+      {recipeFor && (
+        <RecipeModal serviceId={recipeFor.id} serviceName={recipeFor.name}
+          onClose={() => setRecipeFor(null)} />
+      )}
 
       {showCreate && (
         <FormModal

@@ -230,7 +230,7 @@ export async function fetchProductPage(
   return { rows, total: count ?? 0 };
 }
 
-export async function updateProduct(id: string, patch: Partial<Product>): Promise<void> {
+export async function updateProduct(id: string, patch: Omit<Partial<Product>, 'stock' | 'stock_frac'>): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('products').update(patch).eq('id', id).select();
   if (error) throw error;
@@ -254,6 +254,52 @@ export type InventoryMovement = Tables<'inventory_movements'> & {
   products: { name: string; code: string; unit: string } | null;
 };
 export type InventoryMovementKind = Enums['inventory_movement_kind'];
+
+// ------------------------------------------------------------------- Recetas
+
+export type ServiceRecipe = Tables<'service_recipes'> & {
+  products: { name: string; code: string; unit: string; cost_cents: number } | null;
+};
+
+export async function fetchServiceRecipes(serviceId: string): Promise<ServiceRecipe[]> {
+  const { data, error } = await requireSupabase()
+    .from('service_recipes')
+    .select('*, products!service_recipes_product_same_company(name, code, unit, cost_cents)')
+    .eq('service_id', serviceId)
+    .order('created_at');
+  if (error) throw error;
+  return (data ?? []) as ServiceRecipe[];
+}
+
+export async function addRecipeLine(input: {
+  companyId: string; serviceId: string; productId: string;
+  vehicleCategory: VehicleCategory | null; quantity: number;
+}): Promise<void> {
+  const { error } = await requireSupabase().from('service_recipes').insert({
+    company_id: input.companyId,
+    service_id: input.serviceId,
+    product_id: input.productId,
+    vehicle_category: input.vehicleCategory,
+    quantity: input.quantity
+  });
+  if (error) throw friendlyDuplicate(error, 'renglón de receta', 'insumo y categoría');
+}
+
+export async function deleteRecipeLine(id: string): Promise<void> {
+  const { error } = await requireSupabase().from('service_recipes').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Costo estimado de ejecutar el servicio hoy (recetas × último costo). */
+export async function fetchRecipeCost(
+  serviceId: string, category: VehicleCategory | null = null
+): Promise<number> {
+  const { data, error } = await requireSupabase().rpc('service_recipe_cost', {
+    p_service_id: serviceId, p_vehicle_category: category
+  });
+  if (error) throw error;
+  return (data as number) ?? 0;
+}
 
 // ------------------------------------------------------ Proveedores y compras
 
