@@ -131,4 +131,28 @@ set role postgres;
 select test.check('SSO: el empleado queda con acceso (contraseña presente)',
   (select encrypted_password is not null from auth.users where email = 'gerente@alfa.test'));
 
+-- ---- SSO SALIENTE (car wash → Membego): el borde pide identidad para firmar.
+-- El dueño de Alfa (empresa vinculada a MG-A) recibe su companyId de Membego.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
+select test.check('SSO saliente: devuelve el companyId de Membego de la empresa del usuario',
+  (public.membego_sso_saliente() ->> 'companyId') = 'MG-A');
+select test.check('SSO saliente: incluye el correo (respaldo que Membego acepta)',
+  (public.membego_sso_saliente() ->> 'email') is not null);
+
+-- El empleado que entró por SSO trae su sub de Membego (el preferido).
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('sso_uid'), false);
+set role authenticated;
+select test.check('SSO saliente: el empleado llegado por SSO conserva su sub de Membego',
+  (public.membego_sso_saliente() ->> 'sub') = 'mg-sub-1');
+
+-- El dueño de Beta (empresa NO vinculada) no puede: sin companyId no hay pase.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_owner_b'), false);
+set role authenticated;
+select test.expect_error('SSO saliente: empresa no vinculada no obtiene pase',
+  $q$select public.membego_sso_saliente()$q$);
+
 reset role;

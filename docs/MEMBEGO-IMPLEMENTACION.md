@@ -80,3 +80,36 @@ wash del sistema hace su propio `membego_link_company` con su `companyId`.
 
 > El acuñado de la sesión (magic link admin) solo se puede probar contra Supabase
 > real: al desplegar, hagan una prueba de humo abriendo el SSO desde Membego.
+
+## ✅ Hecho — SSO saliente (botón "Ir a Membego")
+
+El inverso del anterior: el usuario ya logueado en el car wash entra **logueado**
+a su cuenta de Membego con un clic (botón ámbar en la barra superior).
+
+- **Botón** (`src/components/layout/Navbar.tsx`): con sesión, pide un pase a
+  `POST /api/ir-a-membego` (con el `access_token` del usuario) y abre la URL que
+  devuelve en pestaña nueva. Sin sesión o si algo falla, abre `membego.com`.
+- **Borde** (`api/ir-a-membego.ts`): resuelve la identidad llamando a
+  `membego_sso_saliente` **con el token del propio usuario** (no service_role),
+  firma un pase corto (HMAC-SHA256, 90 s, no-JWT) con el secreto compartido y
+  arma la URL de entrada de Membego.
+- **Contrato de entrada de Membego:**
+  `GET https://membego.com/sso/entrar?sistema=<slug>&token=<base64url(JSON).hmacHex>`
+  con payload `{ sub?, email, companyId, exp }`. El `sub` va cuando el usuario
+  entró alguna vez por el SSO de Membego (0015 lo guarda en `raw_user_meta_data`);
+  el dueño creado por bootstrap va por `email` (Membego lo acepta como suficiente).
+- **RPC** `membego_sso_saliente()` (migración 0016 / parche
+  `supabase/membego_0017_sso_saliente.sql`): devuelve `{ email, companyId, sub }`
+  del usuario autenticado; rechaza si su empresa no está vinculada.
+- Verificado: 17 pruebas unitarias del borde + 4 SQL de la RPC.
+
+### Para que el SSO saliente funcione en producción
+
+1. Corre `supabase/membego_0017_sso_saliente.sql` en el editor SQL de Supabase.
+2. En **Vercel**, agrega (sin `VITE_`): `MEMBEGO_SISTEMA_SLUG` = el slug que
+   Membego confirme para tu sistema (el mismo de tus webhooks). Opcional:
+   `MEMBEGO_SSO_ENTRADA_URL` (por defecto `https://membego.com/sso/entrar`).
+   `MEMBEGO_SECRETO` y `SUPABASE_URL` ya deben estar. Redeploy.
+
+> Hasta que exista `MEMBEGO_SISTEMA_SLUG`, el borde responde 503 y el botón
+> cae a `membego.com` (nunca queda muerto).
