@@ -35,6 +35,9 @@ const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsS
 const InventoryMovesView    = lazyView(() => import('./components/views/InventoryMovementsSupabaseView'), 'InventoryMovementsSupabaseView');
 const PurchasesView         = lazyView(() => import('./components/views/PurchasesSupabaseView'), 'PurchasesSupabaseView');
 const SuppliersView         = lazyView(() => import('./components/views/SuppliersSupabaseView'), 'SuppliersSupabaseView');
+const ClaimsView            = lazyView(() => import('./components/views/ClaimsSupabaseView'), 'ClaimsSupabaseView');
+const AppointmentsView      = lazyView(() => import('./components/views/AppointmentsSupabaseView'), 'AppointmentsSupabaseView');
+const EquipmentView         = lazyView(() => import('./components/views/EquipmentSupabaseView'), 'EquipmentSupabaseView');
 const QualityView           = lazyView(() => import('./components/views/QualitySupabaseView'), 'QualitySupabaseView');
 const SalesReportView       = lazyView(() => import('./components/views/SalesReportSupabaseView'), 'SalesReportSupabaseView');
 const ProfitReportView      = lazyView(() => import('./components/views/ProfitReportSupabaseView'), 'ProfitReportSupabaseView');
@@ -71,6 +74,9 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   kanban:    { ready: <KanbanSupabaseView />,    demo: <KanbanView /> },
   bays:      { ready: <BaysSupabaseView />,      demo: <BaysView /> },
   quality:   { ready: <QualityView />,           demo: <QualityView /> },
+  equipment: { ready: <EquipmentView />,         demo: <EquipmentView /> },
+  appointments: { ready: <AppointmentsView />,   demo: <AppointmentsView /> },
+  claims:    { ready: <ClaimsView />,            demo: <ClaimsView /> },
   pos:       { ready: <PosSupabaseView />,       demo: <PosView /> },
   services:  { ready: <ServicesSupabaseView />,  demo: <ServicesView /> },
   invoices:  { ready: <InvoicesSupabaseView />,  demo: <InvoicesView /> },

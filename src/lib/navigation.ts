@@ -19,11 +19,11 @@ import { can, Permission, Profile } from './auth';
 
 /** Claves de vista: identifican un componente registrado en App.tsx. */
 export type ViewKey =
-  | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality'
+  | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
   | 'pos' | 'services'
   | 'invoices'
   | 'cash' | 'expenses'
-  | 'customers' | 'vehicles'
+  | 'customers' | 'vehicles' | 'claims'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team'
   | 'reports' | 'report-sales' | 'report-margin'
@@ -71,9 +71,11 @@ export const NAVIGATION: Module[] = [
     queueBadge: true,
     items: [
       { slug: 'ordenes', label: 'Órdenes', view: 'orders', queueBadge: true },
+      { slug: 'agenda', label: 'Agenda', view: 'appointments' },
       { slug: 'cola', label: 'Cola', view: 'kanban' },
       { slug: 'bahias', label: 'Bahías', view: 'bays' },
-      { slug: 'calidad', label: 'Calidad', view: 'quality' }
+      { slug: 'calidad', label: 'Calidad', view: 'quality' },
+      { slug: 'equipos', label: 'Equipos', view: 'equipment' }
     ]
   },
   {
@@ -111,6 +113,7 @@ export const NAVIGATION: Module[] = [
     items: [
       { slug: 'directorio', label: 'Clientes', view: 'customers' },
       { slug: 'vehiculos', label: 'Vehículos', view: 'vehicles' },
+      { slug: 'reclamos', label: 'Reclamos', view: 'claims' },
       { slug: 'cuentas', label: 'Por cobrar', pronto: true,
         hint: 'Cuentas por cobrar de flotillas y clientes a crédito, planificado.' }
     ]

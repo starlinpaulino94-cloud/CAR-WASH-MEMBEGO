@@ -198,7 +198,8 @@ check('marcar una bahía fuera de servicio se refleja en la base',
   sql("select status from bays where name='Bahía 1'"));
 
 // --- Reportes
-await go(page, /^Reportes/);
+// Auditoría es la tercera pestaña de Reportes (Ventas y Rentabilidad van antes).
+await go(page, /^Reportes/, /^Auditoría/);
 check('el propietario sí ve la bitácora de auditoría',
   await page.getByText('Bitácora de auditoría').isVisible().catch(() => false));
 check('la bitácora está paginada y muestra eventos reales',
