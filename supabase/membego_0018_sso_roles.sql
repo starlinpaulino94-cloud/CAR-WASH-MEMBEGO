@@ -1,16 +1,10 @@
 -- =============================================================================
--- 0015 · SSO de empleados desde Membego
+-- 0018 · PARCHE (editor SQL Supabase) · SSO de entrada: rol no reconocido → 403
 -- =============================================================================
--- Membego redirige al empleado a /sso/membego con un token firmado (HMAC, vence
--- en 90 s). La función serverless verifica la firma (en el borde) y llama a esta
--- función con la service_role para asegurar el usuario local y su perfil en la
--- empresa del token, con el rol mapeado. Luego el borde acuña la sesión de
--- Supabase (magic link) y redirige al panel.
---
--- Roles Membego → roles del car wash:
---   ADMIN_EMPRESA → administrador   GERENTE   → supervisor
---   RECEPCION     → recepcionista   EMPLEADO  → operario
---   SUPERADMIN    → superadmin      (otro)    → operario
+-- Ejecuta este script COMPLETO en el editor SQL de Supabase (Production).
+-- Idempotente (create or replace). Arregla el 500 con roles de plataforma:
+--   · SUPERADMIN  -> superadmin (rol máximo, acotado al tenant)
+--   · rol NO reconocido -> se rechaza limpio (el borde responde 403, no 500)
 -- =============================================================================
 
 create or replace function public.membego_sso_upsert_user(

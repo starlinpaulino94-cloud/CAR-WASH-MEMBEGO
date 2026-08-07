@@ -113,8 +113,11 @@ set role service_role;
 select test.set_var('sso_uid',  public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE')::text);
 select test.set_var('sso_uid1', public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE')::text);
 select test.set_var('sso_uid3', public.membego_sso_upsert_user('MG-A', 'mg-sub-2', 'adminemp@alfa.test', 'ADMIN_EMPRESA')::text);
+select test.set_var('sso_uid4', public.membego_sso_upsert_user('MG-A', 'mg-sub-3', 'plataforma@alfa.test', 'SUPERADMIN')::text);
 select test.expect_error('SSO rechaza una empresa de Membego no vinculada',
   $q$select public.membego_sso_upsert_user('MG-DESCONOCIDA','s','x@y.com','EMPLEADO')$q$);
+select test.expect_error('SSO rechaza un rol de Membego no reconocido (403 limpio, no 500)',
+  $q$select public.membego_sso_upsert_user('MG-A','s2','otro@alfa.test','ROL_DE_PLATAFORMA_NUEVO')$q$);
 
 set role postgres;
 select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
@@ -126,6 +129,9 @@ select test.check('SSO repetido reutiliza el mismo usuario (enlace por correo)',
   test.var('sso_uid') = test.var('sso_uid1'));
 select test.check('SSO: ADMIN_EMPRESA se mapea a administrador',
   (select role = 'administrador' from public.profiles where id = test.var('sso_uid3')::uuid));
+select test.check('SSO: SUPERADMIN se mapea a superadmin (admin máximo, acotado al tenant)',
+  (select role = 'superadmin' and company_id = test.var('c_a')::uuid
+     from public.profiles where id = test.var('sso_uid4')::uuid));
 
 set role postgres;
 select test.check('SSO: el empleado queda con acceso (contraseña presente)',
