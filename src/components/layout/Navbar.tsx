@@ -18,12 +18,20 @@ export const Navbar: React.FC = () => {
   const irAMembego = async () => {
     if (yendoMembego) return;
     // Abrir la pestaña YA, dentro del gesto del clic, para no toparse con el
-    // bloqueo de pop-ups tras el await. Luego se le fija el destino.
-    const tab = window.open('', '_blank', 'noopener,noreferrer');
-    if (!authenticated || !supabase) {
-      if (tab) tab.location.href = MEMBEGO_URL;
-      return;
-    }
+    // bloqueo de pop-ups tras el await. OJO: NO usar 'noopener' aquí — con esa
+    // opción el navegador devuelve null y la pestaña se queda en blanco. Abrimos
+    // con handle y luego anulamos el opener a mano (misma protección).
+    const tab = window.open('about:blank', '_blank');
+    const irA = (destino: string) => {
+      if (tab && !tab.closed) {
+        try { (tab as { opener: unknown }).opener = null; } catch { /* no crítico */ }
+        tab.location.href = destino;
+      } else {
+        // El navegador bloqueó la pestaña: navegamos en la actual como respaldo.
+        window.location.href = destino;
+      }
+    };
+    if (!authenticated || !supabase) { irA(MEMBEGO_URL); return; }
     setYendoMembego(true);
     try {
       const { data } = await supabase.auth.getSession();
@@ -34,10 +42,9 @@ export const Navbar: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const body = (await res.json().catch(() => ({}))) as { url?: string };
-      const destino = res.ok && body.url ? body.url : MEMBEGO_URL;
-      if (tab) tab.location.href = destino; else window.open(destino, '_blank', 'noopener,noreferrer');
+      irA(res.ok && body.url ? body.url : MEMBEGO_URL);
     } catch {
-      if (tab) tab.location.href = MEMBEGO_URL; else window.open(MEMBEGO_URL, '_blank', 'noopener,noreferrer');
+      irA(MEMBEGO_URL);
     } finally {
       setYendoMembego(false);
     }
