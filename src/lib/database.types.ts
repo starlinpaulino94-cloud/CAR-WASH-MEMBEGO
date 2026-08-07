@@ -2066,6 +2066,10 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['purchases']['Row'];
       };
+      management_report: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
       service_recipe_cost: {
         Args: {
           p_service_id: string;

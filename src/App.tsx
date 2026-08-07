@@ -35,6 +35,8 @@ const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsS
 const InventoryMovesView    = lazyView(() => import('./components/views/InventoryMovementsSupabaseView'), 'InventoryMovementsSupabaseView');
 const PurchasesView         = lazyView(() => import('./components/views/PurchasesSupabaseView'), 'PurchasesSupabaseView');
 const SuppliersView         = lazyView(() => import('./components/views/SuppliersSupabaseView'), 'SuppliersSupabaseView');
+const SalesReportView       = lazyView(() => import('./components/views/SalesReportSupabaseView'), 'SalesReportSupabaseView');
+const ProfitReportView      = lazyView(() => import('./components/views/ProfitReportSupabaseView'), 'ProfitReportSupabaseView');
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
 
 // --- Vistas de demostración (sin base de datos conectada)
@@ -80,6 +82,8 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   suppliers: { ready: <SuppliersView />, demo: <SuppliersView /> },
   team:      { ready: <TeamSupabaseView />,      demo: <TeamView /> },
   reports:   { ready: <ReportsSupabaseView />,   demo: <ReportsView /> },
+  'report-sales':  { ready: <SalesReportView />,  demo: <SalesReportView /> },
+  'report-margin': { ready: <ProfitReportView />, demo: <ProfitReportView /> },
   'settings-empresa':   { ready: <SettingsSupabaseView seccion="empresa" />,   demo: <SettingsView /> },
   'settings-impresion': { ready: <SettingsSupabaseView seccion="impresion" />, demo: <SettingsView /> },
   'settings-membego':   { ready: <SettingsSupabaseView seccion="membego" />,   demo: <SettingsView /> }

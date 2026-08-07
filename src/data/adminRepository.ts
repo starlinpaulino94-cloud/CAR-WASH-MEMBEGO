@@ -255,6 +255,39 @@ export type InventoryMovement = Tables<'inventory_movements'> & {
 };
 export type InventoryMovementKind = Enums['inventory_movement_kind'];
 
+// ---------------------------------------------------------- Reporte gerencial
+
+export interface ManagementReport {
+  from: string;
+  to: string;
+  sales: {
+    total_cents: number; invoice_count: number;
+    annulled_cents: number; annulled_count: number; avg_ticket_cents: number;
+  };
+  by_method: { method: PaymentMethod; amount_cents: number }[];
+  by_service: { service_id: string | null; name: string; qty: number; sales_cents: number }[];
+  by_product: { product_id: string | null; name: string; qty: number; sales_cents: number }[];
+  by_employee: { profile_id: string | null; name: string; invoice_count: number; sales_cents: number }[];
+  expenses: { category: ExpenseCategory; amount_cents: number }[];
+  expenses_total_cents: number;
+  purchases_total_cents: number;
+  payables_cents: number;
+  consumption_cents: number;
+  service_margin: {
+    service_id: string | null; name: string;
+    sales_cents: number; consumption_cents: number; margin_cents: number;
+  }[];
+  gross_profit_cents: number;
+}
+
+export async function fetchManagementReport(from: string, to: string): Promise<ManagementReport> {
+  const { data, error } = await requireSupabase().rpc('management_report', {
+    p_from: from, p_to: to
+  });
+  if (error) throw error;
+  return data as unknown as ManagementReport;
+}
+
 // ------------------------------------------------------------------- Recetas
 
 export type ServiceRecipe = Tables<'service_recipes'> & {
