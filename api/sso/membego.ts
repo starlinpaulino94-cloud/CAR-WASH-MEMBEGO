@@ -49,37 +49,66 @@ export function verificarTokenMembego(token: string): TokenMembego | null {
 }
 
 export async function GET(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const token = url.searchParams.get('token') ?? '';
-  const datos = verificarTokenMembego(token);
-  if (!datos) return new Response('Token de Membego inválido o vencido.', { status: 401 });
+  // Todo envuelto: un throw no controlado (p. ej. SUPABASE_URL vacío → fetch con
+  // URL relativa lanza) se vería como un 500 opaco de la plataforma. Aquí lo
+  // convertimos en una respuesta con causa visible para diagnóstico.
+  try {
+    // Config faltante → 503 nombrando la variable (sin esto el fetch lanza 500).
+    const faltan: string[] = [];
+    if (!SUPABASE_URL) faltan.push('SUPABASE_URL');
+    if (!SERVICE_ROLE) faltan.push('SUPABASE_SERVICE_ROLE_KEY');
+    if (!SECRET) faltan.push('MEMBEGO_SECRETO');
+    if (faltan.length) {
+      return new Response(`Configuración incompleta del SSO: falta ${faltan.join(', ')}.`, { status: 503 });
+    }
 
-  // 1) Asegurar el usuario local y su perfil en la empresa del token.
-  const upsert = await fetch(`${SUPABASE_URL}/rest/v1/rpc/membego_sso_upsert_user`, {
-    method: 'POST',
-    headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      p_membego_company_id: String(datos.companyId),
-      p_sub: String(datos.sub),
-      p_email: String(datos.email),
-      p_rol: String(datos.rol),
-    }),
-  });
-  if (!upsert.ok) return new Response('No se pudo preparar la cuenta del empleado.', { status: 502 });
+    const url = new URL(request.url);
+    const token = url.searchParams.get('token') ?? '';
+    const datos = verificarTokenMembego(token);
+    if (!datos) return new Response('Token de Membego inválido o vencido.', { status: 401 });
 
-  // 2) Acuñar la sesión de Supabase con un enlace mágico y redirigir el navegador.
-  const gen = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
-    method: 'POST',
-    headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'magiclink', email: String(datos.email), options: { redirect_to: `${url.origin}/` } }),
-  });
-  if (!gen.ok) return new Response('No se pudo iniciar la sesión.', { status: 502 });
+    // 1) Asegurar el usuario local y su perfil en la empresa del token.
+    const upsert = await fetch(`${SUPABASE_URL}/rest/v1/rpc/membego_sso_upsert_user`, {
+      method: 'POST',
+      headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_membego_company_id: String(datos.companyId),
+        p_sub: String(datos.sub),
+        p_email: String(datos.email),
+        p_rol: String(datos.rol),
+      }),
+    });
+    if (!upsert.ok) {
+      // 4xx = rechazo PERMANENTE (empresa no vinculada, rol no reconocido, correo
+      // inválido): 403 limpio con el motivo — NO un 500, y sin reintento. 5xx =
+      // posible fallo transitorio → 502.
+      const detalle = await upsert.text().catch(() => '');
+      const permanente = upsert.status >= 400 && upsert.status < 500;
+      return new Response(
+        permanente
+          ? `No se pudo abrir la sesión: ${detalle || 'rol o empresa no admitidos'}.`
+          : 'No se pudo preparar la cuenta del empleado.',
+        { status: permanente ? 403 : 502 }
+      );
+    }
 
-  const link = await gen.json().catch(() => ({} as Record<string, unknown>));
-  const dest =
-    (link as { action_link?: string }).action_link ??
-    (link as { properties?: { action_link?: string } }).properties?.action_link;
-  if (!dest) return new Response('El proveedor no devolvió un enlace de sesión.', { status: 502 });
+    // 2) Acuñar la sesión de Supabase con un enlace mágico y redirigir el navegador.
+    const gen = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+      method: 'POST',
+      headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'magiclink', email: String(datos.email), options: { redirect_to: `${url.origin}/` } }),
+    });
+    if (!gen.ok) return new Response('No se pudo iniciar la sesión.', { status: 502 });
 
-  return new Response(null, { status: 302, headers: { Location: dest } });
+    const link = await gen.json().catch(() => ({} as Record<string, unknown>));
+    const dest =
+      (link as { action_link?: string }).action_link ??
+      (link as { properties?: { action_link?: string } }).properties?.action_link;
+    if (!dest) return new Response('El proveedor no devolvió un enlace de sesión.', { status: 502 });
+
+    return new Response(null, { status: 302, headers: { Location: dest } });
+  } catch (err) {
+    const detalle = err instanceof Error ? err.message : String(err);
+    return new Response(`Error interno del SSO: ${detalle}`, { status: 502 });
+  }
 }
