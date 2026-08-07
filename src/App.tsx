@@ -33,6 +33,8 @@ const TeamSupabaseView      = lazyView(() => import('./components/views/TeamSupa
 const ExpensesSupabaseView  = lazyView(() => import('./components/views/ExpensesSupabaseView'), 'ExpensesSupabaseView');
 const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsSupabaseView'), 'ReportsSupabaseView');
 const InventoryMovesView    = lazyView(() => import('./components/views/InventoryMovementsSupabaseView'), 'InventoryMovementsSupabaseView');
+const PurchasesView         = lazyView(() => import('./components/views/PurchasesSupabaseView'), 'PurchasesSupabaseView');
+const SuppliersView         = lazyView(() => import('./components/views/SuppliersSupabaseView'), 'SuppliersSupabaseView');
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
 
 // --- Vistas de demostración (sin base de datos conectada)
@@ -74,6 +76,8 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   vehicles:  { ready: <VehiclesSupabaseView />,  demo: <VehiclesView /> },
   products:  { ready: <ProductsSupabaseView />,  demo: <ProductsView /> },
   'inventory-moves': { ready: <InventoryMovesView />, demo: <InventoryMovesView /> },
+  purchases: { ready: <PurchasesView />, demo: <PurchasesView /> },
+  suppliers: { ready: <SuppliersView />, demo: <SuppliersView /> },
   team:      { ready: <TeamSupabaseView />,      demo: <TeamView /> },
   reports:   { ready: <ReportsSupabaseView />,   demo: <ReportsView /> },
   'settings-empresa':   { ready: <SettingsSupabaseView seccion="empresa" />,   demo: <SettingsView /> },

@@ -255,6 +255,137 @@ export type InventoryMovement = Tables<'inventory_movements'> & {
 };
 export type InventoryMovementKind = Enums['inventory_movement_kind'];
 
+// ------------------------------------------------------ Proveedores y compras
+
+export type Supplier = Tables<'suppliers'>;
+export type Purchase = Tables<'purchases'> & {
+  suppliers: { name: string } | null;
+};
+
+export async function fetchSupplierPage(
+  page: number, pageSize: number, search: string
+): Promise<PagedResult<Supplier>> {
+  let query = requireSupabase().from('suppliers').select('*', { count: 'exact' });
+  if (search.trim()) {
+    const t = escape(search.trim());
+    query = query.or(`name.ilike.%${t}%,phone.ilike.%${t}%,tax_id.ilike.%${t}%`);
+  }
+  const { data, error, count } = await query
+    .order('name')
+    .range(page * pageSize, page * pageSize + pageSize - 1);
+  if (error) throw error;
+  return { rows: data ?? [], total: count ?? 0 };
+}
+
+export async function createSupplier(input: {
+  companyId: string; name: string; taxId?: string; phone?: string; email?: string; notes?: string;
+}): Promise<Supplier> {
+  const { data, error } = await requireSupabase().from('suppliers').insert({
+    company_id: input.companyId,
+    name: input.name.trim(),
+    tax_id: input.taxId?.trim() || null,
+    phone: input.phone?.trim() || null,
+    email: input.email?.trim() || null,
+    notes: input.notes?.trim() || null
+  }).select().single();
+  if (error) throw friendlyDuplicate(error, 'proveedor', 'nombre');
+  return data;
+}
+
+export async function updateSupplier(id: string, patch: {
+  name?: string; tax_id?: string | null; phone?: string | null;
+  email?: string | null; address?: string | null; notes?: string | null; is_active?: boolean;
+}): Promise<void> {
+  const { data, error } = await requireSupabase()
+    .from('suppliers').update(patch).eq('id', id).select();
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Su rol no permite administrar proveedores.');
+}
+
+/** Proveedores activos para el selector de la compra (sin paginar, acotado). */
+export async function fetchActiveSuppliers(): Promise<Supplier[]> {
+  const { data, error } = await requireSupabase()
+    .from('suppliers').select('*').eq('is_active', true).order('name').limit(200);
+  if (error) throw error;
+  return data ?? [];
+}
+
+type PendingFilter = 'all' | 'pending';
+
+export async function fetchPurchasePage(
+  page: number, pageSize: number, search: string, pending: PendingFilter
+): Promise<PagedResult<Purchase>> {
+  let query = requireSupabase()
+    .from('purchases')
+    .select('*, suppliers!purchases_supplier_same_company(name)', { count: 'exact' })
+    .eq('status', 'recibida');
+  if (pending === 'pending') {
+    // Cuentas por pagar: saldo > 0. PostgREST no compara columnas entre sí:
+    // se acota a crédito en el servidor y el saldo se filtra sobre la página
+    // (el contado nace saldado, así que el universo correcto es el crédito).
+    query = query.eq('is_credit', true);
+  }
+  if (search.trim()) {
+    const t = escape(search.trim());
+    query = query.or(`name.ilike.%${t}%`, { referencedTable: 'suppliers' });
+  }
+  const { data, error, count } = await query
+    .order('purchase_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, page * pageSize + pageSize - 1);
+  if (error) throw error;
+  const rows = (data ?? []) as Purchase[];
+  return {
+    rows: pending === 'pending' ? rows.filter(p => p.paid_cents < p.total_cents) : rows,
+    total: count ?? 0
+  };
+}
+
+export interface PurchaseItemInput {
+  productId: string;
+  quantity: number;
+  unitCostCents: number;
+}
+
+export async function registerPurchase(input: {
+  supplierId: string;
+  items: PurchaseItemInput[];
+  isCredit: boolean;
+  dueDate?: string | null;
+  paymentMethod: PaymentMethod;
+  invoiceRef?: string;
+  taxCents?: number;
+  notes?: string;
+  cashSessionId?: string | null;
+}): Promise<Tables<'purchases'>> {
+  const { data, error } = await requireSupabase().rpc('register_purchase', {
+    p_supplier_id: input.supplierId,
+    p_items: input.items as unknown as Json,
+    p_is_credit: input.isCredit,
+    p_due_date: input.dueDate ?? null,
+    p_payment_method: input.paymentMethod,
+    p_invoice_ref: input.invoiceRef ?? null,
+    p_tax_cents: input.taxCents ?? 0,
+    p_notes: input.notes ?? null,
+    p_cash_session_id: input.cashSessionId ?? null
+  });
+  if (error) throw error;
+  return data as Tables<'purchases'>;
+}
+
+export async function paySupplier(input: {
+  purchaseId: string; amountCents: number; paymentMethod: PaymentMethod; reference?: string;
+}): Promise<Tables<'purchases'>> {
+  const { data, error } = await requireSupabase().rpc('pay_supplier', {
+    p_purchase_id: input.purchaseId,
+    p_amount_cents: input.amountCents,
+    p_payment_method: input.paymentMethod,
+    p_reference: input.reference ?? null
+  });
+  if (error) throw error;
+  return data as Tables<'purchases'>;
+}
+
 /** Kardex paginado. `kind` filtra por clase; la búsqueda es por producto. */
 export async function fetchInventoryMovementPage(
   page: number, pageSize: number, search: string, kind: InventoryMovementKind | 'all'

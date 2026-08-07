@@ -24,7 +24,7 @@ export type ViewKey =
   | 'invoices'
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles'
-  | 'products' | 'inventory-moves'
+  | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team'
   | 'reports'
   | 'settings-empresa' | 'settings-impresion' | 'settings-membego';
@@ -122,10 +122,8 @@ export const NAVIGATION: Module[] = [
     items: [
       { slug: 'productos', label: 'Productos', view: 'products' },
       { slug: 'movimientos', label: 'Movimientos', view: 'inventory-moves' },
-      { slug: 'compras', label: 'Compras', pronto: true,
-        hint: 'Órdenes de compra y entradas de inventario, planificado.' },
-      { slug: 'proveedores', label: 'Proveedores', pronto: true,
-        hint: 'Directorio de proveedores, planificado.' }
+      { slug: 'compras', label: 'Compras', view: 'purchases' },
+      { slug: 'proveedores', label: 'Proveedores', view: 'suppliers' }
     ]
   },
   {

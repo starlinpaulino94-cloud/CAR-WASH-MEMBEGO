@@ -17,8 +17,10 @@ export const FormModal: React.FC<{
   onSubmit: () => void;
   onClose: () => void;
   onDismissError?: () => void;
+  /** Diálogo ancho para formularios con renglones (compras, recetas). */
+  wide?: boolean;
   children: React.ReactNode;
-}> = ({ title, submitLabel, busy = false, error, onSubmit, onClose, onDismissError, children }) => {
+}> = ({ title, submitLabel, busy = false, error, onSubmit, onClose, onDismissError, wide = false, children }) => {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +42,7 @@ export const FormModal: React.FC<{
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none"
+        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none`}
       >
         <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
           <h2 id={titleId} className="font-bold text-white text-sm">{title}</h2>
