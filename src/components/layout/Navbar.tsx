@@ -1,15 +1,47 @@
-import React from 'react';
-import { Building2, User, Plus, LogOut, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, User, Plus, LogOut, ExternalLink, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
-// Portal de Membego (el hub de fidelización). Se abre en pestaña nueva para no
-// perder la sesión del car wash. Si algún día cambia la URL, se ajusta aquí.
+// Portal de Membego (el hub de fidelización). Respaldo si el SSO no está
+// disponible (sesión demo, config pendiente, etc.).
 const MEMBEGO_URL = 'https://membego.com';
 
 export const Navbar: React.FC = () => {
   const { phase, profile, company: realCompany, branch: realBranch, signOut } = useAuth();
   const authenticated = phase === 'ready';
+
+  // "Ir a Membego": con sesión real pide un pase de SSO y aterriza al usuario
+  // logueado en Membego. Sin sesión (o si algo falla), abre membego.com.
+  const [yendoMembego, setYendoMembego] = useState(false);
+  const irAMembego = async () => {
+    if (yendoMembego) return;
+    // Abrir la pestaña YA, dentro del gesto del clic, para no toparse con el
+    // bloqueo de pop-ups tras el await. Luego se le fija el destino.
+    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    if (!authenticated || !supabase) {
+      if (tab) tab.location.href = MEMBEGO_URL;
+      return;
+    }
+    setYendoMembego(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('sin token');
+      const res = await fetch('/api/ir-a-membego', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as { url?: string };
+      const destino = res.ok && body.url ? body.url : MEMBEGO_URL;
+      if (tab) tab.location.href = destino; else window.open(destino, '_blank', 'noopener,noreferrer');
+    } catch {
+      if (tab) tab.location.href = MEMBEGO_URL; else window.open(MEMBEGO_URL, '_blank', 'noopener,noreferrer');
+    } finally {
+      setYendoMembego(false);
+    }
+  };
 
   const {
     company,
@@ -79,17 +111,16 @@ export const Navbar: React.FC = () => {
         </button>
 
         {/* Acceso directo a Membego. Ámbar para que resalte y se distinga de la
-            acción principal (morada). Abre en pestaña nueva. */}
-        <a
-          href={MEMBEGO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Abrir Membego en una pestaña nueva"
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-900 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/30 transition-all transform hover:scale-[1.02]"
+            acción principal (morada). Con sesión, entra logueado vía SSO. */}
+        <button
+          onClick={() => void irAMembego()}
+          disabled={yendoMembego}
+          title="Entrar a Membego (tu cuenta) en una pestaña nueva"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-70 text-slate-900 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/30 transition-all transform hover:scale-[1.02]"
         >
-          <ExternalLink className="w-4 h-4" />
+          {yendoMembego ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
           <span>Ir a Membego</span>
-        </a>
+        </button>
       </div>
 
       {/* Right Controls: Identidad */}
