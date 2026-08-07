@@ -19,7 +19,7 @@ import { can, Permission, Profile } from './auth';
 
 /** Claves de vista: identifican un componente registrado en App.tsx. */
 export type ViewKey =
-  | 'dashboard' | 'orders' | 'kanban' | 'bays'
+  | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality'
   | 'pos' | 'services'
   | 'invoices'
   | 'cash' | 'expenses'
@@ -73,8 +73,7 @@ export const NAVIGATION: Module[] = [
       { slug: 'ordenes', label: 'Órdenes', view: 'orders', queueBadge: true },
       { slug: 'cola', label: 'Cola', view: 'kanban' },
       { slug: 'bahias', label: 'Bahías', view: 'bays' },
-      { slug: 'calidad', label: 'Calidad', pronto: true,
-        hint: 'El control de calidad opera hoy como etapa dentro de la Cola.' }
+      { slug: 'calidad', label: 'Calidad', view: 'quality' }
     ]
   },
   {
