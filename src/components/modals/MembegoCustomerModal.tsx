@@ -55,7 +55,7 @@ export const MembegoCustomerModal: React.FC<{
             <h2 id={titleId} className="font-bold text-white text-sm flex items-center gap-2">
               <BadgeCheck className="w-4 h-4 text-amber-400" /> Beneficios Membego
             </h2>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-xs text-slate-400">
               {customerName}{tier && <> · <span className="text-amber-300 font-semibold">{tier}</span></>}
             </p>
           </div>
@@ -85,16 +85,16 @@ export const MembegoCustomerModal: React.FC<{
 
           {!loading && !error && (data?.memberships.length ?? 0) > 0 && (
             <section className="space-y-2">
-              <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Membresías</h3>
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Membresías</h3>
               {data!.memberships.map(m => (
                 <div key={m.id} className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-white text-sm">{m.plan_name || 'Membresía'}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${MEMBERSHIP_TONE[m.status] ?? 'bg-slate-700 text-slate-300'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${MEMBERSHIP_TONE[m.status] ?? 'bg-slate-700 text-slate-300'}`}>
                       {m.status}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
                     {m.tier && <span>Nivel {m.tier}</span>}
                     <span>{m.is_paid ? 'De pago' : 'Gratuita'}</span>
                     {m.valid_until && <span>Vence {new Date(m.valid_until).toLocaleDateString('es-DO')}</span>}
@@ -106,18 +106,18 @@ export const MembegoCustomerModal: React.FC<{
 
           {!loading && !error && (data?.promotions.length ?? 0) > 0 && (
             <section className="space-y-2">
-              <h3 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Gift className="w-3.5 h-3.5" /> Promociones y ofertas
               </h3>
               {data!.promotions.map(p => (
                 <div key={p.id} className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-white text-sm">{p.title || 'Oferta'}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${PROMO_TONE[p.status] ?? 'bg-slate-700 text-slate-300'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${PROMO_TONE[p.status] ?? 'bg-slate-700 text-slate-300'}`}>
                       {p.status}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-400">
                     <span className={p.kind === 'paid' ? 'text-indigo-300' : 'text-emerald-300'}>
                       {p.kind === 'paid' ? 'De pago' : 'Gratis'}
                     </span>

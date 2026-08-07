@@ -1,17 +1,20 @@
 import React, { Suspense, lazy } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { QueueCountProvider } from './context/QueueCountContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginView, UnprovisionedView } from './components/auth/LoginView';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
+import { ModulePage } from './components/layout/ModulePage';
 import { StorageAlertBanner } from './components/layout/StorageAlertBanner';
 import { NuevaLlegadaModal } from './components/modals/NuevaLlegadaModal';
+import type { ViewKey } from './lib/navigation';
 
 // Todas las vistas se cargan bajo demanda. Antes se importaban las 16 de forma
 // estática y viajaban íntegras en el bundle inicial (hallazgo H5).
-const lazyView = <K extends string>(loader: () => Promise<Record<string, React.ComponentType>>, key: K) =>
+const lazyView = <K extends string>(loader: () => Promise<Record<string, React.ComponentType<Record<string, unknown>>>>, key: K) =>
   lazy(() => loader().then(m => ({ default: m[key] })));
 
 // --- Vistas migradas a Supabase
@@ -28,7 +31,6 @@ const ServicesSupabaseView  = lazyView(() => import('./components/views/Services
 const ProductsSupabaseView  = lazyView(() => import('./components/views/ProductsSupabaseView'), 'ProductsSupabaseView');
 const TeamSupabaseView      = lazyView(() => import('./components/views/TeamSupabaseView'), 'TeamSupabaseView');
 const ExpensesSupabaseView  = lazyView(() => import('./components/views/ExpensesSupabaseView'), 'ExpensesSupabaseView');
-const MembegoHubSupabaseView= lazyView(() => import('./components/views/MembegoHubSupabaseView'), 'MembegoHubSupabaseView');
 const ReportsSupabaseView   = lazyView(() => import('./components/views/ReportsSupabaseView'), 'ReportsSupabaseView');
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
 
@@ -46,12 +48,36 @@ const ServicesView  = lazyView(() => import('./components/views/ServicesView'), 
 const ProductsView  = lazyView(() => import('./components/views/ProductsView'), 'ProductsView');
 const TeamView      = lazyView(() => import('./components/views/TeamView'), 'TeamView');
 const ExpensesView  = lazyView(() => import('./components/views/ExpensesView'), 'ExpensesView');
-const MembegoHubView= lazyView(() => import('./components/views/MembegoHubView'), 'MembegoHubView');
 const ReportsView   = lazyView(() => import('./components/views/ReportsView'), 'ReportsView');
 const SettingsView  = lazyView(() => import('./components/views/SettingsView'), 'SettingsView');
 
 const PhaseArchitectureReportModal = lazy(() =>
   import('./components/modals/PhaseArchitectureReportModal').then(m => ({ default: m.PhaseArchitectureReportModal })));
+
+/**
+ * Registro de vistas: clave de navegación → componente real y de demo.
+ * La arquitectura de información (módulos/submódulos) vive en
+ * lib/navigation.ts; aquí solo se resuelve QUÉ componente pinta cada clave.
+ */
+const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.ReactElement }> = {
+  dashboard: { ready: <DashboardSupabaseView />, demo: <DashboardView /> },
+  orders:    { ready: <OrdersSupabaseView />,    demo: <OrdersView /> },
+  kanban:    { ready: <KanbanSupabaseView />,    demo: <KanbanView /> },
+  bays:      { ready: <BaysSupabaseView />,      demo: <BaysView /> },
+  pos:       { ready: <PosSupabaseView />,       demo: <PosView /> },
+  services:  { ready: <ServicesSupabaseView />,  demo: <ServicesView /> },
+  invoices:  { ready: <InvoicesSupabaseView />,  demo: <InvoicesView /> },
+  cash:      { ready: <CashSupabaseView />,      demo: <CashView /> },
+  expenses:  { ready: <ExpensesSupabaseView />,  demo: <ExpensesView /> },
+  customers: { ready: <CustomersSupabaseView />, demo: <CustomersView /> },
+  vehicles:  { ready: <VehiclesSupabaseView />,  demo: <VehiclesView /> },
+  products:  { ready: <ProductsSupabaseView />,  demo: <ProductsView /> },
+  team:      { ready: <TeamSupabaseView />,      demo: <TeamView /> },
+  reports:   { ready: <ReportsSupabaseView />,   demo: <ReportsView /> },
+  'settings-empresa':   { ready: <SettingsSupabaseView seccion="empresa" />,   demo: <SettingsView /> },
+  'settings-impresion': { ready: <SettingsSupabaseView seccion="impresion" />, demo: <SettingsView /> },
+  'settings-membego':   { ready: <SettingsSupabaseView seccion="membego" />,   demo: <SettingsView /> }
+};
 
 /** Marcador mientras llega un fragmento cargado bajo demanda. */
 const ChunkFallback: React.FC = () => (
@@ -61,14 +87,17 @@ const ChunkFallback: React.FC = () => (
   </div>
 );
 
-const AppContent: React.FC = () => {
-  const { activeTab, isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
+/** Resuelve el submódulo activo a su vista (real o demo). */
+const ActiveView: React.FC = () => {
+  const { sub } = useNavigation();
   const { phase } = useAuth();
+  if (!sub.view) return null; // los "pronto" los pinta ModulePage
+  const entry = VIEW_REGISTRY[sub.view];
+  return phase === 'ready' ? entry.ready : entry.demo;
+};
 
-  // Las 16 vistas están migradas: con Supabase conectado usan la base de datos
-  // real; sin configurar, la aplicación sigue funcionando en modo demostración
-  // sobre localStorage, que es lo que permite enseñarla sin desplegar nada.
-  const onSupabase = phase === 'ready';
+const AppContent: React.FC = () => {
+  const { isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
 
   return (
     <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
@@ -81,25 +110,12 @@ const AppContent: React.FC = () => {
       <div className="flex flex-1 min-h-0">
         <Sidebar />
 
-        <main className="flex-1 overflow-y-auto min-h-0">
-          <Suspense fallback={<ChunkFallback />}>
-            {activeTab === 'dashboard' && (onSupabase ? <DashboardSupabaseView /> : <DashboardView />)}
-            {activeTab === 'orders'    && (onSupabase ? <OrdersSupabaseView />    : <OrdersView />)}
-            {activeTab === 'kanban'    && (onSupabase ? <KanbanSupabaseView />    : <KanbanView />)}
-            {activeTab === 'bays'      && (onSupabase ? <BaysSupabaseView />      : <BaysView />)}
-            {activeTab === 'pos'       && (onSupabase ? <PosSupabaseView />       : <PosView />)}
-            {activeTab === 'cash'      && (onSupabase ? <CashSupabaseView />      : <CashView />)}
-            {activeTab === 'invoices'  && (onSupabase ? <InvoicesSupabaseView />  : <InvoicesView />)}
-            {activeTab === 'customers' && (onSupabase ? <CustomersSupabaseView /> : <CustomersView />)}
-            {activeTab === 'vehicles'  && (onSupabase ? <VehiclesSupabaseView />  : <VehiclesView />)}
-            {activeTab === 'services'  && (onSupabase ? <ServicesSupabaseView />  : <ServicesView />)}
-            {activeTab === 'products'  && (onSupabase ? <ProductsSupabaseView />  : <ProductsView />)}
-            {activeTab === 'team'      && (onSupabase ? <TeamSupabaseView />      : <TeamView />)}
-            {activeTab === 'expenses'  && (onSupabase ? <ExpensesSupabaseView />  : <ExpensesView />)}
-            {activeTab === 'membego'   && (onSupabase ? <MembegoHubSupabaseView />: <MembegoHubView />)}
-            {activeTab === 'reports'   && (onSupabase ? <ReportsSupabaseView />   : <ReportsView />)}
-            {activeTab === 'settings'  && (onSupabase ? <SettingsSupabaseView />  : <SettingsView />)}
-          </Suspense>
+        <main className="flex-1 min-h-0">
+          <ModulePage>
+            <Suspense fallback={<ChunkFallback />}>
+              <ActiveView />
+            </Suspense>
+          </ModulePage>
         </main>
       </div>
 
@@ -124,7 +140,7 @@ const DemoModeBanner: React.FC = () => {
   const { phase } = useAuth();
   if (phase !== 'demo') return null;
   return (
-    <div role="status" className="bg-indigo-950/60 border-b border-indigo-500/40 px-4 py-2 text-center text-[11px] text-indigo-200">
+    <div role="status" className="bg-indigo-950/60 border-b border-indigo-500/40 px-4 py-2 text-center text-xs text-indigo-200">
       <strong className="font-bold">Modo demostración.</strong>{' '}
       Sin base de datos conectada: los datos se guardan solo en este navegador y pueden perderse.
       Configure Supabase para trabajar contra la base de datos real.
@@ -141,7 +157,7 @@ const AuthGate: React.FC = () => {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center" aria-busy="true">
         <div className="space-y-3 text-center">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 mx-auto animate-pulse" />
-          <p className="text-xs text-slate-500">Cargando…</p>
+          <p className="text-sm text-slate-500">Cargando…</p>
         </div>
       </div>
     );
@@ -155,7 +171,9 @@ const AuthGate: React.FC = () => {
   return (
     <AppProvider>
       <QueueCountProvider>
-        <AppContent />
+        <NavigationProvider>
+          <AppContent />
+        </NavigationProvider>
       </QueueCountProvider>
     </AppProvider>
   );

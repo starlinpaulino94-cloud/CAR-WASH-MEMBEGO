@@ -81,12 +81,12 @@ export const OrdersView: React.FC = () => {
                   <td className="p-3 font-bold text-indigo-300">{order.orderNumber}</td>
                   <td className="p-3">
                     <div className="font-bold text-white uppercase">{order.vehiclePlate}</div>
-                    <div className="text-[10px] text-slate-400">{order.vehicleMakeModel} ({order.vehicleCategory.toUpperCase()})</div>
+                    <div className="text-xs text-slate-400">{order.vehicleMakeModel} ({order.vehicleCategory.toUpperCase()})</div>
                   </td>
                   <td className="p-3">
                     <div className="text-slate-200">{order.customerName}</div>
                     {order.membegoBenefitId && (
-                      <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded font-bold">
+                      <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded font-bold">
                         Socio Membego
                       </span>
                     )}
@@ -95,7 +95,7 @@ export const OrdersView: React.FC = () => {
                     {order.items.map(i => i.name).join(', ')}
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                       order.status === 'pendiente' ? 'bg-amber-500/20 text-amber-300' :
                       order.status === 'en_proceso' ? 'bg-indigo-500/20 text-indigo-300' :
                       order.status === 'listo' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-300'
@@ -110,7 +110,7 @@ export const OrdersView: React.FC = () => {
                     {order.status === 'pendiente' && (
                       <button
                         onClick={() => updateOrderStatus(order.id, 'en_proceso')}
-                        className="px-2.5 py-1 bg-indigo-600 text-white rounded text-[10px] font-bold"
+                        className="px-2.5 py-1 bg-indigo-600 text-white rounded text-xs font-bold"
                       >
                         Iniciar
                       </button>

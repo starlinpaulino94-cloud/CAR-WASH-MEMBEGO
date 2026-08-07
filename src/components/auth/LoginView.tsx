@@ -101,7 +101,7 @@ export const LoginView: React.FC = () => {
           </button>
         </form>
 
-        <p className="text-[11px] text-slate-500 text-center leading-relaxed flex items-center justify-center gap-1.5">
+        <p className="text-xs text-slate-500 text-center leading-relaxed flex items-center justify-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
           Cada acceso queda registrado en la bitácora de auditoría.
         </p>

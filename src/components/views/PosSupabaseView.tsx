@@ -316,7 +316,7 @@ export const PosSupabaseView: React.FC = () => {
         {/* Catálogo */}
         <div className="lg:col-span-7 space-y-5">
           <div className="space-y-2">
-            <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+            <span className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
               1. Categoría de vehículo
             </span>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -371,7 +371,7 @@ export const PosSupabaseView: React.FC = () => {
                       {formatCents(s.price_cents, symbol)}
                     </span>
                   </span>
-                  <span className="block text-[11px] text-slate-400 line-clamp-2">{s.description}</span>
+                  <span className="block text-xs text-slate-400 line-clamp-2">{s.description}</span>
                 </button>
               ))
             ) : (
@@ -392,7 +392,7 @@ export const PosSupabaseView: React.FC = () => {
                       {formatCents(p.price_cents, symbol)}
                     </span>
                   </span>
-                  <span className={`block text-[10px] ${p.stock <= p.min_stock ? 'text-amber-400' : 'text-slate-400'}`}>
+                  <span className={`block text-xs ${p.stock <= p.min_stock ? 'text-amber-400' : 'text-slate-400'}`}>
                     Stock: {p.stock} {p.unit}
                   </span>
                 </button>
@@ -412,7 +412,7 @@ export const PosSupabaseView: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label htmlFor="pos-cust" className="text-[10px] font-semibold text-slate-400 uppercase">Cliente</label>
+              <label htmlFor="pos-cust" className="text-xs font-semibold text-slate-400 uppercase">Cliente</label>
               <input
                 id="pos-cust" type="text" value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
@@ -421,7 +421,7 @@ export const PosSupabaseView: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="pos-plate" className="text-[10px] font-semibold text-slate-400 uppercase">Placa</label>
+              <label htmlFor="pos-plate" className="text-xs font-semibold text-slate-400 uppercase">Placa</label>
               <input
                 id="pos-plate" type="text" value={vehiclePlate}
                 onChange={e => setVehiclePlate(e.target.value.toUpperCase())}
@@ -448,7 +448,7 @@ export const PosSupabaseView: React.FC = () => {
               </button>
             </div>
             {membegoSummary && (
-              <div role="status" className="flex items-center gap-2 p-2 bg-amber-950/30 border border-amber-500/40 rounded-lg text-[11px] text-amber-200">
+              <div role="status" className="flex items-center gap-2 p-2 bg-amber-950/30 border border-amber-500/40 rounded-lg text-xs text-amber-200">
                 <BadgeCheck className="w-4 h-4 flex-shrink-0 text-amber-400" />
                 <span>
                   <strong>{membegoSummary.customerName}</strong>
@@ -459,7 +459,7 @@ export const PosSupabaseView: React.FC = () => {
               </div>
             )}
             {membegoSearched && !membegoSummary && !membegoBusy && (
-              <p className="text-[10px] text-slate-500">Sin beneficios de Membego para ese teléfono.</p>
+              <p className="text-xs text-slate-500">Sin beneficios de Membego para ese teléfono.</p>
             )}
           </div>
 
@@ -472,7 +472,7 @@ export const PosSupabaseView: React.FC = () => {
               <div key={l.key} className="p-2.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs gap-2">
                 <div className="space-y-0.5 min-w-0 flex-1">
                   <div className="font-bold text-white truncate">{l.name}</div>
-                  <div className="text-[10px] text-slate-400">{formatCents(l.unitPriceCents, symbol)} c/u</div>
+                  <div className="text-xs text-slate-400">{formatCents(l.unitPriceCents, symbol)} c/u</div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
@@ -507,13 +507,13 @@ export const PosSupabaseView: React.FC = () => {
                 <span>Total</span>
                 <span className="text-indigo-400">{formatCents(preview.total, symbol)}</span>
               </div>
-              <p className="text-[10px] text-slate-500 pt-1">
+              <p className="text-xs text-slate-500 pt-1">
                 Cifras de referencia: el importe definitivo lo calcula el servidor al emitir.
               </p>
             </div>
 
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Método de pago</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">Método de pago</span>
               <div className="grid grid-cols-3 gap-2 text-xs font-bold">
                 {METHODS.map(m => {
                   const Icon = m.icon;
@@ -556,7 +556,7 @@ export const PosSupabaseView: React.FC = () => {
               )}
 
               {fiscal.ready && (
-              <label className="flex items-center gap-2 text-[11px] text-slate-400 pt-1 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-slate-400 pt-1 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={wantsNcf}
@@ -583,7 +583,7 @@ export const PosSupabaseView: React.FC = () => {
                 <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
                 <div className="space-y-1">
                   <p>{submitError}</p>
-                  <p className="text-[10px] text-rose-300/80">
+                  <p className="text-xs text-rose-300/80">
                     Puede reintentar sin miedo a cobrar dos veces: la operación conserva su
                     identificador y el servidor la reconoce.
                   </p>
@@ -614,7 +614,7 @@ export const PosSupabaseView: React.FC = () => {
             </button>
 
             {!can(profile, 'issueInvoice') && (
-              <p className="text-[11px] text-amber-400 text-center">
+              <p className="text-xs text-amber-400 text-center">
                 Su rol no permite emitir facturas.
               </p>
             )}

@@ -157,7 +157,7 @@ export const PosView: React.FC = () => {
         <div className="lg:col-span-7 space-y-5">
           {/* Category Bar */}
           <div className="space-y-2">
-            <label className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+            <label className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
               1. Seleccionar Categoría de Vehículo
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -219,7 +219,7 @@ export const PosView: React.FC = () => {
                       <span>{s.name}</span>
                       <span className="text-indigo-400 font-extrabold">{company.currencySymbol} {price.toLocaleString()}</span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-2">{s.description}</p>
+                    <p className="text-xs text-slate-400 line-clamp-2">{s.description}</p>
                   </div>
                 );
               })
@@ -234,7 +234,7 @@ export const PosView: React.FC = () => {
                     <span>{p.name}</span>
                     <span className="text-indigo-400 font-extrabold">{company.currencySymbol} {p.price.toLocaleString()}</span>
                   </div>
-                  <div className="text-[10px] text-slate-400">Stock disponible: {p.stock} {p.unit}</div>
+                  <div className="text-xs text-slate-400">Stock disponible: {p.stock} {p.unit}</div>
                 </div>
               ))
             )}
@@ -254,7 +254,7 @@ export const PosView: React.FC = () => {
             {/* Customer Inputs */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="text-[10px] font-semibold text-slate-400 uppercase">Cliente</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase">Cliente</label>
                 <input
                   type="text"
                   value={customerName}
@@ -263,7 +263,7 @@ export const PosView: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-slate-400 uppercase">Placa</label>
+                <label className="text-xs font-semibold text-slate-400 uppercase">Placa</label>
                 <input
                   type="text"
                   value={vehiclePlate}
@@ -282,7 +282,7 @@ export const PosView: React.FC = () => {
                   <div key={item.id} className="p-2.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
                     <div className="space-y-0.5 max-w-[170px]">
                       <div className="font-bold text-white truncate">{item.name}</div>
-                      <div className="text-[10px] text-slate-400">{company.currencySymbol} {item.unitPrice.toLocaleString()} c/u</div>
+                      <div className="text-xs text-slate-400">{company.currencySymbol} {item.unitPrice.toLocaleString()} c/u</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
@@ -313,7 +313,7 @@ export const PosView: React.FC = () => {
 
             {/* Payment Method Selection */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Método de Pago</label>
+              <label className="text-xs font-bold text-slate-400 uppercase">Método de Pago</label>
               <div className="grid grid-cols-3 gap-2 text-xs font-bold">
                 {[
                   { id: 'efectivo', label: 'Efectivo', icon: Banknote },

@@ -113,7 +113,7 @@ export const CashView: React.FC = () => {
 
               {/* Difference Calculation */}
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">Diferencia Calculada (Contado vs Esperado)</div>
+                <div className="text-xs text-slate-400 uppercase font-semibold">Diferencia Calculada (Contado vs Esperado)</div>
                 <div className={`text-base font-black ${
                   countedCashInput - cashSession.expectedCash === 0 ? 'text-emerald-400' : 'text-rose-400'
                 }`}>

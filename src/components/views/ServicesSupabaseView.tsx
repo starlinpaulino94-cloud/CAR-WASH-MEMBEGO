@@ -134,7 +134,7 @@ export const ServicesSupabaseView: React.FC = () => {
       )}
       {actionError && <InlineAlert tone="error" onDismiss={() => setActionError(null)}>{actionError}</InlineAlert>}
       {editable && (
-        <p className="text-[11px] text-slate-500">
+        <p className="text-xs text-slate-500">
           Toque un precio para editarlo. Enter guarda, Escape cancela.
         </p>
       )}
@@ -173,7 +173,7 @@ export const ServicesSupabaseView: React.FC = () => {
                 <tr key={s.id} className={`hover:bg-slate-800/40 ${s.is_active ? '' : 'opacity-50'}`}>
                   <td className="p-3">
                     <div className="font-bold text-white">{s.name}</div>
-                    <div className="text-[10px] text-slate-400">
+                    <div className="text-xs text-slate-400">
                       {s.code} · {s.estimated_minutes} min
                       {!s.is_active && ' · inactivo'}
                     </div>
@@ -228,7 +228,7 @@ export const ServicesSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-500">
+      <p className="text-xs text-slate-500">
         Un servicio sin precio para una categoría no se ofrece en el punto de venta ni al
         registrar la llegada: facturarlo fallaría.
       </p>
@@ -280,16 +280,16 @@ export const ServicesSupabaseView: React.FC = () => {
           </label>
 
           <div className="space-y-2 pt-1">
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
               Precio por categoría ({symbol})
             </div>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Deje en blanco las categorías que este servicio no cubre.
             </p>
             <div className="grid grid-cols-3 gap-2">
               {COLUMNS.map(c => (
                 <div key={c.id} className="space-y-1">
-                  <label htmlFor={`svc-price-${c.id}`} className="block text-[10px] text-slate-400">{c.label}</label>
+                  <label htmlFor={`svc-price-${c.id}`} className="block text-xs text-slate-400">{c.label}</label>
                   <input id={`svc-price-${c.id}`} type="text" inputMode="decimal"
                     className={textInputClass} value={form.prices[c.id] ?? ''}
                     onChange={e => setForm(f => ({ ...f, prices: { ...f.prices, [c.id]: e.target.value } }))}

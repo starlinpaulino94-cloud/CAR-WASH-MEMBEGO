@@ -14,9 +14,14 @@ import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell
  * Editar estos datos está restringido al propietario por RLS: la interfaz solo
  * refleja esa regla. Los campos fiscales importan porque de ellos salen el
  * ITBIS y la cabecera de todos los comprobantes.
+ *
+ * `seccion` divide la pantalla en los submódulos de Configuración (empresa /
+ * impresión / membego) SIN duplicar lógica: es el mismo componente y el mismo
+ * guardado; solo cambia qué bloques se pintan. Sin prop, muestra todo.
  */
-export const SettingsSupabaseView: React.FC = () => {
+export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' | 'membego' }> = ({ seccion }) => {
   const { company, branch, profile, reload } = useAuth();
+  const show = (s: 'empresa' | 'impresion' | 'membego') => !seccion || seccion === s;
   const editable = can(profile, 'manageCatalog') && profile?.role === 'propietario';
   const canManageMembego = can(profile, 'manageStaff');
 
@@ -97,19 +102,28 @@ export const SettingsSupabaseView: React.FC = () => {
       <input id={id} type="text" value={value} disabled={!editable || busy}
         onChange={e => set(e.target.value)}
         className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-60" />
-      {hint && <p className="text-[10px] text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
   );
+
+  const headerBySection = {
+    empresa:   { title: 'Empresa', subtitle: 'Datos fiscales y moneda de la empresa' },
+    impresion: { title: 'Impresión', subtitle: 'Impresora térmica y notas de los comprobantes' },
+    membego:   { title: 'Membego', subtitle: 'Vínculo de esta empresa con la plataforma Membego' }
+  } as const;
+  const header = seccion
+    ? headerBySection[seccion]
+    : { title: 'Configuración de la empresa', subtitle: 'Datos fiscales, moneda e impresión de comprobantes' };
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <ViewHeader
         icon={<Settings className="w-5 h-5 text-indigo-400" />}
-        title="Configuración de la empresa"
-        subtitle="Datos fiscales, moneda e impresión de comprobantes"
+        title={header.title}
+        subtitle={header.subtitle}
       />
 
-      {!editable && (
+      {seccion !== 'membego' && !editable && (
         <ReadOnlyNotice>
           Solo el propietario puede modificar estos datos. La restricción la aplica la base
           de datos, no esta pantalla.
@@ -118,6 +132,7 @@ export const SettingsSupabaseView: React.FC = () => {
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
       {error && <InlineAlert tone="error">{error}</InlineAlert>}
 
+      {show('empresa') && (
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2">Datos fiscales</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -129,7 +144,7 @@ export const SettingsSupabaseView: React.FC = () => {
             <p className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white text-xs font-bold">
               {bpsToPercent(company?.tax_rate_bps ?? 1800)}
             </p>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-xs text-slate-500">
               La tasa impositiva no se edita desde aquí: cambiarla altera el cálculo de
               comprobantes ya emitidos y exige una decisión contable.
             </p>
@@ -148,7 +163,9 @@ export const SettingsSupabaseView: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
 
+      {show('impresion') && (
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2">Comprobantes</h3>
         <div className="space-y-4">
@@ -163,14 +180,15 @@ export const SettingsSupabaseView: React.FC = () => {
               <option value="80mm">80 mm</option>
               <option value="letter">Carta</option>
             </select>
-            <p className="text-[10px] text-slate-500">Determina el ancho real del ticket al imprimir.</p>
+            <p className="text-xs text-slate-500">Determina el ancho real del ticket al imprimir.</p>
           </div>
           {field('s-header', 'Nota de cabecera', headerNote, setHeaderNote)}
           {field('s-footer', 'Nota de pie', footerNote, setFooterNote)}
         </div>
       </section>
+      )}
 
-      {editable && (
+      {seccion !== 'membego' && editable && (
         <button onClick={() => void save()} disabled={busy}
           className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -178,7 +196,7 @@ export const SettingsSupabaseView: React.FC = () => {
         </button>
       )}
 
-      {canManageMembego && (
+      {show('membego') && canManageMembego && (
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
           <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2 flex items-center gap-2">
             <BadgeCheck className="w-4 h-4 text-amber-400" /> Integración Membego
@@ -213,7 +231,7 @@ export const SettingsSupabaseView: React.FC = () => {
                 {membegoLink ? 'Actualizar vínculo' : 'Vincular'}
               </button>
             </div>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-xs text-slate-500">
               El <span className="font-mono">companyId</span> te lo da Membego. Vincula esta empresa para que
               sus clientes, membresías y promociones entren solo aquí.
             </p>

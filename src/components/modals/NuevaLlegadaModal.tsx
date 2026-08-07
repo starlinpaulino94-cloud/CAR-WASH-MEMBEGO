@@ -278,7 +278,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   <div>
                     <div className="text-sm font-bold text-white flex items-center gap-2">
                       Escanear QR / Simular VIP
-                      <span className="text-[10px] bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded">Membego VIP</span>
+                      <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded">Membego VIP</span>
                     </div>
                     <div className="text-xs text-slate-400">Verificar membresía y beneficios de Ramón Peña (Demo)</div>
                   </div>
@@ -336,7 +336,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                           <div>
                             <div className="font-bold text-white flex items-center gap-2">
                               {membegoResult.customer.name}
-                              <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
+                              <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
                                 {membegoResult.customer.membegoTier || 'Socio Activo'}
                               </span>
                             </div>
@@ -365,13 +365,13 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                   <span>{b.serviceName}</span>
                                   <span className="text-emerald-400 font-bold">{b.discountPercentage}% OFF</span>
                                 </div>
-                                <div className="text-[11px] text-slate-400">{b.membershipName} • Usos: {b.usesRemaining}/{b.usesMax}</div>
+                                <div className="text-xs text-slate-400">{b.membershipName} • Usos: {b.usesRemaining}/{b.usesMax}</div>
                                 <button
                                   onClick={() => {
                                     handleApplyBenefit(b);
                                     setStep('vehicle');
                                   }}
-                                  className="w-full mt-1.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[11px] font-semibold border border-indigo-500/40 transition-colors"
+                                  className="w-full mt-1.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-xs font-semibold border border-indigo-500/40 transition-colors"
                                 >
                                   Usar este beneficio hoy
                                 </button>
@@ -521,7 +521,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         <div className="flex items-start justify-between">
                           <div className="font-bold text-sm flex items-center gap-2">
                             {s.name}
-                            {s.isPopular && <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Popular</span>}
+                            {s.isPopular && <span className="text-xs bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Popular</span>}
                           </div>
                           <div className="text-right">
                             {isCovered ? (

@@ -62,7 +62,7 @@ export const CustomersView: React.FC = () => {
                     <td className="p-3 text-slate-400">{c.phone || 'N/A'}</td>
                     <td className="p-3">
                       {c.membegoTier ? (
-                        <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">
+                        <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">
                           {c.membegoTier}
                         </span>
                       ) : (

@@ -113,16 +113,16 @@ export const CustomersSupabaseView: React.FC = () => {
                       <tr key={c.id} className="hover:bg-slate-800/40">
                         <td className="p-3">
                           <div className="font-bold text-white">{c.name}</div>
-                          {c.tax_id && <div className="text-[10px] text-slate-500">RNC {c.tax_id}</div>}
+                          {c.tax_id && <div className="text-xs text-slate-500">RNC {c.tax_id}</div>}
                         </td>
                         <td className="p-3 text-slate-400">
                           <div>{c.phone || '—'}</div>
-                          {c.email && <div className="text-[10px] truncate max-w-[180px]">{c.email}</div>}
+                          {c.email && <div className="text-xs truncate max-w-[180px]">{c.email}</div>}
                         </td>
                         <td className="p-3">
                           {c.membego_customer_id ? (
                             <button onClick={() => void openMembego(c)}
-                              className="inline-flex items-center gap-1 text-[10px] bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2 py-0.5 rounded font-bold">
+                              className="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 px-2 py-0.5 rounded font-bold">
                               <BadgeCheck className="w-3 h-3" />
                               {c.membego_tier || 'Membego'}
                             </button>
@@ -168,7 +168,7 @@ export const CustomersSupabaseView: React.FC = () => {
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cliente
             </button>
 
-            <p className="text-[10px] text-slate-500 flex items-start gap-1.5">
+            <p className="text-xs text-slate-500 flex items-start gap-1.5">
               <Car className="w-3 h-3 flex-shrink-0 mt-0.5" />
               Los vehículos se vinculan solos al registrar la llegada con la placa.
             </p>

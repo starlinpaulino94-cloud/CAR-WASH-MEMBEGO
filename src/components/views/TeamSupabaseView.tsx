@@ -204,13 +204,13 @@ export const TeamSupabaseView: React.FC = () => {
                   <tr key={person.id} className={`hover:bg-slate-800/40 ${person.is_active ? '' : 'opacity-50'}`}>
                     <td className="p-3">
                       <div className="font-bold text-white">{person.full_name || person.email}</div>
-                      <div className="text-[10px] text-slate-500">{person.email}</div>
+                      <div className="text-xs text-slate-500">{person.email}</div>
                     </td>
                     <td className="p-3">
-                      <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
+                      <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-xs uppercase">
                         {person.role ?? 'sin rol'}
                       </span>
-                      {!person.is_active && <span className="ml-1 text-[10px] text-slate-500">inactivo</span>}
+                      {!person.is_active && <span className="ml-1 text-xs text-slate-500">inactivo</span>}
                     </td>
                     <td className="p-3 text-right text-emerald-400 font-bold">
                       {person.commission_bps ? bpsToPercent(person.commission_bps) : '—'}
@@ -232,7 +232,7 @@ export const TeamSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+      <p className="text-xs text-slate-500 flex items-center gap-1.5">
         {loading && <Loader2 className="w-3 h-3 animate-spin" />}
         Las comisiones se generan al entregar el vehículo, repartiendo cada servicio entre
         los operarios asignados con la tasa de cada uno.
@@ -248,7 +248,7 @@ export const TeamSupabaseView: React.FC = () => {
           onClose={() => setShowCreate(false)}
           onDismissError={() => setCreateError(null)}
         >
-          <div className="flex items-start gap-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-[11px] text-slate-300">
+          <div className="flex items-start gap-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-xs text-slate-300">
             <UserCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-indigo-400" />
             <span>
               Se crea el acceso del empleado (correo y contraseña) y su rol dentro de tu

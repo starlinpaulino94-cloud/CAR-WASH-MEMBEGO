@@ -42,7 +42,7 @@ export const ReportsView: React.FC = () => {
                 <span className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</span>
               </div>
               <div className="text-slate-300">{log.details}</div>
-              <div className="text-[10px] text-slate-500">Usuario: {log.userName} ({log.userRole})</div>
+              <div className="text-xs text-slate-500">Usuario: {log.userName} ({log.userRole})</div>
             </div>
           ))}
         </div>

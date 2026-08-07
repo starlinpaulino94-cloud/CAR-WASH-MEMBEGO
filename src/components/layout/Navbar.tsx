@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Building2, User, Plus, LogOut, ExternalLink, Loader2 } from 'lucide-react';
+import { Building2, User, Plus, LogOut, ExternalLink, Loader2, Menu } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { supabase } from '../../lib/supabase';
 
 // Portal de Membego (el hub de fidelización). Respaldo si el SSO no está
@@ -10,6 +11,7 @@ const MEMBEGO_URL = 'https://membego.com';
 
 export const Navbar: React.FC = () => {
   const { phase, profile, company: realCompany, branch: realBranch, signOut } = useAuth();
+  const { setDrawerOpen } = useNavigation();
   const authenticated = phase === 'ready';
 
   // "Ir a Membego": con sesión real pide un pase de SSO y aterriza al usuario
@@ -65,16 +67,25 @@ export const Navbar: React.FC = () => {
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between text-white">
       {/* Brand & Branch */}
       <div className="flex items-center gap-4">
+        {/* Hamburguesa: abre el menú (drawer) en pantallas pequeñas. */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Abrir menú"
+          className="md:hidden p-2 -ml-1 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-black text-lg shadow-lg shadow-indigo-600/30 text-white">
             M
           </div>
           <div>
-            <h1 className="font-bold text-sm tracking-tight">
+            <h1 className="font-bold text-[15px] tracking-tight">
               {authenticated ? realCompany?.trade_name : company.tradeName}
             </h1>
             {authenticated && realBranch?.name && (
-              <p className="text-[11px] text-slate-400">{realBranch.name}</p>
+              <p className="text-xs text-slate-400">{realBranch.name}</p>
             )}
           </div>
         </div>
@@ -141,7 +152,7 @@ export const Navbar: React.FC = () => {
             <span className="text-slate-200 font-medium max-w-[150px] truncate">
               {profile?.full_name}
             </span>
-            <span className="text-[10px] text-slate-500 uppercase">{profile?.role}</span>
+            <span className="text-xs text-slate-500 uppercase">{profile?.role}</span>
             <button
               onClick={() => void signOut()}
               title="Cerrar sesión"

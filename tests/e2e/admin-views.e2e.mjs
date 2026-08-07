@@ -49,10 +49,15 @@ async function login(page, email) {
   await page.getByLabel('Correo electrónico').fill(email);
   await page.getByLabel('Contraseña').fill('clave-de-prueba');
   await page.getByRole('button', { name: /Entrar/ }).click();
-  await page.getByRole('button', { name: /^Inicio & Resumen/ }).waitFor({ timeout: 15000 });
+  await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Inicio/ }).waitFor({ timeout: 15000 });
 }
-const go = async (page, name) => {
-  await page.getByRole('button', { name }).click();
+// Navegación nueva: módulo en el sidebar y, si hace falta, pestaña de submódulo.
+const go = async (page, modulo, submodulo) => {
+  await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: modulo }).click();
+  await page.waitForTimeout(600);
+  if (submodulo) {
+    await page.locator('nav[aria-label="Submódulos"]').getByRole('link', { name: submodulo }).click();
+  }
   await page.waitForTimeout(1800);
 };
 
@@ -81,7 +86,7 @@ check('cambiar el rango vuelve a consultar al servidor',
 
 // ======================================================= Clientes
 console.log('\n[2] Clientes');
-await go(page, /^Directorio de Clientes/);
+await go(page, /^Clientes/);
 
 const before = Number(sql('select count(*) from customers'));
 await page.getByLabel('Nombre *').fill('Cliente Nuevo E2E');
@@ -102,7 +107,7 @@ check('la búsqueda de clientes filtra en el servidor',
 
 // ======================================================= Gastos
 console.log('\n[3] Gastos — atómicos con la caja');
-await go(page, /^Gastos Operativos/);
+await go(page, /^Caja/, /^Gastos/);
 
 const cashBefore = Number(sql("select expected_cash_cents from cash_sessions where status='open'"));
 await page.getByLabel(/Concepto/).fill('Compra de jabón industrial');
@@ -121,19 +126,19 @@ check('quedó su movimiento de salida en caja',
 
 // ======================================================= Permisos del cajero
 console.log('\n[4] Restricciones de rol (cajero)');
-await go(page, /^Servicios & Paquetes/);
+await go(page, /^Ventas/, /^Servicios/);
 check('el cajero ve el catálogo en solo lectura',
   await page.getByText(/no cambiar precios/).isVisible().catch(() => false));
 
-await go(page, /^Reportes & Auditoría/);
-check('el cajero no accede a la bitácora de auditoría',
-  await page.getByText(/no permite consultar la bitácora/).isVisible().catch(() => false));
+// Con la navegación por permisos, el módulo entero desaparece para el cajero.
+check('el cajero no ve el módulo de Reportes (auditoría vedada)',
+  !(await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Reportes/ }).isVisible().catch(() => false)));
 
-await go(page, /^Ajustes de Empresa/);
+await go(page, /^Configuración/);
 check('el cajero ve los ajustes en solo lectura',
   await page.getByText(/Solo el propietario puede modificar/).isVisible().catch(() => false));
 
-await go(page, /^Empleados & Comisiones/);
+await go(page, /^Personal/);
 check('el cajero solo ve sus propias comisiones',
   await page.getByText(/solo permite ver sus propias comisiones/).isVisible().catch(() => false));
 
@@ -151,7 +156,7 @@ await login(page, 'dueno@example.com');
 await page.waitForTimeout(1500);
 
 // --- Servicios: editar un precio
-await go(page, /^Servicios & Paquetes/);
+await go(page, /^Ventas/, /^Servicios/);
 check('el propietario sí puede editar precios',
   !(await page.getByText(/no cambiar precios/).isVisible().catch(() => false)));
 
@@ -169,7 +174,7 @@ check('el precio nuevo se guardó en centavos',
        where vehicle_category='jeep' and service_id='44444444-4444-4444-4444-444444444444'`));
 
 // --- Productos: ajustar existencia
-await go(page, /^Productos e Insumos/);
+await go(page, /^Inventario/);
 await page.getByRole('button', { name: /Existencia de Aromatizante/ }).click();
 await page.waitForTimeout(400);
 await page.getByLabel(/Existencia de Aromatizante/).fill('42');
@@ -180,7 +185,7 @@ check('la existencia ajustada se guardó',
   sql("select stock from products where code='AR1'"));
 
 // --- Bahías
-await go(page, /^Bahías y Estaciones/);
+await go(page, /^Operaciones/, /^Bahías/);
 await page.getByRole('button', { name: /Fuera de servicio/ }).click();
 await page.waitForTimeout(2000);
 check('marcar una bahía fuera de servicio se refleja en la base',
@@ -188,7 +193,7 @@ check('marcar una bahía fuera de servicio se refleja en la base',
   sql("select status from bays where name='Bahía 1'"));
 
 // --- Reportes
-await go(page, /^Reportes & Auditoría/);
+await go(page, /^Reportes/);
 check('el propietario sí ve la bitácora de auditoría',
   await page.getByText('Bitácora de auditoría').isVisible().catch(() => false));
 check('la bitácora está paginada y muestra eventos reales',
@@ -202,8 +207,8 @@ check('la bitácora se filtra en el servidor',
   (await page.locator('tbody tr').count()) === 1,
   `${await page.locator('tbody tr').count()} fila(s)`);
 
-// --- Ajustes
-await go(page, /^Ajustes de Empresa/);
+// --- Ajustes (la nota de pie vive en el submódulo Impresión)
+await go(page, /^Configuración/, /^Impresión/);
 await page.getByLabel(/Nota de pie/).fill('Gracias por su visita — E2E');
 await page.getByRole('button', { name: /Guardar cambios/ }).click();
 await page.waitForTimeout(2200);
@@ -212,12 +217,12 @@ check('el propietario puede guardar los ajustes de la empresa',
   sql("select coalesce(footer_note,'(nulo)') from companies"));
 
 // --- Equipo
-await go(page, /^Empleados & Comisiones/);
+await go(page, /^Personal/);
 check('el propietario ve el resumen de comisiones del equipo',
   await page.getByText('Comisiones del periodo').isVisible().catch(() => false));
 
 // --- Vehículos
-await go(page, /^Flotillas & Vehículos/);
+await go(page, /^Clientes/, /^Vehículos/);
 check('la flotilla lista los vehículos registrados',
   await page.getByText('AD0001').first().isVisible().catch(() => false));
 

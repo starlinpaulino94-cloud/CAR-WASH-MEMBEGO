@@ -26,11 +26,11 @@ export const TeamView: React.FC = () => {
                   <div className="text-slate-400">{u.email} • Tel: {u.phone}</div>
                 </div>
                 <div className="text-right">
-                  <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">
+                  <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-xs uppercase">
                     {u.role}
                   </span>
                   {u.commissionRate && (
-                    <div className="text-[10px] text-emerald-400 font-bold mt-1">
+                    <div className="text-xs text-emerald-400 font-bold mt-1">
                       Comisión: {u.commissionRate}%
                     </div>
                   )}

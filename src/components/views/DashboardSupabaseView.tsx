@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutDashboard, RefreshCw, Loader2, ArrowRight, Clock, Car, CheckCircle2, DollarSign } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import { fetchDashboardMetrics, DashboardMetrics } from '../../data/adminRepository';
@@ -33,7 +33,7 @@ function rangeBounds(id: RangeId): { from: Date; to: Date } {
 }
 
 export const DashboardSupabaseView: React.FC = () => {
-  const { setActiveTab } = useApp();
+  const { navigate } = useNavigation();
   const { branch, company, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
 
@@ -99,7 +99,7 @@ export const DashboardSupabaseView: React.FC = () => {
 
       {/* Estado del taller AHORA: no depende del rango elegido. */}
       <section aria-label="Estado del taller" className="space-y-2">
-        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+        <h3 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
           En el taller ahora
         </h3>
         {loading && !metrics ? skeleton : metrics && (
@@ -115,7 +115,7 @@ export const DashboardSupabaseView: React.FC = () => {
       </section>
 
       <section aria-label="Resultados del periodo" className="space-y-2">
-        <h3 className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+        <h3 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
           {RANGES.find(r => r.id === range)?.label}
         </h3>
         {loading && !metrics ? skeleton : metrics && (
@@ -141,7 +141,7 @@ export const DashboardSupabaseView: React.FC = () => {
             { tab: 'pos', label: 'Punto de venta', icon: DollarSign },
             { tab: 'cash', label: 'Control de caja', icon: CheckCircle2 }
           ].map(({ tab, label, icon: Icon }) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => navigate(tab)}
               className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-between transition-all">
               <span className="flex items-center gap-2.5"><Icon className="w-4 h-4 text-indigo-400" />{label}</span>
               <ArrowRight className="w-4 h-4" />
@@ -150,7 +150,7 @@ export const DashboardSupabaseView: React.FC = () => {
         </div>
       </section>
 
-      <p className="text-[11px] text-slate-600 flex items-center gap-1.5">
+      <p className="text-xs text-slate-600 flex items-center gap-1.5">
         <Clock className="w-3 h-3" />
         Los importes del periodo excluyen comprobantes anulados y notas de crédito.
         {loading && <Loader2 className="w-3 h-3 animate-spin ml-1" />}

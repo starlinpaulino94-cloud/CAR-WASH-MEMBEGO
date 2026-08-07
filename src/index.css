@@ -1,6 +1,18 @@
 @import "tailwindcss";
 
 /* ===========================================================================
+   Escala tipográfica
+   ===========================================================================
+   La interfaz original abusaba de 10-12 px. Subir la raíz escala TODA la
+   tipografía relativa (las clases text-* de Tailwind son rem): text-xs pasa de
+   12 a 13.5 px, text-sm de 14 a 15.75 px, text-2xl de 24 a 27 px. La impresión
+   de tickets no se ve afectada (usa pt/mm absolutos).
+   =========================================================================== */
+html {
+  font-size: 112.5%;
+}
+
+/* ===========================================================================
    Impresión de comprobantes
    ===========================================================================
    La aplicación auditada llamaba a window.print() sin una sola regla @media

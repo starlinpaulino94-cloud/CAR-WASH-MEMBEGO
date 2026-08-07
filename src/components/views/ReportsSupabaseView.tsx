@@ -134,12 +134,12 @@ export const ReportsSupabaseView: React.FC = () => {
                       </td>
                       <td className="p-3">
                         <span className="font-bold text-indigo-300 whitespace-nowrap">{log.action}</span>
-                        <div className="text-[10px] text-slate-500">{log.entity}</div>
+                        <div className="text-xs text-slate-500">{log.entity}</div>
                       </td>
                       <td className="p-3 text-slate-300">{log.details}</td>
                       <td className="p-3 text-slate-400 whitespace-nowrap">
                         {log.actor_name || '—'}
-                        {log.actor_role && <div className="text-[10px] text-slate-600 uppercase">{log.actor_role}</div>}
+                        {log.actor_role && <div className="text-xs text-slate-600 uppercase">{log.actor_role}</div>}
                       </td>
                     </tr>
                   ))}
@@ -151,7 +151,7 @@ export const ReportsSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+      <p className="text-xs text-slate-500 flex items-center gap-1.5">
         {q.loading && <Loader2 className="w-3 h-3 animate-spin" />}
         La bitácora no admite modificación ni borrado, garantizado por permisos, políticas y
         trigger. El autor y la hora los sella el servidor.

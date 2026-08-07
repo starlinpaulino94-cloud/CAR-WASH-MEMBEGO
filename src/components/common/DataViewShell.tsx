@@ -17,8 +17,8 @@ export const ViewHeader: React.FC<{
 }> = ({ icon, title, subtitle, actions }) => (
   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
     <div>
-      <h2 className="text-xl font-bold text-white flex items-center gap-2">{icon} {title}</h2>
-      {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+      <h2 className="text-2xl font-bold text-white flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
+      {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
     </div>
     {actions && <div className="flex items-center gap-2 self-start sm:self-auto">{actions}</div>}
   </div>
@@ -32,7 +32,7 @@ export const ErrorState: React.FC<{ message: string; onRetry: () => void; title?
       <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
         <AlertCircle className="w-5 h-5" /> {title}
       </div>
-      <p className="text-xs text-slate-300">{message}</p>
+      <p className="text-sm text-slate-300">{message}</p>
       <button onClick={onRetry}
         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2">
         <RefreshCw className="w-4 h-4" /> Reintentar
@@ -53,7 +53,7 @@ export const InlineAlert: React.FC<{
   }[tone];
   return (
     <div role={tone === 'error' ? 'alert' : 'status'}
-      className={`flex items-start gap-2 p-3 border rounded-xl text-xs ${styles}`}>
+      className={`flex items-start gap-2 p-3 border rounded-xl text-sm ${styles}`}>
       <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
       <div className="flex-1">{children}</div>
       {onDismiss && (
@@ -73,7 +73,7 @@ export const SearchBox: React.FC<{
     <input
       id={id} type="search" value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
     />
   </div>
 );
@@ -94,7 +94,7 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
   <div className="flex gap-1.5 flex-wrap">
     {options.map(o => (
       <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
-        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+        className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
           value === o.id
             ? 'bg-indigo-600 text-white border-indigo-500'
             : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
@@ -125,7 +125,7 @@ export const Pagination: React.FC<{
   page: number; pageCount: number; total: number; pageSize: number;
   loading?: boolean; onPage: (p: number) => void;
 }> = ({ page, pageCount, total, pageSize, loading, onPage }) => (
-  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-xs">
+  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-sm">
     <span className="text-slate-400">
       {total === 0 ? 'Sin resultados'
         : <>Mostrando {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} de {total}</>}
@@ -151,15 +151,15 @@ export const StatCard: React.FC<{ label: string; value: string; tone?: string; h
   label, value, tone = 'text-white', hint
 }) => (
   <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-1">
-    <div className="text-xs text-slate-400">{label}</div>
-    <div className={`text-xl font-black ${tone}`}>{value}</div>
-    {hint && <div className="text-[11px] text-slate-500">{hint}</div>}
+    <div className="text-sm text-slate-400">{label}</div>
+    <div className={`text-2xl font-black ${tone} tabular-nums`}>{value}</div>
+    {hint && <div className="text-xs text-slate-500">{hint}</div>}
   </div>
 );
 
 /** Aviso de permiso insuficiente, uniforme en todas las vistas. */
 export const ReadOnlyNotice: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div role="status" className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 text-xs text-amber-200">
+  <div role="status" className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 text-sm text-amber-200">
     {children}
   </div>
 );

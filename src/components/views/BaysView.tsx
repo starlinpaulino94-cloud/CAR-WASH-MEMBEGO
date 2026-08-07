@@ -28,7 +28,7 @@ export const BaysView: React.FC = () => {
           >
             <div className="flex items-center justify-between">
               <span className="font-bold text-sm text-white">{bay.name}</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
                 bay.status === 'ocupada' ? 'bg-indigo-500/20 text-indigo-300' :
                 bay.status === 'disponible' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'
               }`}>

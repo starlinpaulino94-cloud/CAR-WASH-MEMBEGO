@@ -39,7 +39,7 @@ check('una contraseña incorrecta no da acceso',
 
 await page.getByLabel('Contraseña').fill('clave-de-prueba');
 await page.getByRole('button', { name: /Entrar/ }).click();
-const sidebarPos = page.getByRole('button', { name: 'Punto de Venta (POS)', exact: true });
+const sidebarPos = page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: 'Ventas' });
 await sidebarPos.waitFor({ timeout: 15000 }).catch(() => {});
 check('con credenciales válidas se entra a la aplicación',
   await sidebarPos.isVisible().catch(() => false));
@@ -50,7 +50,7 @@ check('la barra muestra la identidad REAL, no un selector de rol',
 
 // -------------------------------------------------------------------- Caja
 console.log('\n[2] Caja — apertura');
-await page.getByRole('button', { name: /Control de Caja/ }).click();
+await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: 'Caja' }).click();
 await page.waitForTimeout(1500);
 check('la caja aparece cerrada al inicio',
   await page.getByText('Apertura de turno').isVisible().catch(() => false));
@@ -168,7 +168,7 @@ check('la factura sigue vigente tras el intento',
 
 // ------------------------------------------------------------- Cierre de caja
 console.log('\n[6] Caja — arqueo y cierre');
-await page.getByRole('button', { name: /Control de Caja/ }).click();
+await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: 'Caja' }).click();
 await page.waitForTimeout(1800);
 
 check('los movimientos del turno se listan',
