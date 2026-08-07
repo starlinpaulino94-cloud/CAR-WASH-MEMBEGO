@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight
+  Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight,
+  ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
@@ -9,6 +10,7 @@ import {
   fetchOrderPage, WorkOrder, OrderStatus, STATUS_LABEL
 } from '../../data/ordersRepository';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
+import { InspectionModal } from '../modals/InspectionModal';
 
 const PAGE_SIZE = 25;
 
@@ -51,6 +53,7 @@ export const OrdersSupabaseView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<OrderStatus | 'all' | 'active'>('active');
 
+  const [inspecting, setInspecting] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -165,18 +168,19 @@ export const OrdersSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold">LLEGADA</th>
                 <th scope="col" className="p-3 font-semibold">ESTADO</th>
                 <th scope="col" className="p-3 font-semibold text-right">TOTAL</th>
+                <th scope="col" className="p-3 font-semibold text-right">INSPECCIÓN</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} aria-hidden="true">
-                    <td colSpan={6} className="p-3"><div className="h-5 bg-slate-800/60 rounded animate-pulse" /></td>
+                    <td colSpan={7} className="p-3"><div className="h-5 bg-slate-800/60 rounded animate-pulse" /></td>
                   </tr>
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center text-slate-500 italic">
+                  <td colSpan={7} className="p-10 text-center text-slate-500 italic">
                     {search || status !== 'active'
                       ? 'Ninguna orden coincide con el filtro.'
                       : 'No hay vehículos en el taller ahora mismo.'}
@@ -204,6 +208,15 @@ export const OrdersSupabaseView: React.FC = () => {
                     {order.total_cents === 0
                       ? <span className="text-emerald-400">Beneficio</span>
                       : formatCents(order.total_cents, symbol)}
+                  </td>
+                  <td className="p-3 text-right">
+                    <button
+                      onClick={() => setInspecting(order)}
+                      aria-label={`Inspección de ${order.vehicle_plate}`}
+                      title="Estado del vehículo al recibirlo y entregarlo"
+                      className="p-1.5 text-sky-400 hover:text-sky-300 rounded-lg hover:bg-slate-800">
+                      <ClipboardCheck className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -242,6 +255,15 @@ export const OrdersSupabaseView: React.FC = () => {
             void load();
             refreshQueue();
           }}
+        />
+      )}
+
+      {inspecting && (
+        <InspectionModal
+          orderId={inspecting.id}
+          orderNumber={inspecting.order_number}
+          plate={inspecting.vehicle_plate}
+          onClose={() => setInspecting(null)}
         />
       )}
     </div>

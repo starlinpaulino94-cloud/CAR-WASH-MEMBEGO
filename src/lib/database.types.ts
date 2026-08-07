@@ -12,6 +12,16 @@ export type Enums = {
   cash_session_status: "open" | "closed";
   expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
   fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+  claim_kind: "dano_vehiculo" | "objeto_perdido" | "servicio_deficiente" | "cobro" | "demora" | "otro";
+  claim_status: "abierto" | "en_revision" | "resuelto" | "rechazado";
+  appointment_status: "pendiente" | "confirmada" | "en_curso" | "convertida" | "cancelada" | "ausente";
+  equipment_status: "operativo" | "mantenimiento" | "fuera_servicio" | "retirado";
+  maintenance_kind: "preventivo" | "correctivo";
+  maintenance_status: "abierta" | "completada" | "cancelada";
+  qc_result: "aprobado" | "rechazado";
+  inspection_stage: "recepcion" | "entrega";
+  damage_kind: "rayon" | "abolladura" | "rotura" | "faltante" | "mancha" | "oxido" | "otro";
+  damage_severity: "leve" | "moderado" | "grave";
   inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
   item_type: "service" | "package" | "product";
   membego_status: "active" | "inactive" | "none";
@@ -1208,6 +1218,310 @@ export interface Database {
           },
         ];
       };
+      vehicle_inspections: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          work_order_id: string;
+          stage: Database['public']['Enums']['inspection_stage'];
+          fuel_level: Database['public']['Enums']['fuel_level'] | null;
+          mileage: number | null;
+          valuables: string | null;
+          notes: string | null;
+          terms_accepted: boolean;
+          signature: string | null;
+          signed_by: string | null;
+          signed_at: string | null;
+          photo_urls: string[];
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          branch_id?: string | null;
+          work_order_id: string;
+          stage?: Database['public']['Enums']['inspection_stage'];
+          fuel_level?: Database['public']['Enums']['fuel_level'] | null;
+          mileage?: number | null;
+          valuables?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          fuel_level?: Database['public']['Enums']['fuel_level'] | null;
+          mileage?: number | null;
+          valuables?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "inspections_order_same_company";
+            columns: ["work_order_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "work_orders";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      inspection_damages: {
+        Row: {
+          id: string;
+          company_id: string;
+          inspection_id: string;
+          zone: string;
+          kind: Database['public']['Enums']['damage_kind'];
+          severity: Database['public']['Enums']['damage_severity'];
+          note: string | null;
+          pos_x: number | null;
+          pos_y: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          inspection_id: string;
+          zone: string;
+          kind?: Database['public']['Enums']['damage_kind'];
+          severity?: Database['public']['Enums']['damage_severity'];
+          note?: string | null;
+          pos_x?: number | null;
+          pos_y?: number | null;
+        };
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "damages_inspection_same_company";
+            columns: ["inspection_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "vehicle_inspections";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      claims: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          work_order_id: string | null;
+          customer_id: string | null;
+          customer_name: string;
+          customer_phone: string | null;
+          kind: Database['public']['Enums']['claim_kind'];
+          status: Database['public']['Enums']['claim_status'];
+          description: string;
+          assignee_id: string | null;
+          responsible_id: string | null;
+          resolution: string | null;
+          cost_cents: number;
+          root_cause: string | null;
+          resolved_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: { assignee_id?: string | null };
+        Relationships: [];
+      };
+      claim_events: {
+        Row: {
+          id: number;
+          company_id: string;
+          claim_id: string;
+          note: string;
+          status_from: Database['public']['Enums']['claim_status'] | null;
+          status_to: Database['public']['Enums']['claim_status'] | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      appointments: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string;
+          customer_id: string | null;
+          customer_name: string;
+          customer_phone: string | null;
+          vehicle_id: string | null;
+          vehicle_plate: string;
+          vehicle_category: Database['public']['Enums']['vehicle_category'];
+          service_id: string | null;
+          service_name: string;
+          scheduled_at: string;
+          duration_minutes: number;
+          status: Database['public']['Enums']['appointment_status'];
+          notes: string | null;
+          cancel_reason: string | null;
+          work_order_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: {
+          status?: Database['public']['Enums']['appointment_status'];
+          cancel_reason?: string | null;
+          scheduled_at?: string;
+          duration_minutes?: number;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      equipment: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          bay_id: string | null;
+          code: string;
+          name: string;
+          category: string;
+          brand: string | null;
+          model: string | null;
+          serial_number: string | null;
+          purchase_date: string | null;
+          purchase_cents: number;
+          warranty_until: string | null;
+          status: Database['public']['Enums']['equipment_status'];
+          service_every_days: number | null;
+          next_service_at: string | null;
+          last_service_at: string | null;
+          maintenance_cents: number;
+          downtime_minutes: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          branch_id?: string | null;
+          bay_id?: string | null;
+          code: string;
+          name: string;
+          category?: string;
+          brand?: string | null;
+          model?: string | null;
+          serial_number?: string | null;
+          purchase_date?: string | null;
+          purchase_cents?: number;
+          warranty_until?: string | null;
+          service_every_days?: number | null;
+          next_service_at?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          name?: string;
+          category?: string;
+          brand?: string | null;
+          model?: string | null;
+          serial_number?: string | null;
+          warranty_until?: string | null;
+          status?: Database['public']['Enums']['equipment_status'];
+          service_every_days?: number | null;
+          next_service_at?: string | null;
+          notes?: string | null;
+          bay_id?: string | null;
+        };
+        Relationships: [];
+      };
+      maintenance_orders: {
+        Row: {
+          id: string;
+          company_id: string;
+          equipment_id: string;
+          kind: Database['public']['Enums']['maintenance_kind'];
+          status: Database['public']['Enums']['maintenance_status'];
+          description: string;
+          started_at: string;
+          finished_at: string | null;
+          cost_cents: number;
+          parts: string | null;
+          supplier_id: string | null;
+          resolution: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_equipment_same_company";
+            columns: ["equipment_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "equipment";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      qc_checklist_items: {
+        Row: {
+          id: string;
+          company_id: string;
+          service_id: string | null;
+          label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          service_id?: string | null;
+          label: string;
+          sort_order?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          label?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          service_id?: string | null;
+        };
+        Relationships: [];
+      };
+      qc_reviews: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          work_order_id: string;
+          attempt: number;
+          result: Database['public']['Enums']['qc_result'];
+          reject_reason: string | null;
+          washer_id: string | null;
+          reviewer_id: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      qc_review_results: {
+        Row: {
+          id: string;
+          company_id: string;
+          review_id: string;
+          item_id: string | null;
+          label: string;
+          passed: boolean;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       service_recipes: {
         Row: {
           id: string;
@@ -2066,6 +2380,96 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['purchases']['Row'];
       };
+      open_claim: {
+        Args: {
+          p_customer_name: string;
+          p_kind: Database['public']['Enums']['claim_kind'];
+          p_description: string;
+          p_work_order_id?: string | null;
+          p_customer_id?: string | null;
+          p_customer_phone?: string | null;
+        };
+        Returns: Database['public']['Tables']['claims']['Row'];
+      };
+      add_claim_note: {
+        Args: {
+          p_claim_id: string;
+          p_note: string;
+          p_status?: Database['public']['Enums']['claim_status'] | null;
+        };
+        Returns: Database['public']['Tables']['claims']['Row'];
+      };
+      resolve_claim: {
+        Args: {
+          p_claim_id: string;
+          p_status: Database['public']['Enums']['claim_status'];
+          p_resolution: string;
+          p_cost_cents?: number;
+          p_root_cause?: string | null;
+          p_responsible_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['claims']['Row'];
+      };
+      book_appointment: {
+        Args: {
+          p_branch_id: string;
+          p_customer_name: string;
+          p_scheduled_at: string;
+          p_service_id?: string | null;
+          p_vehicle_plate?: string;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'];
+          p_customer_id?: string | null;
+          p_customer_phone?: string | null;
+          p_duration_minutes?: number | null;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['appointments']['Row'];
+      };
+      convert_appointment: {
+        Args: { p_appointment_id: string; p_client_request_id: string };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
+      };
+      appointment_availability: {
+        Args: { p_branch_id: string; p_start: string; p_minutes?: number };
+        Returns: Json;
+      };
+      open_maintenance: {
+        Args: {
+          p_equipment_id: string;
+          p_kind: Database['public']['Enums']['maintenance_kind'];
+          p_description: string;
+          p_supplier_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['maintenance_orders']['Row'];
+      };
+      complete_maintenance: {
+        Args: {
+          p_maintenance_id: string;
+          p_cost_cents?: number;
+          p_resolution?: string | null;
+          p_parts?: string | null;
+        };
+        Returns: Database['public']['Tables']['maintenance_orders']['Row'];
+      };
+      submit_qc_review: {
+        Args: {
+          p_order_id: string;
+          p_result: Database['public']['Enums']['qc_result'];
+          p_results?: Json;
+          p_reject_reason?: string | null;
+          p_washer_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['qc_reviews']['Row'];
+      };
+      qc_rework_index: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      sign_inspection: {
+        Args: { p_inspection_id: string; p_signature: string; p_signed_by: string };
+        Returns: Database['public']['Tables']['vehicle_inspections']['Row'];
+      };
       management_report: {
         Args: { p_from: string; p_to: string };
         Returns: Json;
@@ -2100,6 +2504,16 @@ export interface Database {
       cash_session_status: "open" | "closed";
       expense_category: "quimicos_insumos" | "servicios_publicos" | "mantenimiento_equipos" | "nomina_extras" | "varios";
       fuel_level: "reserva" | "1/4" | "1/2" | "3/4" | "lleno";
+      claim_kind: "dano_vehiculo" | "objeto_perdido" | "servicio_deficiente" | "cobro" | "demora" | "otro";
+      claim_status: "abierto" | "en_revision" | "resuelto" | "rechazado";
+      appointment_status: "pendiente" | "confirmada" | "en_curso" | "convertida" | "cancelada" | "ausente";
+      equipment_status: "operativo" | "mantenimiento" | "fuera_servicio" | "retirado";
+      maintenance_kind: "preventivo" | "correctivo";
+      maintenance_status: "abierta" | "completada" | "cancelada";
+      qc_result: "aprobado" | "rechazado";
+      inspection_stage: "recepcion" | "entrega";
+      damage_kind: "rayon" | "abolladura" | "rotura" | "faltante" | "mancha" | "oxido" | "otro";
+      damage_severity: "leve" | "moderado" | "grave";
       inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
       item_type: "service" | "package" | "product";
       membego_status: "active" | "inactive" | "none";

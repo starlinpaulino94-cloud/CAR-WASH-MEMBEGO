@@ -11,6 +11,7 @@ import {
   WorkOrder, WorkOrderItem, Bay, Profile, OrderStatus
 } from '../../data/ordersRepository';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
+import { QcReviewModal } from '../modals/QcReviewModal';
 
 const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
   { id: 'pendiente',       label: 'Llegadas',        tone: 'border-amber-500/50 bg-amber-500/5' },
@@ -43,6 +44,8 @@ export const KanbanSupabaseView: React.FC = () => {
   const [assignees, setAssignees] = useState<Map<string, string[]>>(new Map());
   const [bays, setBays] = useState<Bay[]>([]);
   const [operators, setOperators] = useState<Profile[]>([]);
+  // Revisión de calidad: la orden en control_calidad se resuelve con checklist.
+  const [reviewing, setReviewing] = useState<WorkOrder | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -252,6 +255,18 @@ export const KanbanSupabaseView: React.FC = () => {
                         </span>
                       </div>
 
+                      {order.status === 'control_calidad' && (
+                        <div className="pt-1">
+                          <button
+                            disabled={busy}
+                            onClick={() => setReviewing(order)}
+                            className="w-full py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold text-xs rounded transition-colors flex items-center justify-center gap-1"
+                          >
+                            <ShieldCheck className="w-3 h-3" /> Revisar calidad…
+                          </button>
+                        </div>
+                      )}
+
                       {nexts.length > 0 && (
                         <div className="pt-1 space-y-1">
                           {nexts.filter(n => n !== 'cancelado').map(next => (
@@ -278,6 +293,25 @@ export const KanbanSupabaseView: React.FC = () => {
           );
         })}
       </div>
+
+      {reviewing && (
+        <QcReviewModal
+          orderId={reviewing.id}
+          orderNumber={reviewing.order_number}
+          plate={reviewing.vehicle_plate}
+          operators={operators}
+          onClose={() => setReviewing(null)}
+          onDone={result => {
+            setReviewing(null);
+            setActionError(null);
+            void load();
+            refreshQueue();
+            if (result === 'rechazado') {
+              setActionError('Revisión rechazada: la orden volvió a lavado para reproceso.');
+            }
+          }}
+        />
+      )}
 
       {startTarget && (
         <StartServiceDialog
