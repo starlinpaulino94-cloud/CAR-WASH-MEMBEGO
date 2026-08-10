@@ -59,7 +59,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0024','quality_control',       'calidad_0024.sql',      'table',  'qc_reviews'),
     ('0025','equipment',             'equipos_0025.sql',      'table',  'equipment'),
     ('0026','appointments',          'agenda_0026.sql',       'table',  'appointments'),
-    ('0027','claims',                'reclamos_0027.sql',     'table',  'claims')
+    ('0027','claims',                'reclamos_0027.sql',     'table',  'claims'),
+    ('0028','customer_credit',       'credito_0028.sql',      'table',  'receivables')
 ),
 detectadas as (
   select e.*,
@@ -108,7 +109,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0024','quality_control',       'calidad_0024.sql',      'table',  'qc_reviews'),
     ('0025','equipment',             'equipos_0025.sql',      'table',  'equipment'),
     ('0026','appointments',          'agenda_0026.sql',       'table',  'appointments'),
-    ('0027','claims',                'reclamos_0027.sql',     'table',  'claims')
+    ('0027','claims',                'reclamos_0027.sql',     'table',  'claims'),
+    ('0028','customer_credit',       'credito_0028.sql',      'table',  'receivables')
 ),
 detectadas as (
   select e.*,

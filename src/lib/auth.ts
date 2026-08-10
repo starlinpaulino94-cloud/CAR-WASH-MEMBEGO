@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   operateCash:       ['propietario', 'administrador', 'supervisor', 'cajero', 'superadmin'],
   issueInvoice:      ['propietario', 'administrador', 'cajero', 'superadmin'],
   registerExpense:   ['propietario', 'administrador', 'supervisor', 'cajero', 'contador', 'superadmin'],
+  // Mismos roles que el gate de collect_receivable() en la migración 0028.
+  manageReceivables: ['propietario', 'administrador', 'supervisor', 'cajero', 'contador', 'superadmin'],
   viewAllCommissions:['propietario', 'administrador', 'supervisor', 'contador', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 

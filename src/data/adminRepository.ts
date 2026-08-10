@@ -1,5 +1,5 @@
 import { requireSupabase } from '../lib/supabase';
-import { Tables, Enums, Json } from '../lib/database.types';
+import { Tables, Enums, Json, UpdateDto } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
 
 /**
@@ -95,7 +95,13 @@ export async function createCustomer(input: {
   return data;
 }
 
-export async function updateCustomer(id: string, patch: Partial<Customer>): Promise<Customer> {
+/**
+ * El parche es UpdateDto, no Partial<Customer>: desde 0028 el cupo de crédito
+ * (credit_enabled, credit_limit_cents, credit_terms_days) queda fuera del tipo
+ * de actualización porque un trigger rechaza tocarlo por esta vía. Se cambia
+ * solo con set_customer_credit() — ver creditRepository.
+ */
+export async function updateCustomer(id: string, patch: UpdateDto<'customers'>): Promise<Customer> {
   const { data, error } = await requireSupabase()
     .from('customers').update(patch).eq('id', id).select();
   if (error) throw error;

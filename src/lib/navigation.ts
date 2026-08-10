@@ -23,7 +23,7 @@ export type ViewKey =
   | 'pos' | 'services'
   | 'invoices'
   | 'cash' | 'expenses'
-  | 'customers' | 'vehicles' | 'claims'
+  | 'customers' | 'vehicles' | 'claims' | 'receivables'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team'
   | 'reports' | 'report-sales' | 'report-margin'
@@ -114,8 +114,8 @@ export const NAVIGATION: Module[] = [
       { slug: 'directorio', label: 'Clientes', view: 'customers' },
       { slug: 'vehiculos', label: 'Vehículos', view: 'vehicles' },
       { slug: 'reclamos', label: 'Reclamos', view: 'claims' },
-      { slug: 'cuentas', label: 'Por cobrar', pronto: true,
-        hint: 'Cuentas por cobrar de flotillas y clientes a crédito, planificado.' }
+      { slug: 'cuentas', label: 'Por cobrar', view: 'receivables',
+        permission: 'manageReceivables' }
     ]
   },
   {
