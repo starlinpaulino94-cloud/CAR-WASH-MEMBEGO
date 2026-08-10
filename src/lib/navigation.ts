@@ -25,7 +25,7 @@ export type ViewKey =
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles' | 'claims' | 'receivables' | 'fleets'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
-  | 'team'
+  | 'team' | 'shifts' | 'attendance' | 'payroll'
   | 'reports' | 'report-sales' | 'report-margin'
   | 'settings-empresa' | 'settings-impresion' | 'settings-membego';
 
@@ -135,10 +135,9 @@ export const NAVIGATION: Module[] = [
     description: 'Empleados, comisiones y turnos',
     items: [
       { slug: 'empleados', label: 'Empleados', view: 'team' },
-      { slug: 'horarios', label: 'Horarios', pronto: true,
-        hint: 'Turnos y horarios por sucursal, planificado.' },
-      { slug: 'asistencia', label: 'Asistencia', pronto: true,
-        hint: 'Registro de entrada y salida, planificado.' }
+      { slug: 'horarios', label: 'Horarios', view: 'shifts' },
+      { slug: 'asistencia', label: 'Asistencia', view: 'attendance' },
+      { slug: 'nomina', label: 'Nómina', view: 'payroll', permission: 'runPayroll' }
     ]
   },
   {

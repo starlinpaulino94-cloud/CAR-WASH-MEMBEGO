@@ -29,6 +29,8 @@ export type Enums = {
   order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
   payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
   payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
+  payroll_type: "mensual" | "por_hora" | "solo_comision";
+  payroll_status: "borrador" | "aprobada" | "pagada";
   printer_width: "58mm" | "80mm" | "letter";
   user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
   vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
@@ -525,6 +527,8 @@ export interface Database {
           earned_on: string;
           is_paid: boolean;
           paid_at: string | null;
+          // Partida de nómina que la pagó (0030). NULL = todavía sin pagar.
+          payroll_item_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -1346,6 +1350,113 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      work_shifts: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          starts_at: string;
+          ends_at: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      attendance_records: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          shift_id: string | null;
+          checked_in_at: string;
+          checked_out_at: string | null;
+          worked_minutes: number | null;
+          late_minutes: number;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_advances: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          amount_cents: number;
+          reason: string | null;
+          cash_session_id: string | null;
+          payroll_item_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_periods: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          period_from: string;
+          period_to: string;
+          status: Database['public']['Enums']['payroll_status'];
+          gross_cents: number;
+          deductions_cents: number;
+          net_cents: number;
+          notes: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          paid_by: string | null;
+          paid_at: string | null;
+          payment_method: Database['public']['Enums']['payment_method'] | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_items: {
+        Row: {
+          id: string;
+          company_id: string;
+          period_id: string;
+          profile_id: string;
+          payroll_type: Database['public']['Enums']['payroll_type'];
+          base_cents: number;
+          worked_minutes: number;
+          commissions_cents: number;
+          bonus_cents: number;
+          advances_cents: number;
+          deductions_cents: number;
+          net_cents: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "payroll_items_period_same_company";
+            columns: ["period_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "payroll_periods";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       fleets: {
         Row: {
           id: string;
@@ -1887,6 +1998,11 @@ export interface Database {
           avatar_url: string | null;
           cash_pin_hash: string | null;
           commission_bps: number | null;
+          // Datos de pago (0030). Protegidos por un guardia: solo los cambia
+          // set_employee_pay(), por eso no aparecen en Update.
+          payroll_type: Database['public']['Enums']['payroll_type'];
+          base_salary_cents: number;
+          hourly_rate_cents: number;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -1916,7 +2032,6 @@ export interface Database {
           role?: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin" | null;
           avatar_url?: string | null;
           cash_pin_hash?: string | null;
-          commission_bps?: number | null;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -2544,6 +2659,82 @@ export interface Database {
         Args: { p_as_of?: string };
         Returns: Json;
       };
+      set_employee_pay: {
+        Args: {
+          p_profile_id: string;
+          p_payroll_type: Database['public']['Enums']['payroll_type'];
+          p_base_salary_cents?: number;
+          p_hourly_rate_cents?: number;
+          p_commission_bps?: number | null;
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
+      schedule_shift: {
+        Args: {
+          p_profile_id: string;
+          p_starts_at: string;
+          p_ends_at: string;
+          p_branch_id?: string | null;
+          p_notes?: string | null;
+          p_shift_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['work_shifts']['Row'];
+      };
+      delete_shift: {
+        Args: { p_shift_id: string };
+        Returns: void;
+      };
+      clock_in: {
+        Args: { p_profile_id?: string | null; p_notes?: string | null };
+        Returns: Database['public']['Tables']['attendance_records']['Row'];
+      };
+      clock_out: {
+        Args: { p_profile_id?: string | null; p_notes?: string | null };
+        Returns: Database['public']['Tables']['attendance_records']['Row'];
+      };
+      register_payroll_advance: {
+        Args: {
+          p_profile_id: string;
+          p_amount_cents: number;
+          p_reason?: string | null;
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_advances']['Row'];
+      };
+      open_payroll_period: {
+        Args: {
+          p_from: string;
+          p_to: string;
+          p_branch_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      adjust_payroll_item: {
+        Args: {
+          p_item_id: string;
+          p_bonus_cents?: number;
+          p_deductions_cents?: number;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_items']['Row'];
+      };
+      approve_payroll: {
+        Args: { p_period_id: string };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      pay_payroll: {
+        Args: {
+          p_period_id: string;
+          p_payment_method?: Database['public']['Enums']['payment_method'];
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      delete_payroll_period: {
+        Args: { p_period_id: string };
+        Returns: void;
+      };
       upsert_fleet: {
         Args: {
           p_customer_id: string;
@@ -2701,6 +2892,8 @@ export interface Database {
       order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
       payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
       payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
+      payroll_type: "mensual" | "por_hora" | "solo_comision";
+      payroll_status: "borrador" | "aprobada" | "pagada";
       printer_width: "58mm" | "80mm" | "letter";
       user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
       vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";

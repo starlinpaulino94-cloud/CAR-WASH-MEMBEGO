@@ -44,6 +44,9 @@ export const PERMISSIONS = {
   registerExpense:   ['propietario', 'administrador', 'supervisor', 'cajero', 'contador', 'superadmin'],
   // Mismos roles que el gate de collect_receivable() en la migración 0028.
   manageReceivables: ['propietario', 'administrador', 'supervisor', 'cajero', 'contador', 'superadmin'],
+  // La nómina completa es información sensible: solo quien la firma. Mismos
+  // roles que la política de payroll_periods en la migración 0030.
+  runPayroll:        ['propietario', 'administrador', 'contador', 'superadmin'],
   viewAllCommissions:['propietario', 'administrador', 'supervisor', 'contador', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 

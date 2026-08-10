@@ -369,6 +369,66 @@ check('la orden queda sellada con su flotilla para facturarla luego',
   sql(`select count(*) from work_orders o join fleets f on f.id = o.fleet_id
        where o.client_request_id='e2e-flota-1' and f.name='Transporte E2E SRL'`) === '1');
 
+// ======================================================= Nómina
+console.log('\n[9] Personal — sueldo, adelanto y nómina');
+
+// El sueldo NO se puede tocar por la vía directa: lo prueba el guardia de 0030.
+await go(page, /^Personal/, /^Nómina/);
+await page.getByRole('button', { name: /Fijar sueldo/ }).first().click();
+await page.waitForTimeout(600);
+await page.getByLabel('Modalidad').selectOption('mensual');
+await page.getByLabel('Sueldo mensual').fill('30000');
+await page.getByRole('button', { name: /Guardar sueldo/ }).click();
+await page.waitForTimeout(2200);
+
+check('el sueldo mensual se guardó en centavos por la vía correcta',
+  sql("select count(*) from profiles where payroll_type='mensual' and base_salary_cents=3000000") === '1',
+  sql("select coalesce((select payroll_type || '/' || base_salary_cents from profiles where payroll_type='mensual'),'(ninguno)')"));
+
+// Un UPDATE directo sobre la ficha lo rechaza la base, aunque venga del API.
+check('el guardia rechaza cambiar el sueldo con un UPDATE directo',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+           set role authenticated;
+           update public.profiles set base_salary_cents = 99999999
+            where id = '33333333-3333-3333-3333-333333333333';`);
+      return false;
+    } catch { return true; }
+  })());
+
+// Adelanto: sale de la gaveta.
+const cashPreAdvance = Number(sql("select expected_cash_cents from cash_sessions where status='open'"));
+await page.getByRole('button', { name: /Dar adelanto/ }).click();
+await page.waitForTimeout(600);
+await page.getByLabel('Empleado').selectOption({ index: 1 });
+await page.getByLabel('Importe').fill('500');
+await page.getByRole('button', { name: /Entregar adelanto/ }).click();
+await page.waitForTimeout(2200);
+
+check('el adelanto salió de la caja en la misma operación',
+  Number(sql("select expected_cash_cents from cash_sessions where status='open'")) === cashPreAdvance - 50000,
+  `${cashPreAdvance} → ${sql("select expected_cash_cents from cash_sessions where status='open'")}`);
+
+// Nómina del periodo: calcula, y el adelanto aparece descontado.
+await page.getByRole('button', { name: /Abrir nómina/ }).click();
+await page.waitForTimeout(600);
+await page.getByRole('button', { name: /^Calcular$/ }).click();
+await page.waitForTimeout(2600);
+
+check('la nómina nace en borrador con sus partidas',
+  sql("select status from payroll_periods limit 1") === 'borrador',
+  sql("select coalesce((select status::text from payroll_periods limit 1),'(ninguna)')"));
+
+check('el adelanto entregado se descontó en la partida',
+  sql("select coalesce(sum(advances_cents),0) from payroll_items") === '50000',
+  sql("select coalesce(sum(advances_cents),0)::text from payroll_items"));
+
+check('el neto del periodo cuadra con la suma de sus partidas',
+  sql(`select (p.net_cents = (select coalesce(sum(i.net_cents),0)
+         from payroll_items i where i.period_id = p.id))::text
+       from payroll_periods p limit 1`) === 'true');
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

@@ -38,6 +38,9 @@ const SuppliersView         = lazyView(() => import('./components/views/Supplier
 const ClaimsView            = lazyView(() => import('./components/views/ClaimsSupabaseView'), 'ClaimsSupabaseView');
 const ReceivablesView       = lazyView(() => import('./components/views/ReceivablesSupabaseView'), 'ReceivablesSupabaseView');
 const FleetsView            = lazyView(() => import('./components/views/FleetsSupabaseView'), 'FleetsSupabaseView');
+const ShiftsView            = lazyView(() => import('./components/views/ShiftsSupabaseView'), 'ShiftsSupabaseView');
+const AttendanceView        = lazyView(() => import('./components/views/AttendanceSupabaseView'), 'AttendanceSupabaseView');
+const PayrollView           = lazyView(() => import('./components/views/PayrollSupabaseView'), 'PayrollSupabaseView');
 const AppointmentsView      = lazyView(() => import('./components/views/AppointmentsSupabaseView'), 'AppointmentsSupabaseView');
 const EquipmentView         = lazyView(() => import('./components/views/EquipmentSupabaseView'), 'EquipmentSupabaseView');
 const QualityView           = lazyView(() => import('./components/views/QualitySupabaseView'), 'QualitySupabaseView');
@@ -81,6 +84,9 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   claims:    { ready: <ClaimsView />,            demo: <ClaimsView /> },
   receivables: { ready: <ReceivablesView />,     demo: <ReceivablesView /> },
   fleets:    { ready: <FleetsView />,            demo: <FleetsView /> },
+  shifts:    { ready: <ShiftsView />,            demo: <ShiftsView /> },
+  attendance: { ready: <AttendanceView />,       demo: <AttendanceView /> },
+  payroll:   { ready: <PayrollView />,           demo: <PayrollView /> },
   pos:       { ready: <PosSupabaseView />,       demo: <PosView /> },
   services:  { ready: <ServicesSupabaseView />,  demo: <ServicesView /> },
   invoices:  { ready: <InvoicesSupabaseView />,  demo: <InvoicesView /> },
