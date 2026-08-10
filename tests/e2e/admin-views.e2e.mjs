@@ -232,6 +232,71 @@ await go(page, /^Clientes/, /^Vehículos/);
 check('la flotilla lista los vehículos registrados',
   await page.getByText('AD0001').first().isVisible().catch(() => false));
 
+// ======================================================= Crédito y por cobrar
+console.log('\n[7] Por cobrar — crédito, saldo y abonos');
+await go(page, /^Clientes/, /^Por cobrar/);
+
+// El propietario autoriza el cupo. Es la ÚNICA vía: un UPDATE directo sobre
+// customers lo rechaza el guardia de la 0028 (comprobado en 96_credit_tests).
+await page.getByRole('button', { name: /Autorizar crédito/ }).click();
+await page.waitForTimeout(500);
+await page.getByLabel(/Buscar cliente/).fill('Cliente Panel');
+await page.waitForTimeout(1200);
+await page.getByRole('button', { name: /Cliente Panel/ }).click();
+await page.waitForTimeout(500);
+await page.getByLabel('Cupo autorizado').fill('5000');
+await page.getByLabel('Plazo en días').fill('10');
+await page.getByRole('button', { name: /Guardar cupo/ }).click();
+await page.waitForTimeout(2000);
+
+check('el cupo autorizado se guardó en centavos y con su plazo',
+  sql(`select credit_enabled || '|' || credit_limit_cents || '|' || credit_terms_days
+       from customers where name='Cliente Panel'`) === 'true|500000|10',
+  sql(`select credit_enabled || '|' || credit_limit_cents || '|' || credit_terms_days
+       from customers where name='Cliente Panel'`));
+
+// Una venta fiada: no entra a caja y abre la cuenta por cobrar.
+sql(`
+  select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+  set role authenticated;
+  select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'adm-cred-1',
+    jsonb_build_array(jsonb_build_object('item_type','service',
+      'service_id','44444444-4444-4444-4444-444444444444','name','Lavado',
+      'quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    jsonb_build_array(jsonb_build_object('method','credito','amount_cents',
+      (select (price_cents * 1.18)::bigint from service_prices
+        where service_id='44444444-4444-4444-4444-444444444444' and vehicle_category='sedan'))),
+    'sedan', null, (select id from customers where name='Cliente Panel'),
+    'Cliente Panel', null, 'AD0001', null,
+    (select id from cash_sessions where status='open' limit 1));
+`);
+
+check('lo fiado abre cuenta por cobrar y NO entra a la caja',
+  sql("select count(*) from receivables where status='pendiente'") === '1'
+  && sql(`select count(*) from cash_movements m
+          join invoices i on i.id = m.invoice_id
+          where i.client_request_id='adm-cred-1' and m.type='inflow'`) === '0');
+
+// Se vuelve a entrar para que la pantalla lea la cuenta recién abierta.
+await go(page, /^Clientes/, /^Vehículos/);
+await go(page, /^Clientes/, /^Por cobrar/);
+
+check('la cuenta pendiente aparece en el listado',
+  await page.getByRole('button', { name: /^Cobrar$/ }).first().isVisible().catch(() => false));
+
+await page.getByRole('button', { name: /^Cobrar$/ }).first().click();
+await page.waitForTimeout(600);
+await page.getByLabel('Importe a cobrar').fill('300');
+await page.getByLabel('Forma de pago').selectOption('transferencia');
+await page.getByRole('button', { name: /Registrar cobro/ }).click();
+await page.waitForTimeout(2200);
+
+check('el abono se guardó en centavos y dejó la cuenta pendiente',
+  sql("select paid_cents || '|' || status from receivables limit 1") === '30000|pendiente',
+  sql("select paid_cents || '|' || status from receivables limit 1"));
+check('el abono quedó registrado con su forma de pago',
+  sql("select count(*) from receivable_payments where amount_cents=30000 and payment_method='transferencia'") === '1');
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

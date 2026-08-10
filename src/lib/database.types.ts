@@ -672,6 +672,11 @@ export interface Database {
           total_visits: number;
           total_spent_cents: number;
           last_visit_at: string | null;
+          // Crédito (0028). El cupo NO se edita por UPDATE: solo con
+          // set_customer_credit(); un trigger rechaza cualquier otra vía.
+          credit_enabled: boolean;
+          credit_limit_cents: number;
+          credit_terms_days: number;
           created_at: string;
           updated_at: string;
         };
@@ -1334,6 +1339,59 @@ export interface Database {
           note: string;
           status_from: Database['public']['Enums']['claim_status'] | null;
           status_to: Database['public']['Enums']['claim_status'] | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      receivables: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          customer_id: string;
+          invoice_id: string;
+          work_order_id: string | null;
+          issued_on: string;
+          due_on: string;
+          total_cents: number;
+          paid_cents: number;
+          status: "pendiente" | "pagada" | "anulada";
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "receivables_customer_same_company";
+            columns: ["customer_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+          {
+            foreignKeyName: "receivables_invoice_same_company";
+            columns: ["invoice_id", "company_id"];
+            isOneToOne: true;
+            referencedRelation: "invoices";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      receivable_payments: {
+        Row: {
+          id: string;
+          company_id: string;
+          receivable_id: string;
+          amount_cents: number;
+          payment_method: Database['public']['Enums']['payment_method'];
+          reference: string | null;
+          notes: string | null;
+          cash_session_id: string | null;
           created_by: string | null;
           created_at: string;
         };
@@ -2409,6 +2467,33 @@ export interface Database {
           p_responsible_id?: string | null;
         };
         Returns: Database['public']['Tables']['claims']['Row'];
+      };
+      set_customer_credit: {
+        Args: {
+          p_customer_id: string;
+          p_enabled: boolean;
+          p_limit_cents?: number;
+          p_terms_days?: number;
+        };
+        Returns: Database['public']['Tables']['customers']['Row'];
+      };
+      customer_credit_status: {
+        Args: { p_customer_id: string };
+        Returns: Json;
+      };
+      collect_receivable: {
+        Args: {
+          p_receivable_id: string;
+          p_amount_cents: number;
+          p_payment_method?: Database['public']['Enums']['payment_method'];
+          p_reference?: string | null;
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['receivables']['Row'];
+      };
+      receivables_aging: {
+        Args: { p_as_of?: string };
+        Returns: Json;
       };
       book_appointment: {
         Args: {
