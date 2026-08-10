@@ -286,6 +286,8 @@ export interface CreateInvoiceParams {
   vehiclePlate?: string | null;
   ncfType?: NcfType | null;
   cashSessionId?: string | null;
+  /** Código promocional. El descuento lo recalcula el servidor al emitir. */
+  promotionCode?: string | null;
 }
 
 /**
@@ -320,7 +322,8 @@ export async function createInvoice(params: CreateInvoiceParams): Promise<Invoic
     p_customer_tax_id: params.customerTaxId ?? null,
     p_vehicle_plate: params.vehiclePlate ?? null,
     p_ncf_type: params.ncfType ?? null,
-    p_cash_session_id: params.cashSessionId ?? null
+    p_cash_session_id: params.cashSessionId ?? null,
+    p_promotion_code: params.promotionCode ?? null
   });
 
   if (error) throw new Error(translatePostgresError(error.message));

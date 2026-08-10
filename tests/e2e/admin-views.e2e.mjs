@@ -484,6 +484,73 @@ check('quien quedó limitado a otra sucursal deja de ver las órdenes de la prin
   ordenesTotales > 0 && ordenesVistas === 0,
   `${ordenesVistas} visibles de ${ordenesTotales} existentes`);
 
+// ======================================================= Descuentos
+console.log('\n[11] Descuentos — promoción con reglas y techo del manual');
+await go(page, /^Ventas/, /^Descuentos/);
+
+await page.getByRole('button', { name: /Nueva promoción/ }).click();
+await page.waitForTimeout(600);
+await page.getByLabel('Código *').fill('E2E15');
+await page.getByLabel('Nombre *').fill('Quince por ciento');
+await page.getByLabel('Porcentaje (%)').fill('15');
+await page.getByRole('button', { name: /Crear promoción/ }).click();
+await page.waitForTimeout(2200);
+
+check('la promoción se guardó con su porcentaje en puntos base',
+  sql("select value_bps::text from promotions where code='E2E15'") === '1500',
+  sql("select coalesce((select value_bps::text from promotions where code='E2E15'),'(ninguna)')"));
+
+check('la promoción nace activa y sin usos',
+  sql("select (is_active and uses_count = 0)::text from promotions where code='E2E15'") === 'true');
+
+// Lo que de verdad importa: el importe lo pone el servidor, no la pantalla.
+// Se emite una venta con el código y se comprueba el descuento resultante.
+sql(`
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'e2e-promo-1',
+    jsonb_build_array(jsonb_build_object('item_type','service',
+      'service_id','44444444-4444-4444-4444-444444444444','name','Lavado',
+      'quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    jsonb_build_array(jsonb_build_object('method','tarjeta','amount_cents',
+      (select round((price_cents * 0.85) * 1.18)::bigint from service_prices
+        where service_id='44444444-4444-4444-4444-444444444444' and vehicle_category='sedan'))),
+    'sedan', null, null, 'Consumidor Final', null, 'PR0001', null, null, 'E2E15');
+`);
+
+const precioSedan = Number(sql(`select price_cents from service_prices
+  where service_id='44444444-4444-4444-4444-444444444444' and vehicle_category='sedan'`));
+
+check('el servidor calculó el 15 % sobre el precio de catálogo',
+  Number(sql("select discount_cents from invoices where client_request_id='e2e-promo-1'"))
+    === Math.round(precioSedan * 0.15),
+  `${sql("select discount_cents from invoices where client_request_id='e2e-promo-1'")} de ${precioSedan}`);
+
+check('el canje quedó registrado y el contador subió',
+  sql("select uses_count::text from promotions where code='E2E15'") === '1'
+  && sql(`select count(*) from promotion_redemptions r join invoices i on i.id = r.invoice_id
+          where i.client_request_id='e2e-promo-1'`) === '1');
+
+// El techo del descuento manual: se baja al 10 % y el cajero deja de poder.
+sql("update public.companies set max_manual_discount_bps = 1000;");
+
+check('con techo puesto, un cajero no puede rebajar la factura a voluntad',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+           set role authenticated;
+           select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'e2e-abuso',
+             jsonb_build_array(jsonb_build_object('item_type','service',
+               'service_id','44444444-4444-4444-4444-444444444444','name','Lavado',
+               'quantity',1,'discount_cents',${precioSedan - 100},'is_membego_covered',false)),
+             jsonb_build_array(jsonb_build_object('method','tarjeta','amount_cents',118)),
+             'sedan', null, null, 'Consumidor Final', null, 'AB0001', null, null);`);
+      return false;
+    } catch { return true; }
+  })());
+
+sql("update public.companies set max_manual_discount_bps = 10000;");
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, taxFromBps, bpsToPercent } from '../../lib/money';
+import { validatePromotion, PromotionPreview } from '../../data/promotionRepository';
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
   lookupMembegoByPhone,
@@ -165,15 +166,47 @@ export const PosSupabaseView: React.FC = () => {
 
   const removeLine = (key: string) => setLines(prev => prev.filter(l => l.key !== key));
 
+  // ----------------------------------------------------------- Promoción
+  const [promoCode, setPromoCode] = useState('');
+  const [promoPreview, setPromoPreview] = useState<PromotionPreview | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
+
+  const aplicarPromo = async () => {
+    if (!promoCode.trim() || promoBusy) return;
+    setPromoBusy(true);
+    try {
+      const subtotal = lines.reduce((acc, l) => acc + l.unitPriceCents * l.quantity, 0);
+      setPromoPreview(await validatePromotion({
+        code: promoCode,
+        subtotalCents: subtotal,
+        lines: lines.map(l => ({
+          service_id: l.serviceId,
+          category,
+          amount_cents: l.unitPriceCents * l.quantity - l.discountCents
+        }))
+      }));
+    } catch {
+      setPromoPreview({ valid: false, reason: 'No se pudo comprobar el código.' });
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const quitarPromo = () => { setPromoCode(''); setPromoPreview(null); };
+
   // Previsualización. La cifra que vale es la que devuelve create_invoice().
   const preview = useMemo(() => {
     const subtotal = lines.reduce((acc, l) => acc + l.unitPriceCents * l.quantity, 0);
-    const discount = lines.reduce((acc, l) => acc + (l.isMembegoCovered ? 0 : l.discountCents), 0);
+    const manual = lines.reduce((acc, l) => acc + (l.isMembegoCovered ? 0 : l.discountCents), 0);
     const membego = lines.reduce((acc, l) => acc + (l.isMembegoCovered ? l.unitPriceCents * l.quantity : 0), 0);
+    // El descuento promocional lo calculó el servidor al validar el código; aquí
+    // solo se pinta. Al emitir, create_invoice lo vuelve a calcular.
+    const promo = promoPreview?.valid ? (promoPreview.discount_cents ?? 0) : 0;
+    const discount = manual + promo;
     const taxable = Math.max(0, subtotal - discount - membego);
     const tax = taxFromBps(taxable, taxRateBps);
-    return { subtotal, discount, membego, tax, total: taxable + tax };
-  }, [lines, taxRateBps]);
+    return { subtotal, discount, manual, promo, membego, tax, total: taxable + tax };
+  }, [lines, taxRateBps, promoPreview]);
 
   const tenderedCents = parseAmountToCents(tenderedInput);
   const effectiveTendered = method === 'efectivo'
@@ -210,7 +243,9 @@ export const PosSupabaseView: React.FC = () => {
         customerTaxId: customerTaxId.trim() || null,
         vehiclePlate: vehiclePlate.trim().toUpperCase() || null,
         ncfType: wantsNcf ? (customerTaxId.trim() ? 'B01' : 'B02') : null,
-        cashSessionId: session?.id ?? null
+        cashSessionId: session?.id ?? null,
+        // Solo el código: el importe lo recalcula el servidor con sus reglas.
+        promotionCode: promoPreview?.valid ? promoCode.trim() : null
       });
 
       setLastInvoice(invoice);
@@ -222,6 +257,7 @@ export const PosSupabaseView: React.FC = () => {
       setCustomerTaxId('');
       setTenderedInput('');
       setMembegoPhone(''); setMembegoSummary(null); setMembegoSearched(false);
+      quitarPromo();
       void load();     // refresca stock y caja
     } catch (err) {
       // NO se limpia requestIdRef: un reintento debe llevar la MISMA clave.
@@ -497,9 +533,35 @@ export const PosSupabaseView: React.FC = () => {
 
           <div className="space-y-4 pt-4 border-t border-slate-800">
             <div className="space-y-1.5 text-xs">
+              <div className="flex gap-1.5 pb-1.5">
+                <input
+                  aria-label="Código promocional"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-sm text-white uppercase"
+                  value={promoCode}
+                  onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoPreview(null); }}
+                  placeholder="Código promocional" />
+                {promoPreview?.valid
+                  ? <button type="button" onClick={quitarPromo}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                      Quitar
+                    </button>
+                  : <button type="button" onClick={() => void aplicarPromo()} disabled={promoBusy || !promoCode.trim()}
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50">
+                      Aplicar
+                    </button>}
+              </div>
+              {promoPreview && !promoPreview.valid && (
+                <p className="text-xs text-amber-400 pb-1.5">{promoPreview.reason}</p>
+              )}
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal</span><span>{formatCents(preview.subtotal, symbol)}</span>
               </div>
+              {preview.promo > 0 && (
+                <div className="flex justify-between text-emerald-400">
+                  <span>Promoción {promoPreview?.code}</span>
+                  <span>−{formatCents(preview.promo, symbol)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-slate-400">
                 <span>ITBIS ({bpsToPercent(taxRateBps)})</span><span>{formatCents(preview.tax, symbol)}</span>
               </div>

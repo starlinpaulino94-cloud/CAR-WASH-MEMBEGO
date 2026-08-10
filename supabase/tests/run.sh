@@ -26,7 +26,9 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
     || { echo "FALLO al aplicar $(basename "$f")"; exit 1; }
 done
 
-for t in "$HERE"/[0-9][0-9]_*tests*.sql; do
+# El prefijo admite letras además de dígitos: la numeración pasó de 99 y
+# seguir con A0, A1… mantiene el orden alfabético, que es el de ejecución.
+for t in "$HERE"/[0-9A-Z][0-9A-Z]_*tests*.sql; do
   "${PSQL[@]}" -d membego_test -q -f "$t" >/dev/null 2>&1 || true
 done
 

@@ -32,6 +32,8 @@ export type Enums = {
   payroll_type: "mensual" | "por_hora" | "solo_comision";
   payroll_status: "borrador" | "aprobada" | "pagada";
   branch_scope: "sucursal" | "todas";
+  promotion_kind: "porcentaje" | "importe";
+  promotion_scope: "total" | "servicio" | "categoria";
   printer_width: "58mm" | "80mm" | "letter";
   user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
   vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
@@ -613,6 +615,8 @@ export interface Database {
           currency_symbol: string;
           timezone: string;
           tax_rate_bps: number;
+          // Techo del descuento manual (0032). 10000 = 100 %, sin límite.
+          max_manual_discount_bps: number;
           allow_guest_checkout: boolean;
           thermal_printer_width: "58mm" | "80mm" | "letter";
           header_note: string | null;
@@ -631,6 +635,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";
           header_note?: string | null;
@@ -649,6 +654,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";
           header_note?: string | null;
@@ -1351,6 +1357,56 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      promotions: {
+        Row: {
+          id: string;
+          company_id: string;
+          code: string;
+          name: string;
+          kind: Database['public']['Enums']['promotion_kind'];
+          scope: Database['public']['Enums']['promotion_scope'];
+          value_bps: number | null;
+          value_cents: number | null;
+          service_id: string | null;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          starts_on: string;
+          ends_on: string | null;
+          weekdays: number[] | null;
+          min_purchase_cents: number;
+          max_uses: number | null;
+          max_uses_per_customer: number | null;
+          uses_count: number;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      promotion_redemptions: {
+        Row: {
+          id: string;
+          company_id: string;
+          promotion_id: string;
+          invoice_id: string;
+          customer_id: string | null;
+          discount_cents: number;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "redemptions_promotion_same_company";
+            columns: ["promotion_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "promotions";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
       work_shifts: {
         Row: {
           id: string;
@@ -2007,6 +2063,8 @@ export interface Database {
           // Alcance de sucursal (0031). Junto con branch_id decide qué ve. Lo
           // cambia solo set_employee_branch(), nunca sobre uno mismo.
           branch_scope: Database['public']['Enums']['branch_scope'];
+          promotion_kind: "porcentaje" | "importe";
+          promotion_scope: "total" | "servicio" | "categoria";
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -2545,6 +2603,8 @@ export interface Database {
           p_vehicle_plate?: string;
           p_ncf_type?: "B01" | "B02" | "B04" | "B14" | "B15";
           p_cash_session_id?: string;
+          // Código promocional (0032). El importe lo recalcula el servidor.
+          p_promotion_code?: string | null;
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
       };
@@ -2663,6 +2723,36 @@ export interface Database {
       };
       receivables_aging: {
         Args: { p_as_of?: string };
+        Returns: Json;
+      };
+      upsert_promotion: {
+        Args: {
+          p_code: string;
+          p_name: string;
+          p_kind: Database['public']['Enums']['promotion_kind'];
+          p_scope?: Database['public']['Enums']['promotion_scope'];
+          p_promotion_id?: string | null;
+          p_value_bps?: number | null;
+          p_value_cents?: number | null;
+          p_service_id?: string | null;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          p_starts_on?: string | null;
+          p_ends_on?: string | null;
+          p_weekdays?: number[] | null;
+          p_min_purchase_cents?: number;
+          p_max_uses?: number | null;
+          p_max_uses_per_customer?: number | null;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['promotions']['Row'];
+      };
+      validate_promotion: {
+        Args: {
+          p_code: string;
+          p_subtotal: number;
+          p_lines?: Json;
+          p_customer_id?: string | null;
+        };
         Returns: Json;
       };
       upsert_branch: {
@@ -2920,6 +3010,8 @@ export interface Database {
       payroll_type: "mensual" | "por_hora" | "solo_comision";
       payroll_status: "borrador" | "aprobada" | "pagada";
       branch_scope: "sucursal" | "todas";
+      promotion_kind: "porcentaje" | "importe";
+      promotion_scope: "total" | "servicio" | "categoria";
       printer_width: "58mm" | "80mm" | "letter";
       user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
       vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";

@@ -20,7 +20,7 @@ import { can, Permission, Profile } from './auth';
 /** Claves de vista: identifican un componente registrado en App.tsx. */
 export type ViewKey =
   | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
-  | 'pos' | 'services'
+  | 'pos' | 'services' | 'promotions'
   | 'invoices'
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles' | 'claims' | 'receivables' | 'fleets'
@@ -84,8 +84,7 @@ export const NAVIGATION: Module[] = [
     items: [
       { slug: 'pos', label: 'Punto de venta', view: 'pos' },
       { slug: 'servicios', label: 'Servicios', view: 'services' },
-      { slug: 'descuentos', label: 'Descuentos', pronto: true,
-        hint: 'Promociones y descuentos por campaña llegarán en una fase próxima.' }
+      { slug: 'descuentos', label: 'Descuentos', view: 'promotions' }
     ]
   },
   {
