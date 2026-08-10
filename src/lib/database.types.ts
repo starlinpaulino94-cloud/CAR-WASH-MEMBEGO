@@ -1346,6 +1346,49 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      fleets: {
+        Row: {
+          id: string;
+          company_id: string;
+          customer_id: string;
+          name: string;
+          code: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          contact_email: string | null;
+          po_reference: string | null;
+          notes: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "fleets_customer_same_company";
+            columns: ["customer_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      fleet_rates: {
+        Row: {
+          id: string;
+          company_id: string;
+          fleet_id: string;
+          service_id: string;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          price_cents: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       receivables: {
         Row: {
           id: string;
@@ -2000,6 +2043,8 @@ export interface Database {
           category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
           notes: string | null;
           last_visit_at: string | null;
+          // Flotilla (0029). Se mueve solo con assign_vehicle_to_fleet().
+          fleet_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -2202,6 +2247,10 @@ export interface Database {
           created_at: string;
           updated_at: string;
           client_request_id: string | null;
+          // Flotilla (0029). Se sella al crear la orden; la factura consolidada
+          // marca cuál la cobró, para que nadie la cobre dos veces.
+          fleet_id: string | null;
+          consolidated_invoice_id: string | null;
         };
         Insert: {
           id?: string;
@@ -2493,6 +2542,52 @@ export interface Database {
       };
       receivables_aging: {
         Args: { p_as_of?: string };
+        Returns: Json;
+      };
+      upsert_fleet: {
+        Args: {
+          p_customer_id: string;
+          p_name: string;
+          p_fleet_id?: string | null;
+          p_code?: string | null;
+          p_contact_name?: string | null;
+          p_contact_phone?: string | null;
+          p_contact_email?: string | null;
+          p_po_reference?: string | null;
+          p_notes?: string | null;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['fleets']['Row'];
+      };
+      assign_vehicle_to_fleet: {
+        Args: { p_vehicle_id: string; p_fleet_id: string | null };
+        Returns: Database['public']['Tables']['vehicles']['Row'];
+      };
+      set_fleet_rate: {
+        Args: {
+          p_fleet_id: string;
+          p_service_id: string;
+          p_price_cents: number;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+        };
+        Returns: Database['public']['Tables']['fleet_rates']['Row'];
+      };
+      delete_fleet_rate: {
+        Args: { p_rate_id: string };
+        Returns: void;
+      };
+      invoice_fleet_period: {
+        Args: {
+          p_fleet_id: string;
+          p_from: string;
+          p_to: string;
+          p_client_request_id: string;
+          p_ncf_type?: Database['public']['Enums']['ncf_type'] | null;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      fleet_statement: {
+        Args: { p_fleet_id: string; p_from: string; p_to: string };
         Returns: Json;
       };
       book_appointment: {

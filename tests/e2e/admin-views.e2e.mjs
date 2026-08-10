@@ -297,6 +297,78 @@ check('el abono se guardó en centavos y dejó la cuenta pendiente',
 check('el abono quedó registrado con su forma de pago',
   sql("select count(*) from receivable_payments where amount_cents=30000 and payment_method='transferencia'") === '1');
 
+// ======================================================= Flotillas
+console.log('\n[8] Flotillas — cuenta corporativa y tarifa de contrato');
+await go(page, /^Clientes/, /^Flotillas/);
+
+await page.getByRole('button', { name: /Nueva flotilla/ }).click();
+await page.waitForTimeout(500);
+await page.getByLabel('Nombre *').fill('Transporte E2E SRL');
+await page.getByLabel(/Cliente que paga/).fill('Cliente Panel');
+await page.waitForTimeout(1200);
+// El cliente se elige de la lista: la flotilla apunta a quien recibe la factura.
+await page.getByRole('button', { name: 'Cliente Panel', exact: true }).click();
+await page.getByLabel('Código').fill('TE-01');
+await page.getByRole('button', { name: /Crear flotilla/ }).click();
+await page.waitForTimeout(2200);
+
+check('la flotilla se creó apuntando a quien paga',
+  sql(`select f.code from fleets f join customers c on c.id = f.customer_id
+       where f.name='Transporte E2E SRL' and c.name='Cliente Panel'`) === 'TE-01',
+  sql("select coalesce((select code from fleets where name='Transporte E2E SRL'),'(ninguna)')"));
+
+// Tarifa pactada: 500,00 frente a los 1.000,00 del catálogo para sedán.
+await page.getByRole('button', { name: 'Transporte E2E SRL' }).click();
+await page.waitForTimeout(1800);
+await page.getByRole('button', { name: 'Pactar' }).click();
+await page.waitForTimeout(600);
+await page.getByLabel('Servicio').selectOption({ label: 'Lavado Completo' });
+await page.getByLabel('Precio pactado').fill('500');
+await page.getByRole('button', { name: /Guardar tarifa/ }).click();
+await page.waitForTimeout(2200);
+
+check('la tarifa pactada se guardó en centavos, sin categoría (todo el parque)',
+  sql(`select price_cents from fleet_rates r join fleets f on f.id = r.fleet_id
+       where f.name='Transporte E2E SRL' and r.vehicle_category is null`) === '50000',
+  sql(`select coalesce((select price_cents::text from fleet_rates r
+        join fleets f on f.id=r.fleet_id where f.name='Transporte E2E SRL'),'(ninguna)')`));
+
+// El vehículo entra a la flotilla y, a partir de ahí, manda el contrato.
+await page.getByRole('button', { name: 'Añadir' }).click();
+await page.waitForTimeout(500);
+await page.getByLabel(/Buscar placa/).fill('AD0001');
+await page.waitForTimeout(1200);
+await page.getByRole('button', { name: /AD0001/ }).click();
+await page.waitForTimeout(2200);
+
+check('el vehículo quedó dentro de la flotilla',
+  sql(`select count(*) from vehicles v join fleets f on f.id = v.fleet_id
+       where v.plate='AD0001' and f.name='Transporte E2E SRL'`) === '1');
+
+// La prueba que importa: una orden nueva de esa placa cobra la tarifa pactada
+// sin que nadie aplique un descuento a mano.
+sql(`
+  select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+  set role authenticated;
+  select public.create_work_order('22222222-2222-2222-2222-222222222222'::uuid,'e2e-flota-1',
+    'AD0001','sedan',
+    jsonb_build_array(jsonb_build_object('service_id','44444444-4444-4444-4444-444444444444',
+      'name','Lavado','quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    'Cliente Panel');
+`);
+
+check('la orden de un vehículo de flota cobra la tarifa de contrato',
+  sql(`select i.unit_price_cents from work_order_items i
+       join work_orders o on o.id = i.work_order_id
+       where o.client_request_id='e2e-flota-1'`) === '50000',
+  sql(`select i.unit_price_cents::text from work_order_items i
+       join work_orders o on o.id = i.work_order_id
+       where o.client_request_id='e2e-flota-1'`));
+
+check('la orden queda sellada con su flotilla para facturarla luego',
+  sql(`select count(*) from work_orders o join fleets f on f.id = o.fleet_id
+       where o.client_request_id='e2e-flota-1' and f.name='Transporte E2E SRL'`) === '1');
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
