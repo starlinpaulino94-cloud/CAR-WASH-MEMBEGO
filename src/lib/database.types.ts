@@ -29,6 +29,15 @@ export type Enums = {
   order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
   payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
   payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
+  payroll_type: "mensual" | "por_hora" | "solo_comision";
+  payroll_status: "borrador" | "aprobada" | "pagada";
+  branch_scope: "sucursal" | "todas";
+  promotion_kind: "porcentaje" | "importe";
+  promotion_scope: "total" | "servicio" | "categoria";
+  notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+  notification_audience: "cliente" | "interno";
+  notification_channel: "whatsapp" | "sms" | "email" | "app";
+  notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
   printer_width: "58mm" | "80mm" | "letter";
   user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
   vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
@@ -525,6 +534,8 @@ export interface Database {
           earned_on: string;
           is_paid: boolean;
           paid_at: string | null;
+          // Partida de nómina que la pagó (0030). NULL = todavía sin pagar.
+          payroll_item_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -608,6 +619,8 @@ export interface Database {
           currency_symbol: string;
           timezone: string;
           tax_rate_bps: number;
+          // Techo del descuento manual (0032). 10000 = 100 %, sin límite.
+          max_manual_discount_bps: number;
           allow_guest_checkout: boolean;
           thermal_printer_width: "58mm" | "80mm" | "letter";
           header_note: string | null;
@@ -626,6 +639,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";
           header_note?: string | null;
@@ -644,6 +658,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";
           header_note?: string | null;
@@ -1346,6 +1361,234 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          kind: Database['public']['Enums']['notification_kind'];
+          audience: Database['public']['Enums']['notification_audience'];
+          channel: Database['public']['Enums']['notification_channel'];
+          status: Database['public']['Enums']['notification_status'];
+          title: string;
+          body: string;
+          customer_id: string | null;
+          work_order_id: string | null;
+          appointment_id: string | null;
+          recipient_phone: string | null;
+          recipient_email: string | null;
+          dedupe_key: string;
+          scheduled_for: string;
+          sent_at: string | null;
+          sent_by: string | null;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      promotions: {
+        Row: {
+          id: string;
+          company_id: string;
+          code: string;
+          name: string;
+          kind: Database['public']['Enums']['promotion_kind'];
+          scope: Database['public']['Enums']['promotion_scope'];
+          value_bps: number | null;
+          value_cents: number | null;
+          service_id: string | null;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          starts_on: string;
+          ends_on: string | null;
+          weekdays: number[] | null;
+          min_purchase_cents: number;
+          max_uses: number | null;
+          max_uses_per_customer: number | null;
+          uses_count: number;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      promotion_redemptions: {
+        Row: {
+          id: string;
+          company_id: string;
+          promotion_id: string;
+          invoice_id: string;
+          customer_id: string | null;
+          discount_cents: number;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "redemptions_promotion_same_company";
+            columns: ["promotion_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "promotions";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      work_shifts: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          starts_at: string;
+          ends_at: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      attendance_records: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          shift_id: string | null;
+          checked_in_at: string;
+          checked_out_at: string | null;
+          worked_minutes: number | null;
+          late_minutes: number;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_advances: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          profile_id: string;
+          amount_cents: number;
+          reason: string | null;
+          cash_session_id: string | null;
+          payroll_item_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_periods: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          period_from: string;
+          period_to: string;
+          status: Database['public']['Enums']['payroll_status'];
+          gross_cents: number;
+          deductions_cents: number;
+          net_cents: number;
+          notes: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          paid_by: string | null;
+          paid_at: string | null;
+          payment_method: Database['public']['Enums']['payment_method'] | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      payroll_items: {
+        Row: {
+          id: string;
+          company_id: string;
+          period_id: string;
+          profile_id: string;
+          payroll_type: Database['public']['Enums']['payroll_type'];
+          base_cents: number;
+          worked_minutes: number;
+          commissions_cents: number;
+          bonus_cents: number;
+          advances_cents: number;
+          deductions_cents: number;
+          net_cents: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "payroll_items_period_same_company";
+            columns: ["period_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "payroll_periods";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      fleets: {
+        Row: {
+          id: string;
+          company_id: string;
+          customer_id: string;
+          name: string;
+          code: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          contact_email: string | null;
+          po_reference: string | null;
+          notes: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "fleets_customer_same_company";
+            columns: ["customer_id", "company_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id", "company_id"];
+          },
+        ];
+      };
+      fleet_rates: {
+        Row: {
+          id: string;
+          company_id: string;
+          fleet_id: string;
+          service_id: string;
+          vehicle_category: Database['public']['Enums']['vehicle_category'] | null;
+          price_cents: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       receivables: {
         Row: {
           id: string;
@@ -1844,6 +2087,20 @@ export interface Database {
           avatar_url: string | null;
           cash_pin_hash: string | null;
           commission_bps: number | null;
+          // Datos de pago (0030). Protegidos por un guardia: solo los cambia
+          // set_employee_pay(), por eso no aparecen en Update.
+          payroll_type: Database['public']['Enums']['payroll_type'];
+          base_salary_cents: number;
+          hourly_rate_cents: number;
+          // Alcance de sucursal (0031). Junto con branch_id decide qué ve. Lo
+          // cambia solo set_employee_branch(), nunca sobre uno mismo.
+          branch_scope: Database['public']['Enums']['branch_scope'];
+          promotion_kind: "porcentaje" | "importe";
+          promotion_scope: "total" | "servicio" | "categoria";
+          notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+          notification_audience: "cliente" | "interno";
+          notification_channel: "whatsapp" | "sms" | "email" | "app";
+          notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -1873,8 +2130,9 @@ export interface Database {
           role?: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin" | null;
           avatar_url?: string | null;
           cash_pin_hash?: string | null;
-          commission_bps?: number | null;
           is_active?: boolean;
+          // branch_id y branch_scope NO están aquí a propósito: desde 0031 solo
+          // los cambia set_employee_branch(); un UPDATE directo lo rechaza.
           created_at?: string;
           updated_at?: string;
         };
@@ -2000,6 +2258,8 @@ export interface Database {
           category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
           notes: string | null;
           last_visit_at: string | null;
+          // Flotilla (0029). Se mueve solo con assign_vehicle_to_fleet().
+          fleet_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -2202,6 +2462,10 @@ export interface Database {
           created_at: string;
           updated_at: string;
           client_request_id: string | null;
+          // Flotilla (0029). Se sella al crear la orden; la factura consolidada
+          // marca cuál la cobró, para que nadie la cobre dos veces.
+          fleet_id: string | null;
+          consolidated_invoice_id: string | null;
         };
         Insert: {
           id?: string;
@@ -2375,6 +2639,8 @@ export interface Database {
           p_vehicle_plate?: string;
           p_ncf_type?: "B01" | "B02" | "B04" | "B14" | "B15";
           p_cash_session_id?: string;
+          // Código promocional (0032). El importe lo recalcula el servidor.
+          p_promotion_code?: string | null;
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
       };
@@ -2495,6 +2761,189 @@ export interface Database {
         Args: { p_as_of?: string };
         Returns: Json;
       };
+      refresh_alerts: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      mark_notification: {
+        Args: {
+          p_notification_id: string;
+          p_status: Database['public']['Enums']['notification_status'];
+          p_error?: string | null;
+        };
+        Returns: Database['public']['Tables']['notifications']['Row'];
+      };
+      upsert_promotion: {
+        Args: {
+          p_code: string;
+          p_name: string;
+          p_kind: Database['public']['Enums']['promotion_kind'];
+          p_scope?: Database['public']['Enums']['promotion_scope'];
+          p_promotion_id?: string | null;
+          p_value_bps?: number | null;
+          p_value_cents?: number | null;
+          p_service_id?: string | null;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          p_starts_on?: string | null;
+          p_ends_on?: string | null;
+          p_weekdays?: number[] | null;
+          p_min_purchase_cents?: number;
+          p_max_uses?: number | null;
+          p_max_uses_per_customer?: number | null;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['promotions']['Row'];
+      };
+      validate_promotion: {
+        Args: {
+          p_code: string;
+          p_subtotal: number;
+          p_lines?: Json;
+          p_customer_id?: string | null;
+        };
+        Returns: Json;
+      };
+      upsert_branch: {
+        Args: {
+          p_name: string;
+          p_branch_id?: string | null;
+          p_address?: string | null;
+          p_phone?: string | null;
+          p_is_main?: boolean;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['branches']['Row'];
+      };
+      set_employee_branch: {
+        Args: {
+          p_profile_id: string;
+          p_branch_id: string | null;
+          p_scope?: Database['public']['Enums']['branch_scope'];
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
+      set_employee_pay: {
+        Args: {
+          p_profile_id: string;
+          p_payroll_type: Database['public']['Enums']['payroll_type'];
+          p_base_salary_cents?: number;
+          p_hourly_rate_cents?: number;
+          p_commission_bps?: number | null;
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
+      schedule_shift: {
+        Args: {
+          p_profile_id: string;
+          p_starts_at: string;
+          p_ends_at: string;
+          p_branch_id?: string | null;
+          p_notes?: string | null;
+          p_shift_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['work_shifts']['Row'];
+      };
+      delete_shift: {
+        Args: { p_shift_id: string };
+        Returns: void;
+      };
+      clock_in: {
+        Args: { p_profile_id?: string | null; p_notes?: string | null };
+        Returns: Database['public']['Tables']['attendance_records']['Row'];
+      };
+      clock_out: {
+        Args: { p_profile_id?: string | null; p_notes?: string | null };
+        Returns: Database['public']['Tables']['attendance_records']['Row'];
+      };
+      register_payroll_advance: {
+        Args: {
+          p_profile_id: string;
+          p_amount_cents: number;
+          p_reason?: string | null;
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_advances']['Row'];
+      };
+      open_payroll_period: {
+        Args: {
+          p_from: string;
+          p_to: string;
+          p_branch_id?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      adjust_payroll_item: {
+        Args: {
+          p_item_id: string;
+          p_bonus_cents?: number;
+          p_deductions_cents?: number;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_items']['Row'];
+      };
+      approve_payroll: {
+        Args: { p_period_id: string };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      pay_payroll: {
+        Args: {
+          p_period_id: string;
+          p_payment_method?: Database['public']['Enums']['payment_method'];
+          p_cash_session_id?: string | null;
+        };
+        Returns: Database['public']['Tables']['payroll_periods']['Row'];
+      };
+      delete_payroll_period: {
+        Args: { p_period_id: string };
+        Returns: void;
+      };
+      upsert_fleet: {
+        Args: {
+          p_customer_id: string;
+          p_name: string;
+          p_fleet_id?: string | null;
+          p_code?: string | null;
+          p_contact_name?: string | null;
+          p_contact_phone?: string | null;
+          p_contact_email?: string | null;
+          p_po_reference?: string | null;
+          p_notes?: string | null;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['fleets']['Row'];
+      };
+      assign_vehicle_to_fleet: {
+        Args: { p_vehicle_id: string; p_fleet_id: string | null };
+        Returns: Database['public']['Tables']['vehicles']['Row'];
+      };
+      set_fleet_rate: {
+        Args: {
+          p_fleet_id: string;
+          p_service_id: string;
+          p_price_cents: number;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+        };
+        Returns: Database['public']['Tables']['fleet_rates']['Row'];
+      };
+      delete_fleet_rate: {
+        Args: { p_rate_id: string };
+        Returns: void;
+      };
+      invoice_fleet_period: {
+        Args: {
+          p_fleet_id: string;
+          p_from: string;
+          p_to: string;
+          p_client_request_id: string;
+          p_ncf_type?: Database['public']['Enums']['ncf_type'] | null;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      fleet_statement: {
+        Args: { p_fleet_id: string; p_from: string; p_to: string };
+        Returns: Json;
+      };
       book_appointment: {
         Args: {
           p_branch_id: string;
@@ -2556,7 +3005,7 @@ export interface Database {
         Returns: Database['public']['Tables']['vehicle_inspections']['Row'];
       };
       management_report: {
-        Args: { p_from: string; p_to: string };
+        Args: { p_from: string; p_to: string; p_branch_id?: string | null };
         Returns: Json;
       };
       service_recipe_cost: {
@@ -2606,6 +3055,15 @@ export interface Database {
       order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
       payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
       payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
+      payroll_type: "mensual" | "por_hora" | "solo_comision";
+      payroll_status: "borrador" | "aprobada" | "pagada";
+      branch_scope: "sucursal" | "todas";
+      promotion_kind: "porcentaje" | "importe";
+      promotion_scope: "total" | "servicio" | "categoria";
+      notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+      notification_audience: "cliente" | "interno";
+      notification_channel: "whatsapp" | "sms" | "email" | "app";
+      notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
       printer_width: "58mm" | "80mm" | "letter";
       user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
       vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";

@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**118 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
+**143 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
 `orders-kanban` y `admin-views`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
@@ -28,6 +28,11 @@ debe:
 | Panel | Los indicadores llevan rango de fechas real; el de "hoy" refleja solo lo de hoy |
 | Gastos | Un gasto en efectivo descuenta la gaveta en la misma operación |
 | Roles | El cajero ve catálogo, ajustes y comisiones en solo lectura, y la bitácora le está vedada |
+| Avisos | El aviso al cliente se encola solo al quedar listo el vehículo; el barrido no duplica lo ya avisado y marcar sella la hora |
+| Descuentos | El importe de la promoción lo calcula el servidor, no la pantalla; con techo puesto, un cajero no puede rebajar la factura a voluntad |
+| Sucursales | El alcance solo se cambia por su RPC; quien queda limitado a una sucursal deja de ver las órdenes de la otra |
+| Nómina | El sueldo solo se fija por su RPC —un UPDATE directo lo rechaza la base—; el adelanto sale de la gaveta y la nómina lo descuenta |
+| Flotillas | La tarifa pactada gana al catálogo sin descuentos a mano; el vehículo entra a la flotilla y la orden queda sellada con ella |
 | Crédito | El cupo solo se autoriza por su RPC; lo fiado abre cuenta por cobrar y **no entra a la caja**; el abono se guarda en centavos con su forma de pago |
 | Membego | La pantalla declara que no consulta a Membego; el intento sí queda persistido |
 

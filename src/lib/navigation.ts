@@ -19,15 +19,15 @@ import { can, Permission, Profile } from './auth';
 
 /** Claves de vista: identifican un componente registrado en App.tsx. */
 export type ViewKey =
-  | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
-  | 'pos' | 'services'
+  | 'dashboard' | 'alerts' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
+  | 'pos' | 'services' | 'promotions'
   | 'invoices'
   | 'cash' | 'expenses'
-  | 'customers' | 'vehicles' | 'claims' | 'receivables'
+  | 'customers' | 'vehicles' | 'claims' | 'receivables' | 'fleets'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
-  | 'team'
+  | 'team' | 'shifts' | 'attendance' | 'payroll'
   | 'reports' | 'report-sales' | 'report-margin'
-  | 'settings-empresa' | 'settings-impresion' | 'settings-membego';
+  | 'settings-empresa' | 'settings-impresion' | 'settings-membego' | 'branches';
 
 export interface SubModule {
   /** Segmento de la URL, sin acentos: /modulo/<slug> */
@@ -62,7 +62,8 @@ export const NAVIGATION: Module[] = [
     id: 'inicio', pathId: 'inicio', label: 'Inicio', icon: Home,
     description: 'Resumen del día y accesos rápidos',
     items: [
-      { slug: 'resumen', label: 'Resumen', view: 'dashboard' }
+      { slug: 'resumen', label: 'Resumen', view: 'dashboard' },
+      { slug: 'avisos', label: 'Avisos', view: 'alerts' }
     ]
   },
   {
@@ -84,8 +85,7 @@ export const NAVIGATION: Module[] = [
     items: [
       { slug: 'pos', label: 'Punto de venta', view: 'pos' },
       { slug: 'servicios', label: 'Servicios', view: 'services' },
-      { slug: 'descuentos', label: 'Descuentos', pronto: true,
-        hint: 'Promociones y descuentos por campaña llegarán en una fase próxima.' }
+      { slug: 'descuentos', label: 'Descuentos', view: 'promotions' }
     ]
   },
   {
@@ -115,6 +115,8 @@ export const NAVIGATION: Module[] = [
       { slug: 'vehiculos', label: 'Vehículos', view: 'vehicles' },
       { slug: 'reclamos', label: 'Reclamos', view: 'claims' },
       { slug: 'cuentas', label: 'Por cobrar', view: 'receivables',
+        permission: 'manageReceivables' },
+      { slug: 'flotillas', label: 'Flotillas', view: 'fleets',
         permission: 'manageReceivables' }
     ]
   },
@@ -133,10 +135,9 @@ export const NAVIGATION: Module[] = [
     description: 'Empleados, comisiones y turnos',
     items: [
       { slug: 'empleados', label: 'Empleados', view: 'team' },
-      { slug: 'horarios', label: 'Horarios', pronto: true,
-        hint: 'Turnos y horarios por sucursal, planificado.' },
-      { slug: 'asistencia', label: 'Asistencia', pronto: true,
-        hint: 'Registro de entrada y salida, planificado.' }
+      { slug: 'horarios', label: 'Horarios', view: 'shifts' },
+      { slug: 'asistencia', label: 'Asistencia', view: 'attendance' },
+      { slug: 'nomina', label: 'Nómina', view: 'payroll', permission: 'runPayroll' }
     ]
   },
   {
@@ -155,8 +156,7 @@ export const NAVIGATION: Module[] = [
       { slug: 'empresa', label: 'Empresa', view: 'settings-empresa' },
       { slug: 'impresion', label: 'Impresión', view: 'settings-impresion' },
       { slug: 'membego', label: 'Membego', view: 'settings-membego', permission: 'manageStaff' },
-      { slug: 'sucursales', label: 'Sucursales', pronto: true,
-        hint: 'Alta y edición de sucursales, planificado.' },
+      { slug: 'sucursales', label: 'Sucursales', view: 'branches' },
       { slug: 'usuarios', label: 'Usuarios y roles', pronto: true,
         hint: 'El alta de empleados vive en Personal → Empleados; la gestión fina de roles llegará aquí.' }
     ]

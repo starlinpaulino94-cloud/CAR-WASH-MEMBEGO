@@ -286,9 +286,11 @@ export interface ManagementReport {
   gross_profit_cents: number;
 }
 
-export async function fetchManagementReport(from: string, to: string): Promise<ManagementReport> {
+export async function fetchManagementReport(
+  from: string, to: string, branchId?: string | null
+): Promise<ManagementReport> {
   const { data, error } = await requireSupabase().rpc('management_report', {
-    p_from: from, p_to: to
+    p_from: from, p_to: to, p_branch_id: branchId ?? null
   });
   if (error) throw error;
   return data as unknown as ManagementReport;
