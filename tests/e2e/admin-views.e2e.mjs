@@ -551,6 +551,75 @@ check('con techo puesto, un cajero no puede rebajar la factura a voluntad',
 
 sql("update public.companies set max_manual_discount_bps = 10000;");
 
+// ======================================================= Avisos
+console.log('\n[12] Avisos — bandeja que se llena sola');
+
+// Un producto bajo mínimo: se sube el mínimo, porque la existencia la protege
+// el guardia del kardex.
+sql("update public.products set min_stock = greatest(stock + 1, 5) where code='AR1';");
+
+await go(page, /^Inicio/, /^Avisos/);
+await page.getByRole('button', { name: /Buscar avisos/ }).click();
+await page.waitForTimeout(2600);
+
+check('el barrido encoló el aviso de inventario bajo mínimo',
+  sql("select count(*) from notifications where kind='stock_bajo' and status='pendiente'") === '1',
+  sql("select count(*)::text from notifications where kind='stock_bajo'"));
+
+// Lo que hace usable la bandeja: repetir el barrido no la llena de copias.
+await page.getByRole('button', { name: /Buscar avisos/ }).click();
+await page.waitForTimeout(2600);
+
+check('repetir el barrido no duplica el aviso',
+  sql("select count(*) from notifications where kind='stock_bajo'") === '1');
+
+check('la pantalla anuncia que no hay nada nuevo',
+  await page.getByText(/Todo al día/).isVisible().catch(() => false));
+
+// El aviso al cliente lo genera la base sola, al quedar lista la orden.
+// Se hace con el propietario: al cajero se le limitó el alcance a otra sucursal
+// en el bloque anterior, y la política de sucursal —correctamente— lo frena.
+sql(`
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  select public.create_work_order('22222222-2222-2222-2222-222222222222'::uuid,'e2e-aviso-1',
+    'AV9999','sedan',
+    jsonb_build_array(jsonb_build_object('service_id','44444444-4444-4444-4444-444444444444',
+      'name','Lavado','quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    'Doña E2E', null, '809-555-0123');
+`);
+sql(`
+  -- La única bahía quedó en mantenimiento en el bloque [6]: hace falta una libre.
+  insert into public.bays (company_id, branch_id, name, type, status) values
+    ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222',
+     'Bahía Avisos','lavado','disponible');
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  select public.advance_work_order(
+    (select id from work_orders where client_request_id='e2e-aviso-1'), 'en_espera');
+  select public.advance_work_order(
+    (select id from work_orders where client_request_id='e2e-aviso-1'), 'en_proceso',
+    (select id from bays where name='Bahía Avisos'));
+  select public.advance_work_order(
+    (select id from work_orders where client_request_id='e2e-aviso-1'), 'listo');
+`);
+
+check('al quedar listo el vehículo, el aviso al cliente se encola solo',
+  sql(`select count(*) from notifications n join work_orders o on o.id = n.work_order_id
+       where o.client_request_id='e2e-aviso-1' and n.kind='orden_lista'
+         and n.channel='whatsapp' and n.recipient_phone='809-555-0123'`) === '1');
+
+// Marcar como enviado lo saca de lo pendiente, y sella quién y cuándo.
+await go(page, /^Operaciones/, /^Órdenes/);
+await go(page, /^Inicio/, /^Avisos/);
+await page.waitForTimeout(1800);
+await page.getByRole('button', { name: /Marcar como enviado/ }).first().click();
+await page.waitForTimeout(2200);
+
+check('marcar el aviso sella la hora y lo saca de lo pendiente',
+  sql("select count(*) from notifications where status='enviado' and sent_at is not null") === '1',
+  sql("select count(*)::text from notifications where status='enviado'"));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

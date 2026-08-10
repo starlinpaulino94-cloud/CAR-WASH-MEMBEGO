@@ -34,6 +34,10 @@ export type Enums = {
   branch_scope: "sucursal" | "todas";
   promotion_kind: "porcentaje" | "importe";
   promotion_scope: "total" | "servicio" | "categoria";
+  notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+  notification_audience: "cliente" | "interno";
+  notification_channel: "whatsapp" | "sms" | "email" | "app";
+  notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
   printer_width: "58mm" | "80mm" | "letter";
   user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
   vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
@@ -1357,6 +1361,34 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          company_id: string;
+          branch_id: string | null;
+          kind: Database['public']['Enums']['notification_kind'];
+          audience: Database['public']['Enums']['notification_audience'];
+          channel: Database['public']['Enums']['notification_channel'];
+          status: Database['public']['Enums']['notification_status'];
+          title: string;
+          body: string;
+          customer_id: string | null;
+          work_order_id: string | null;
+          appointment_id: string | null;
+          recipient_phone: string | null;
+          recipient_email: string | null;
+          dedupe_key: string;
+          scheduled_for: string;
+          sent_at: string | null;
+          sent_by: string | null;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       promotions: {
         Row: {
           id: string;
@@ -2065,6 +2097,10 @@ export interface Database {
           branch_scope: Database['public']['Enums']['branch_scope'];
           promotion_kind: "porcentaje" | "importe";
           promotion_scope: "total" | "servicio" | "categoria";
+          notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+          notification_audience: "cliente" | "interno";
+          notification_channel: "whatsapp" | "sms" | "email" | "app";
+          notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -2725,6 +2761,18 @@ export interface Database {
         Args: { p_as_of?: string };
         Returns: Json;
       };
+      refresh_alerts: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      mark_notification: {
+        Args: {
+          p_notification_id: string;
+          p_status: Database['public']['Enums']['notification_status'];
+          p_error?: string | null;
+        };
+        Returns: Database['public']['Tables']['notifications']['Row'];
+      };
       upsert_promotion: {
         Args: {
           p_code: string;
@@ -3012,6 +3060,10 @@ export interface Database {
       branch_scope: "sucursal" | "todas";
       promotion_kind: "porcentaje" | "importe";
       promotion_scope: "total" | "servicio" | "categoria";
+      notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
+      notification_audience: "cliente" | "interno";
+      notification_channel: "whatsapp" | "sms" | "email" | "app";
+      notification_status: "pendiente" | "enviado" | "descartado" | "fallido";
       printer_width: "58mm" | "80mm" | "letter";
       user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
       vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";

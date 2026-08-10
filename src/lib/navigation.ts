@@ -19,7 +19,7 @@ import { can, Permission, Profile } from './auth';
 
 /** Claves de vista: identifican un componente registrado en App.tsx. */
 export type ViewKey =
-  | 'dashboard' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
+  | 'dashboard' | 'alerts' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
   | 'pos' | 'services' | 'promotions'
   | 'invoices'
   | 'cash' | 'expenses'
@@ -62,7 +62,8 @@ export const NAVIGATION: Module[] = [
     id: 'inicio', pathId: 'inicio', label: 'Inicio', icon: Home,
     description: 'Resumen del día y accesos rápidos',
     items: [
-      { slug: 'resumen', label: 'Resumen', view: 'dashboard' }
+      { slug: 'resumen', label: 'Resumen', view: 'dashboard' },
+      { slug: 'avisos', label: 'Avisos', view: 'alerts' }
     ]
   },
   {
