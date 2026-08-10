@@ -620,6 +620,85 @@ check('marcar el aviso sella la hora y lo saca de lo pendiente',
   sql("select count(*) from notifications where status='enviado' and sent_at is not null") === '1',
   sql("select count(*)::text from notifications where status='enviado'"));
 
+// ============================================ Los tres que decían «PRONTO»
+console.log('\n[13] Notas de crédito, Fiscal y Usuarios');
+
+// --- Notas de crédito PARCIALES: se acredita 1 de 3, la factura sigue viva.
+sql(`
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'e2e-nc-1',
+    jsonb_build_array(jsonb_build_object('item_type','product',
+      'product_id','55555555-5555-5555-5555-555555555555','name','Aromatizante',
+      'quantity',3,'discount_cents',0,'is_membego_covered',false)),
+    jsonb_build_array(jsonb_build_object('method','tarjeta','amount_cents',
+      (select round(price_cents * 3 * 1.18)::bigint from products
+        where code='AR1'))),
+    'sedan', null, null, 'Cliente NC E2E', null, 'NCE001', null, null);
+`);
+
+await go(page, /^Facturación/, /^Notas de crédito/);
+await page.getByRole('button', { name: /Emitir nota/ }).click();
+await page.waitForTimeout(600);
+await page.getByLabel(/Buscar factura/).fill('Cliente NC E2E');
+await page.waitForTimeout(1400);
+await page.getByRole('button', { name: /Cliente NC E2E/ }).click();
+await page.waitForTimeout(700);
+await page.getByLabel(/Unidades a acreditar de Aromatizante/).fill('1');
+await page.getByLabel('Motivo *').fill('Se entregó uno de menos');
+await page.getByRole('button', { name: /Emitir por/ }).click();
+await page.waitForTimeout(2600);
+
+const stockNC = Number(sql("select stock from products where code='AR1'"));
+check('la nota parcial acredita solo una unidad y deja viva la factura',
+  sql(`select (not is_annulled and credited_cents = 29500)::text
+       from invoices where client_request_id='e2e-nc-1'`) === 'true',
+  sql("select credited_cents::text from invoices where client_request_id='e2e-nc-1'"));
+
+check('la línea recuerda lo acreditado y el inventario volvió por una unidad',
+  sql(`select i.credited_quantity::text from invoice_items i
+       join invoices f on f.id = i.invoice_id
+       where f.client_request_id='e2e-nc-1'`) === '1' && stockNC === 40,
+  `stock=${stockNC}`);
+
+// --- Fiscal: cargar un rango NCF y verlo vigente.
+await go(page, /^Facturación/, /^Fiscal/);
+await page.getByRole('button', { name: /Cargar rango/ }).click();
+await page.waitForTimeout(600);
+await page.getByLabel('Tipo de comprobante').selectOption('B01');
+await page.getByLabel('Desde').fill('500');
+await page.getByLabel('Hasta', { exact: true }).fill('900');
+await page.getByLabel('Autorizado hasta').fill('2030-12-31');
+await page.getByRole('dialog').getByRole('button', { name: /Cargar rango$/ }).click();
+await page.waitForTimeout(2200);
+
+check('el rango NCF se cargó con su correlativo en el inicio',
+  sql("select (range_start || '/' || next_value || '/' || range_end) from ncf_sequences where ncf_type='B01'") === '500/500/900',
+  sql("select coalesce((select range_start::text from ncf_sequences where ncf_type='B01'),'(ninguno)')"));
+
+// --- Usuarios y roles: cambiar el rol de otra persona.
+await go(page, /^Configuración/, /^Usuarios/);
+await page.waitForTimeout(1200);
+await page.getByLabel(/Rol de Cajero E2E/).selectOption('supervisor');
+await page.waitForTimeout(2200);
+
+check('el cambio de rol se guardó',
+  sql("select role::text from profiles where full_name='Cajero E2E'") === 'supervisor',
+  sql("select role::text from profiles where full_name='Cajero E2E'"));
+
+// La base impide ascenderse a uno mismo, aunque se llame al API directamente.
+check('nadie se asciende a sí mismo, ni el propietario',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+           set role authenticated;
+           update public.profiles set role='superadmin'
+            where id='66666666-6666-6666-6666-666666666666';`);
+      // RLS filtra en silencio: si no lanzó, el rol NO debe haber cambiado.
+      return sql("select role::text from profiles where full_name='Dueño E2E'") === 'propietario';
+    } catch { return true; }
+  })());
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

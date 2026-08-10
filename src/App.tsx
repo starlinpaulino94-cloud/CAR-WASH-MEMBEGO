@@ -44,6 +44,9 @@ const PayrollView           = lazyView(() => import('./components/views/PayrollS
 const BranchesView          = lazyView(() => import('./components/views/BranchesSupabaseView'), 'BranchesSupabaseView');
 const PromotionsView        = lazyView(() => import('./components/views/PromotionsSupabaseView'), 'PromotionsSupabaseView');
 const AlertsView            = lazyView(() => import('./components/views/AlertsSupabaseView'), 'AlertsSupabaseView');
+const CreditNotesView       = lazyView(() => import('./components/views/CreditNotesSupabaseView'), 'CreditNotesSupabaseView');
+const FiscalView            = lazyView(() => import('./components/views/FiscalSupabaseView'), 'FiscalSupabaseView');
+const UsersView             = lazyView(() => import('./components/views/UsersSupabaseView'), 'UsersSupabaseView');
 const AppointmentsView      = lazyView(() => import('./components/views/AppointmentsSupabaseView'), 'AppointmentsSupabaseView');
 const EquipmentView         = lazyView(() => import('./components/views/EquipmentSupabaseView'), 'EquipmentSupabaseView');
 const QualityView           = lazyView(() => import('./components/views/QualitySupabaseView'), 'QualitySupabaseView');
@@ -93,6 +96,9 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
   branches:  { ready: <BranchesView />,          demo: <BranchesView /> },
   promotions: { ready: <PromotionsView />,       demo: <PromotionsView /> },
   alerts:    { ready: <AlertsView />,            demo: <AlertsView /> },
+  'credit-notes': { ready: <CreditNotesView />,  demo: <CreditNotesView /> },
+  fiscal:    { ready: <FiscalView />,            demo: <FiscalView /> },
+  users:     { ready: <UsersView />,             demo: <UsersView /> },
   pos:       { ready: <PosSupabaseView />,       demo: <PosView /> },
   services:  { ready: <ServicesSupabaseView />,  demo: <ServicesView /> },
   invoices:  { ready: <InvoicesSupabaseView />,  demo: <InvoicesView /> },

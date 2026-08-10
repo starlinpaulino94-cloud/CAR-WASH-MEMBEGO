@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**143 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
+**148 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
 `orders-kanban` y `admin-views`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
@@ -28,6 +28,9 @@ debe:
 | Panel | Los indicadores llevan rango de fechas real; el de "hoy" refleja solo lo de hoy |
 | Gastos | Un gasto en efectivo descuenta la gaveta en la misma operación |
 | Roles | El cajero ve catálogo, ajustes y comisiones en solo lectura, y la bitácora le está vedada |
+| Notas de crédito | Se acredita 1 de 3 unidades: la factura sigue viva, la línea recuerda lo acreditado y el inventario vuelve solo por esa unidad |
+| Fiscal | El rango NCF se carga con su correlativo en el inicio |
+| Usuarios | El cambio de rol se guarda, pero nadie se asciende a sí mismo ni llamando al API |
 | Avisos | El aviso al cliente se encola solo al quedar listo el vehículo; el barrido no duplica lo ya avisado y marcar sella la hora |
 | Descuentos | El importe de la promoción lo calcula el servidor, no la pantalla; con techo puesto, un cajero no puede rebajar la factura a voluntad |
 | Sucursales | El alcance solo se cambia por su RPC; quien queda limitado a una sucursal deja de ver las órdenes de la otra |

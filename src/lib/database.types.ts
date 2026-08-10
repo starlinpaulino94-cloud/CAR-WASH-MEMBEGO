@@ -878,6 +878,8 @@ export interface Database {
           is_membego_covered: boolean;
           created_at: string;
           company_id: string;
+          // Unidades ya acreditadas por notas parciales (0034).
+          credited_quantity: number;
         };
         Insert: {
           id?: string;
@@ -960,6 +962,8 @@ export interface Database {
           updated_at: string;
           client_request_id: string | null;
           credits_invoice_id: string | null;
+          // Acumulado de notas de crédito parciales (0034).
+          credited_cents: number;
         };
         Insert: {
           id?: string;
@@ -2760,6 +2764,19 @@ export interface Database {
       receivables_aging: {
         Args: { p_as_of?: string };
         Returns: Json;
+      };
+      credit_note_invoice: {
+        Args: {
+          p_invoice_id: string;
+          p_lines: Json;
+          p_reason: string;
+          p_client_request_id: string;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      reset_employee_password: {
+        Args: { p_profile_id: string; p_password: string };
+        Returns: void;
       };
       refresh_alerts: {
         Args: Record<string, never>;
