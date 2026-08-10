@@ -17,8 +17,10 @@ declare
   v_op3 uuid;
 begin
   insert into auth.users (email) values ('op3@example.com') returning id into v_op3;
+  perform set_config('app.branch_ctx', 'ok', true);
   update public.profiles set company_id = v_c, branch_id = v_b, role = 'operario',
          full_name = 'Operario Tres' where id = v_op3;
+  perform set_config('app.branch_ctx', '', true);
   perform test.set_var('op3', v_op3::text);
 end $$;
 

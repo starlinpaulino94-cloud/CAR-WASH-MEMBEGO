@@ -429,6 +429,61 @@ check('el neto del periodo cuadra con la suma de sus partidas',
          from payroll_items i where i.period_id = p.id))::text
        from payroll_periods p limit 1`) === 'true');
 
+// ======================================================= Sucursales
+console.log('\n[10] Sucursales — alta y alcance del personal');
+await go(page, /^Configuración/, /^Sucursales/);
+
+await page.getByRole('button', { name: /Nueva sucursal/ }).click();
+await page.waitForTimeout(600);
+await page.getByLabel('Nombre *').fill('Sucursal Autopista E2E');
+await page.getByLabel('Dirección').fill('Km 12');
+await page.getByRole('button', { name: /Crear sucursal/ }).click();
+await page.waitForTimeout(2200);
+
+check('la sucursal se creó activa y no principal',
+  sql("select (is_active and not is_main)::text from branches where name='Sucursal Autopista E2E'") === 'true',
+  sql("select coalesce((select (is_active and not is_main)::text from branches where name='Sucursal Autopista E2E'),'(ninguna)')"));
+
+// El alcance del cajero: de «todas» a una sola sucursal.
+await page.getByRole('button', { name: /Cambiar alcance/ }).first().click();
+await page.waitForTimeout(600);
+await page.getByLabel(/Qué puede ver/).selectOption('sucursal');
+await page.getByLabel('Sucursal').selectOption({ label: 'Sucursal Autopista E2E' });
+await page.getByRole('button', { name: /Guardar alcance/ }).click();
+await page.waitForTimeout(2200);
+
+check('el alcance quedó limitado a la sucursal elegida',
+  sql(`select count(*) from profiles p join branches b on b.id = p.branch_id
+       where p.branch_scope='sucursal' and b.name='Sucursal Autopista E2E'`) === '1',
+  sql("select count(*)::text from profiles where branch_scope='sucursal'"));
+
+// La frontera es de la base: ni el API la salta.
+check('el guardia rechaza cambiar el alcance con un UPDATE directo',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+           set role authenticated;
+           update public.profiles set branch_scope = 'todas'
+            where id = '33333333-3333-3333-3333-333333333333';`);
+      return false;
+    } catch { return true; }
+  })());
+
+// La frontera es real: el mismo dato, visto por quien quedó limitado, desaparece.
+const limitado = sql("select id::text from profiles where branch_scope='sucursal' limit 1");
+const ordenesTotales = Number(sql('select count(*) from work_orders'));
+// Varias sentencias en un solo psql devuelven varias líneas: la que interesa
+// es la última, la del SELECT.
+const ultimaLinea = (out) => out.split('\n').filter(l => l.trim()).pop() ?? '';
+const ordenesVistas = Number(ultimaLinea(sql(`
+  select set_config('request.jwt.claim.sub', '${limitado}', false);
+  set role authenticated;
+  select count(*) from public.work_orders;`)));
+
+check('quien quedó limitado a otra sucursal deja de ver las órdenes de la principal',
+  ordenesTotales > 0 && ordenesVistas === 0,
+  `${ordenesVistas} visibles de ${ordenesTotales} existentes`);
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

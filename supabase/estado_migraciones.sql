@@ -62,7 +62,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0027','claims',                'reclamos_0027.sql',     'table',  'claims'),
     ('0028','customer_credit',       'credito_0028.sql',      'table',  'receivables'),
     ('0029','fleets',                'flotillas_0029.sql',    'table',  'fleets'),
-    ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods')
+    ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods'),
+    ('0031','branches',              'sucursales_0031.sql',   'func',   'upsert_branch')
 ),
 detectadas as (
   select e.*,
@@ -114,7 +115,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0027','claims',                'reclamos_0027.sql',     'table',  'claims'),
     ('0028','customer_credit',       'credito_0028.sql',      'table',  'receivables'),
     ('0029','fleets',                'flotillas_0029.sql',    'table',  'fleets'),
-    ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods')
+    ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods'),
+    ('0031','branches',              'sucursales_0031.sql',   'func',   'upsert_branch')
 ),
 detectadas as (
   select e.*,

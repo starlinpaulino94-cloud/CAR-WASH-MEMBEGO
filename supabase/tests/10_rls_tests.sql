@@ -109,10 +109,14 @@ begin
     (select company_id from public.profiles where id = u_owner_a) is null,
     'vector de escalada de privilegios cerrado');
 
-  -- Un administrador asigna los tenants (aquí, el proceso de alta).
+  -- Un administrador asigna los tenants (aquí, el proceso de alta). Desde 0031
+  -- la sucursal está protegida por un guardia (nadie se muda de local por su
+  -- cuenta), así que el montaje declara el contexto igual que create_employee().
+  perform set_config('app.branch_ctx', 'ok', true);
   update public.profiles set company_id=c_a, branch_id=b_a, role='propietario' where id=u_owner_a;
   update public.profiles set company_id=c_a, branch_id=b_a, role='cajero'      where id=u_cashier_a;
   update public.profiles set company_id=c_b, branch_id=b_b, role='propietario' where id=u_owner_b;
+  perform set_config('app.branch_ctx', '', true);
   -- u_orphan queda sin empresa a propósito.
 
   -- Catálogo y datos de cada empresa.
@@ -394,9 +398,16 @@ select test.expect_error('los contadores de numeración no son accesibles al cli
 -- Techo de concesión de roles: el administrador no puede crear propietarios.
 set role postgres;
 insert into auth.users (email) values ('admin.a@example.com');
-update public.profiles set company_id = test.var('c_a')::uuid,
-       branch_id = test.var('b_a')::uuid, role = 'administrador'
- where email = 'admin.a@example.com';
+-- En un bloque: `set_config(..., true)` es local a la transacción, y psql abre
+-- una por sentencia. Suelto, el contexto se perdería antes del UPDATE.
+do $$
+begin
+  perform set_config('app.branch_ctx', 'ok', true);
+  update public.profiles set company_id = test.var('c_a')::uuid,
+         branch_id = test.var('b_a')::uuid, role = 'administrador'
+   where email = 'admin.a@example.com';
+  perform set_config('app.branch_ctx', '', true);
+end $$;
 select test.set_var('u_admin_a', (select id::text from public.profiles where email='admin.a@example.com'));
 select set_config('request.jwt.claim.sub', test.var('u_admin_a'), false);
 set role authenticated;

@@ -31,6 +31,7 @@ export type Enums = {
   payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
   payroll_type: "mensual" | "por_hora" | "solo_comision";
   payroll_status: "borrador" | "aprobada" | "pagada";
+  branch_scope: "sucursal" | "todas";
   printer_width: "58mm" | "80mm" | "letter";
   user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
   vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
@@ -2003,6 +2004,9 @@ export interface Database {
           payroll_type: Database['public']['Enums']['payroll_type'];
           base_salary_cents: number;
           hourly_rate_cents: number;
+          // Alcance de sucursal (0031). Junto con branch_id decide qué ve. Lo
+          // cambia solo set_employee_branch(), nunca sobre uno mismo.
+          branch_scope: Database['public']['Enums']['branch_scope'];
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -2033,6 +2037,8 @@ export interface Database {
           avatar_url?: string | null;
           cash_pin_hash?: string | null;
           is_active?: boolean;
+          // branch_id y branch_scope NO están aquí a propósito: desde 0031 solo
+          // los cambia set_employee_branch(); un UPDATE directo lo rechaza.
           created_at?: string;
           updated_at?: string;
         };
@@ -2659,6 +2665,25 @@ export interface Database {
         Args: { p_as_of?: string };
         Returns: Json;
       };
+      upsert_branch: {
+        Args: {
+          p_name: string;
+          p_branch_id?: string | null;
+          p_address?: string | null;
+          p_phone?: string | null;
+          p_is_main?: boolean;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['branches']['Row'];
+      };
+      set_employee_branch: {
+        Args: {
+          p_profile_id: string;
+          p_branch_id: string | null;
+          p_scope?: Database['public']['Enums']['branch_scope'];
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
+      };
       set_employee_pay: {
         Args: {
           p_profile_id: string;
@@ -2842,7 +2867,7 @@ export interface Database {
         Returns: Database['public']['Tables']['vehicle_inspections']['Row'];
       };
       management_report: {
-        Args: { p_from: string; p_to: string };
+        Args: { p_from: string; p_to: string; p_branch_id?: string | null };
         Returns: Json;
       };
       service_recipe_cost: {
@@ -2894,6 +2919,7 @@ export interface Database {
       payment_status: "pendiente" | "pagado" | "parcial" | "reembolsado";
       payroll_type: "mensual" | "por_hora" | "solo_comision";
       payroll_status: "borrador" | "aprobada" | "pagada";
+      branch_scope: "sucursal" | "todas";
       printer_width: "58mm" | "80mm" | "letter";
       user_role: "propietario" | "administrador" | "supervisor" | "cajero" | "recepcionista" | "operario" | "contador" | "superadmin";
       vehicle_category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";

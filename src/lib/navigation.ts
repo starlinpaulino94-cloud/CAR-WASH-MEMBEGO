@@ -27,7 +27,7 @@ export type ViewKey =
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team' | 'shifts' | 'attendance' | 'payroll'
   | 'reports' | 'report-sales' | 'report-margin'
-  | 'settings-empresa' | 'settings-impresion' | 'settings-membego';
+  | 'settings-empresa' | 'settings-impresion' | 'settings-membego' | 'branches';
 
 export interface SubModule {
   /** Segmento de la URL, sin acentos: /modulo/<slug> */
@@ -156,8 +156,7 @@ export const NAVIGATION: Module[] = [
       { slug: 'empresa', label: 'Empresa', view: 'settings-empresa' },
       { slug: 'impresion', label: 'Impresión', view: 'settings-impresion' },
       { slug: 'membego', label: 'Membego', view: 'settings-membego', permission: 'manageStaff' },
-      { slug: 'sucursales', label: 'Sucursales', pronto: true,
-        hint: 'Alta y edición de sucursales, planificado.' },
+      { slug: 'sucursales', label: 'Sucursales', view: 'branches' },
       { slug: 'usuarios', label: 'Usuarios y roles', pronto: true,
         hint: 'El alta de empleados vive en Personal → Empleados; la gestión fina de roles llegará aquí.' }
     ]

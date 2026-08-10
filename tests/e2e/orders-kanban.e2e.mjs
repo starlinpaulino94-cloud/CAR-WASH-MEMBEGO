@@ -29,6 +29,7 @@ sql(`
   -- suya con un UPDATE), así que el montaje declara el contexto igual que
   -- hace set_employee_pay().
   select set_config('app.payroll_ctx','ok',true);
+  select set_config('app.branch_ctx','ok',true);
   update public.profiles set company_id='11111111-1111-1111-1111-111111111111',
          branch_id='22222222-2222-2222-2222-222222222222', role='operario',
          full_name='Lavador E2E', commission_bps=1500

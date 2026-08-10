@@ -26,11 +26,13 @@ begin
   insert into auth.users (email) values ('op1@example.com') returning id into v_op1;
   insert into auth.users (email) values ('op2@example.com') returning id into v_op2;
   perform set_config('app.payroll_ctx', 'ok', true);
+  perform set_config('app.branch_ctx', 'ok', true);
   update public.profiles set company_id=v_c, branch_id=v_b, role='operario',
          full_name='Operario Uno', commission_bps=1000 where id=v_op1;
   update public.profiles set company_id=v_c, branch_id=v_b, role='operario',
          full_name='Operario Dos', commission_bps=2000 where id=v_op2;
   perform set_config('app.payroll_ctx', '', true);
+  perform set_config('app.branch_ctx', '', true);
 
   perform test.set_var('bay1', v_bay1::text);
   perform test.set_var('bay2', v_bay2::text);
