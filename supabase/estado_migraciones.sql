@@ -65,7 +65,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods'),
     ('0031','branches',              'sucursales_0031.sql',   'func',   'upsert_branch'),
     ('0032','promotions',            'promociones_0032.sql',  'table',  'promotions'),
-    ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications')
+    ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications'),
+    ('0034','credit_notes',          'notas_credito_0034.sql','func',   'credit_note_invoice')
 ),
 detectadas as (
   select e.*,
@@ -120,7 +121,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0030','payroll',               'nomina_0030.sql',       'table',  'payroll_periods'),
     ('0031','branches',              'sucursales_0031.sql',   'func',   'upsert_branch'),
     ('0032','promotions',            'promociones_0032.sql',  'table',  'promotions'),
-    ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications')
+    ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications'),
+    ('0034','credit_notes',          'notas_credito_0034.sql','func',   'credit_note_invoice')
 ),
 detectadas as (
   select e.*,

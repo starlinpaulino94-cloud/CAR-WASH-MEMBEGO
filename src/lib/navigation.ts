@@ -21,13 +21,13 @@ import { can, Permission, Profile } from './auth';
 export type ViewKey =
   | 'dashboard' | 'alerts' | 'orders' | 'kanban' | 'bays' | 'quality' | 'equipment' | 'appointments'
   | 'pos' | 'services' | 'promotions'
-  | 'invoices'
+  | 'invoices' | 'credit-notes' | 'fiscal'
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles' | 'claims' | 'receivables' | 'fleets'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team' | 'shifts' | 'attendance' | 'payroll'
   | 'reports' | 'report-sales' | 'report-margin'
-  | 'settings-empresa' | 'settings-impresion' | 'settings-membego' | 'branches';
+  | 'settings-empresa' | 'settings-impresion' | 'settings-membego' | 'branches' | 'users';
 
 export interface SubModule {
   /** Segmento de la URL, sin acentos: /modulo/<slug> */
@@ -93,10 +93,8 @@ export const NAVIGATION: Module[] = [
     description: 'Comprobantes emitidos y su ciclo de vida',
     items: [
       { slug: 'facturas', label: 'Facturas', view: 'invoices' },
-      { slug: 'notas-credito', label: 'Notas de crédito', pronto: true,
-        hint: 'Hoy una factura se anula completa desde Facturas; las notas de crédito parciales están planificadas.' },
-      { slug: 'fiscal', label: 'Fiscal', pronto: true,
-        hint: 'La emisión con NCF (DGII) quedó pospuesta por decisión operativa; se activará cuando se retome esa fase.' }
+      { slug: 'notas-credito', label: 'Notas de crédito', view: 'credit-notes' },
+      { slug: 'fiscal', label: 'Fiscal', view: 'fiscal', permission: 'viewNcfRanges' }
     ]
   },
   {
@@ -157,8 +155,7 @@ export const NAVIGATION: Module[] = [
       { slug: 'impresion', label: 'Impresión', view: 'settings-impresion' },
       { slug: 'membego', label: 'Membego', view: 'settings-membego', permission: 'manageStaff' },
       { slug: 'sucursales', label: 'Sucursales', view: 'branches' },
-      { slug: 'usuarios', label: 'Usuarios y roles', pronto: true,
-        hint: 'El alta de empleados vive en Personal → Empleados; la gestión fina de roles llegará aquí.' }
+      { slug: 'usuarios', label: 'Usuarios y roles', view: 'users', permission: 'manageStaff' }
     ]
   }
 ];
