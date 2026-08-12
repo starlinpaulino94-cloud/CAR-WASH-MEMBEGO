@@ -23,6 +23,9 @@ interface TokenMembego {
   email: string;
   rol: string;
   companyId: string;
+  /** Nombre comercial de la empresa (claim opcional de Membego): con él, la
+   *  auto-vinculación crea el tenant con su nombre real y no con un marcador. */
+  companyName?: string;
   exp: number;
 }
 
@@ -76,6 +79,10 @@ export async function GET(request: Request): Promise<Response> {
         p_sub: String(datos.sub),
         p_email: String(datos.email),
         p_rol: String(datos.rol),
+        // Auto-vinculación: el nombre real si Membego lo manda; null mantiene
+        // el comportamiento del marcador. La RPC vieja de 4 argumentos ya no
+        // existe (migración 20260812210000), así que no hay ambigüedad.
+        p_company_name: datos.companyName ? String(datos.companyName) : null,
       }),
     });
     if (!upsert.ok) {
