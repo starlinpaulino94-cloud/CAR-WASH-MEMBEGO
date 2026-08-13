@@ -12,6 +12,8 @@ import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
   InlineAlert, ReadOnlyNotice, FilterChips
 } from '../common/DataViewShell';
+import { ExportButton } from '../common/ExportButton';
+import { expensesExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -110,6 +112,7 @@ export const ExpensesSupabaseView: React.FC = () => {
         subtitle={session
           ? `Caja abierta · ${formatCents(session.expected_cash_cents, symbol)} en gaveta`
           : 'Sin caja abierta: solo se admiten gastos que no salgan de efectivo'}
+        actions={<ExportButton {...expensesExport()} />}
       />
 
       {!allowed && <ReadOnlyNotice>Su rol permite consultar los gastos, pero no registrarlos.</ReadOnlyNotice>}

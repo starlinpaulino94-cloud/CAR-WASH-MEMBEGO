@@ -5,11 +5,17 @@ import { fetchVehiclePage, VehicleRow } from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow
 } from '../common/DataViewShell';
+import { ExportButton } from '../common/ExportButton';
+import { ImportButton } from '../common/ImportModal';
+import { vehiclesExport } from '../../lib/exportSpecs';
+import { can } from '../../lib/auth';
+import { useAuth } from '../../context/AuthContext';
 
 const PAGE_SIZE = 25;
 
 /** Flotilla registrada. Paginado y búsqueda en el servidor. */
 export const VehiclesSupabaseView: React.FC = () => {
+  const { profile } = useAuth();
   const q = usePagedQuery<VehicleRow>({ fetcher: fetchVehiclePage, pageSize: PAGE_SIZE });
 
   if (q.error) return <ErrorState message={q.error} onRetry={q.reload} title="No se pudo cargar la flotilla" />;
@@ -20,6 +26,14 @@ export const VehiclesSupabaseView: React.FC = () => {
         icon={<Car className="w-5 h-5 text-indigo-400" />}
         title="Flotilla y vehículos"
         subtitle="Historial por placa, modelo y categoría"
+        actions={
+          <>
+            <ExportButton {...vehiclesExport()} />
+            {can(profile, 'importData') && (
+              <ImportButton entity="vehiculos" onImported={q.reload} />
+            )}
+          </>
+        }
       />
 
       <SearchBox id="veh-search" label="Buscar vehículo" value={q.searchInput}

@@ -1,0 +1,6 @@
+﻿nombre,telefono,motivo
+ABEL SEVERINO,55555555,solo 8 dígitos: no es un número marcable
+GREGORI GUERRERO,823024195,solo 9 dígitos: no es un número marcable
+Rodrigo lopez,(vacío),sin teléfono: se reconocerá por el nombre
+Luigi Lavador,(vacío),sin teléfono: se reconocerá por el nombre
+Cliente Generico,(vacío),sin teléfono: se reconocerá por el nombre

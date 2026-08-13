@@ -9,6 +9,8 @@ import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
   FilterChips, ReadOnlyNotice
 } from '../common/DataViewShell';
+import { ExportButton } from '../common/ExportButton';
+import { movementsExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -79,6 +81,7 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
         icon={<History className="w-5 h-5 text-indigo-400" />}
         title="Movimientos de inventario"
         subtitle="Cada cambio de existencia con su clase, motivo y documento"
+        actions={<ExportButton {...movementsExport()} />}
       />
 
       <div className="flex flex-col sm:flex-row gap-3">

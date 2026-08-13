@@ -11,6 +11,8 @@ import {
   Invoice, InvoiceKindFilter, FiscalStatus
 } from '../../data/billingRepository';
 import { TicketSupabaseModal, AnnulInvoiceDialog } from '../modals/TicketSupabaseModal';
+import { ExportButton } from '../common/ExportButton';
+import { invoicesExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -151,13 +153,18 @@ export const InvoicesSupabaseView: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Receipt className="w-5 h-5 text-indigo-400" /> Facturas y comprobantes
-        </h2>
-        <p className="text-xs text-slate-400">
-          {branch?.name} · Reimpresión, NCF fiscal y anulación con nota de crédito
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-indigo-400" /> Facturas y comprobantes
+          </h2>
+          <p className="text-xs text-slate-400">
+            {branch?.name} · Reimpresión, NCF fiscal y anulación con nota de crédito
+          </p>
+        </div>
+        <div className="self-start sm:self-auto">
+          <ExportButton {...invoicesExport()} label="Exportar libro de ventas" />
+        </div>
       </div>
 
       {!fiscal.ready && (

@@ -11,6 +11,8 @@ import {
 } from '../../data/ordersRepository';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { InspectionModal } from '../modals/InspectionModal';
+import { ExportButton } from '../common/ExportButton';
+import { ordersExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -112,12 +114,15 @@ export const OrdersSupabaseView: React.FC = () => {
           </h2>
           <p className="text-xs text-slate-400">{branch?.name}</p>
         </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" /> Registrar llegada
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <ExportButton {...ordersExport()} />
+          <button
+            onClick={() => setCreating(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Registrar llegada
+          </button>
+        </div>
       </div>
 
       {notice && (

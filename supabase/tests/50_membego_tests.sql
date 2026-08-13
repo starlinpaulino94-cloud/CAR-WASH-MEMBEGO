@@ -46,29 +46,43 @@ select test.check('un tipo de evento desconocido no rompe (se ignora sin error)'
 
 -- ---- Endurecimiento (arreglo del 500): la bitácora es best-effort. Si la tabla
 -- membego_sync_logs no existiera, la ingestión NO debe reventar (era la causa
--- probable del 500). Se prueba renombrándola dentro de un savepoint y revirtiendo.
+-- probable del 500). Se prueba escondiéndola y volviéndola a poner.
+--
+-- Se renombra y se renombra de vuelta, en vez de usar savepoint: psql abre una
+-- transacción POR SENTENCIA, así que aquí un `savepoint` no agrupa nada y el
+-- `rollback to savepoint` no revierte — dejaba la tabla renombrada para todo el
+-- resto de la suite, que pasaba a correr contra un esquema que no existe en
+-- producción.
 set role postgres;
-savepoint sin_bitacora;
 alter table public.membego_sync_logs rename to membego_sync_logs_tmp;
 set role service_role;
 select test.check('sin la tabla de bitácora, la ingestión NO revienta (best-effort)',
   (public.membego_ingest_event('EV-NOLOG', 'cliente.registrado', 'MG-A',
     '{"clienteId":"MG-CLI-NOLOG","cliente":{"nombre":"Sin Bitacora"}}'::jsonb) ->> 'handled') = 'true');
 set role postgres;
-rollback to savepoint sin_bitacora;  -- restaura membego_sync_logs
+alter table public.membego_sync_logs_tmp rename to membego_sync_logs;
+
+select test.check('la bitácora quedó restaurada tras el ensayo',
+  to_regclass('public.membego_sync_logs') is not null);
 
 -- ---- Un error PERMANENTE de esquema se reporta como procesado (2xx), no lanza.
 -- Se fuerza rompiendo el tipo de una columna que la función escribe, dentro de un
 -- savepoint. Debe devolver reason='error_permanente', NUNCA propagar (evita el
 -- reintento infinito que Membego pidió no provocar).
-savepoint esquema_roto;
-alter table public.memberships drop column raw;   -- la función inserta 'raw' → undefined_column
+-- Se RENOMBRA la columna en vez de borrarla: provoca el mismo undefined_column
+-- y se deshace sin perder los datos de las filas que ya existen.
+alter table public.memberships rename column raw to raw_escondida;
 set role service_role;
 select test.check('error permanente de esquema → 2xx controlado (no lanza, no reintenta)',
   (public.membego_ingest_event('EV-BROKEN', 'membresia.activada', 'MG-A',
     '{"clienteId":"MG-CLI-1","membresia":{"id":"MEM-BRK","plan":"X"}}'::jsonb) ->> 'reason') = 'error_permanente');
 set role postgres;
-rollback to savepoint esquema_roto;  -- restaura memberships.raw
+alter table public.memberships rename column raw_escondida to raw;
+
+select test.check('la columna raw quedó restaurada tras el ensayo',
+  exists (select 1 from information_schema.columns
+          where table_schema = 'public' and table_name = 'memberships'
+            and column_name = 'raw'));
 
 -- ---- Alfa SÍ ve al cliente, su membresía y su promoción.
 set role postgres;
