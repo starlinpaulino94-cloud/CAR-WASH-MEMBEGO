@@ -104,12 +104,12 @@ export const RecipeModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={`Receta de ${serviceName}`}
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
-          <h2 className="font-bold text-white text-sm flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-purple-400" /> Receta — {serviceName}
+        className="w-full max-w-2xl bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 className="font-bold text-strong text-sm flex items-center gap-2">
+            <FlaskConical className="w-4 h-4 text-accent" /> Receta — {serviceName}
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-slate-400 hover:text-white">
+          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -117,23 +117,23 @@ export const RecipeModal: React.FC<{
         <div className="p-5 space-y-4 overflow-y-auto">
           {error && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Lo que consume cada ejecución, en la unidad del insumo (admite fracciones:
             <span className="font-mono"> 0.12</span> galones). Al entregar la orden se descuenta
             y su costo queda registrado para el margen real.
           </p>
 
           {loading ? (
-            <div className="h-24 bg-slate-800/60 rounded-xl animate-pulse" />
+            <div className="h-24 bg-surface-2/60 rounded-xl animate-pulse" />
           ) : lines.length === 0 ? (
-            <p className="text-sm text-slate-500 italic p-4 text-center bg-slate-950/50 rounded-xl">
+            <p className="text-sm text-faint italic p-4 text-center bg-canvas/50 rounded-xl">
               Este servicio aún no tiene receta: no descuenta insumos al entregarse.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs">
+                  <tr className="border-b border-line text-muted text-xs">
                     <th className="py-2 pr-3 font-semibold">INSUMO</th>
                     <th className="py-2 pr-3 font-semibold">CATEGORÍA</th>
                     <th className="py-2 pr-3 font-semibold text-right">CANTIDAD</th>
@@ -141,27 +141,27 @@ export const RecipeModal: React.FC<{
                     <th className="py-2" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line/60">
                   {lines.map(l => (
                     <tr key={l.id}>
                       <td className="py-2 pr-3">
-                        <div className="font-bold text-white">{l.products?.name}</div>
-                        <div className="text-xs text-slate-500">{l.products?.code}</div>
+                        <div className="font-bold text-strong">{l.products?.name}</div>
+                        <div className="text-xs text-faint">{l.products?.code}</div>
                       </td>
-                      <td className="py-2 pr-3 text-slate-300">
+                      <td className="py-2 pr-3 text-body">
                         {l.vehicle_category
                           ? CATEGORIES.find(c => c.id === l.vehicle_category)?.label ?? l.vehicle_category
-                          : <span className="text-slate-500">Todas</span>}
+                          : <span className="text-faint">Todas</span>}
                       </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-white">
+                      <td className="py-2 pr-3 text-right tabular-nums text-strong">
                         {l.quantity} {l.products?.unit}
                       </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-slate-300">
+                      <td className="py-2 pr-3 text-right tabular-nums text-body">
                         {formatCents(Math.round(l.quantity * (l.products?.cost_cents ?? 0)), symbol)}
                       </td>
                       <td className="py-2 text-right">
                         <button onClick={() => void remove(l.id)} aria-label="Quitar renglón"
-                          className="p-1.5 text-slate-500 hover:text-rose-400">
+                          className="p-1.5 text-faint hover:text-danger">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -173,14 +173,14 @@ export const RecipeModal: React.FC<{
           )}
 
           {cost !== null && lines.length > 0 && (
-            <p className="text-sm text-slate-300 bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3">
+            <p className="text-sm text-body bg-canvas/60 border border-line rounded-xl px-4 py-3">
               Costo estimado por ejecución (receta genérica):{' '}
-              <strong className="text-purple-300 tabular-nums">{formatCents(cost, symbol)}</strong>
+              <strong className="text-accent tabular-nums">{formatCents(cost, symbol)}</strong>
             </p>
           )}
 
-          <div className="border-t border-slate-800 pt-4 space-y-3">
-            <span className="text-sm font-semibold text-slate-400 uppercase">Agregar insumo</span>
+          <div className="border-t border-line pt-4 space-y-3">
+            <span className="text-sm font-semibold text-muted uppercase">Agregar insumo</span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Insumo *" htmlFor="rec-prod">
                 <select id="rec-prod" className={textInputClass} value={productId}
@@ -203,7 +203,7 @@ export const RecipeModal: React.FC<{
               </Field>
             </div>
             <button onClick={() => void add()} disabled={busy}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center gap-2">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
               Agregar a la receta
             </button>

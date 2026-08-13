@@ -121,7 +121,7 @@ export const ShiftsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<CalendarClock className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<CalendarClock className="w-5 h-5 text-brand" />}
           title="Horarios" subtitle="Turnos planificados por empleado" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -155,7 +155,7 @@ export const ShiftsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<CalendarClock className="w-5 h-5 text-indigo-400" />}
+        icon={<CalendarClock className="w-5 h-5 text-brand" />}
         title="Horarios"
         subtitle="Lo que está planificado; Asistencia registra lo que pasó"
       />
@@ -166,20 +166,20 @@ export const ShiftsSupabaseView: React.FC = () => {
 
       <div className="flex items-center gap-2">
         <button onClick={() => shiftWeek(-1)} aria-label="Semana anterior"
-          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
           <ChevronLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-bold text-white tabular-nums">
+        <span className="text-sm font-bold text-strong tabular-nums">
           {weekStart.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })}
           {' — '}
           {days[6].toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
         <button onClick={() => shiftWeek(1)} aria-label="Semana siguiente"
-          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
           <ChevronRight className="w-4 h-4" />
         </button>
         <button onClick={() => setWeekStart(mondayOf(new Date()))}
-          className="ml-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+          className="ml-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
           Esta semana
         </button>
       </div>
@@ -189,41 +189,41 @@ export const ShiftsSupabaseView: React.FC = () => {
           const dayShifts = shiftsOf(day);
           return (
             <section key={day.toISOString()} aria-label={DAY_LABELS[i]}
-              className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
+              className="bg-surface/80 border border-line rounded-2xl p-4 space-y-2">
               <header className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-white">{DAY_LABELS[i]}</h2>
-                  <p className="text-xs text-slate-500 tabular-nums">
+                  <h2 className="text-sm font-bold text-strong">{DAY_LABELS[i]}</h2>
+                  <p className="text-xs text-faint tabular-nums">
                     {day.toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit' })}
                   </p>
                 </div>
                 {canManage && (
                   <button onClick={() => openForm(day)} aria-label={`Programar turno el ${DAY_LABELS[i]}`}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    className="p-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                     <Plus className="w-4 h-4" />
                   </button>
                 )}
               </header>
 
               {loading ? (
-                <div className="h-12 bg-slate-800/50 rounded-lg animate-pulse" />
+                <div className="h-12 bg-surface-2/50 rounded-lg animate-pulse" />
               ) : dayShifts.length === 0 ? (
-                <p className="text-xs text-slate-500">Sin turnos.</p>
+                <p className="text-xs text-faint">Sin turnos.</p>
               ) : (
                 <ul className="space-y-1.5">
                   {dayShifts.map(s => (
                     <li key={s.id}
-                      className="flex items-center justify-between gap-2 bg-slate-950/50 rounded-lg px-2.5 py-2">
+                      className="flex items-center justify-between gap-2 bg-canvas/50 rounded-lg px-2.5 py-2">
                       <div>
-                        <div className="text-sm font-bold text-white">{s.full_name}</div>
-                        <div className="text-xs text-slate-400 tabular-nums">
+                        <div className="text-sm font-bold text-strong">{s.full_name}</div>
+                        <div className="text-xs text-muted tabular-nums">
                           {hhmm(s.starts_at)} – {hhmm(s.ends_at)}
                         </div>
-                        {s.notes && <div className="text-xs text-slate-500">{s.notes}</div>}
+                        {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
                       </div>
                       {canManage && (
                         <button onClick={() => void remove(s)} aria-label={`Retirar turno de ${s.full_name}`}
-                          className="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-slate-800">
+                          className="p-1.5 text-faint hover:text-danger rounded-lg hover:bg-surface-2">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -266,7 +266,7 @@ export const ShiftsSupabaseView: React.FC = () => {
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               placeholder="Cubre a Juan, media jornada…" />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Dos turnos encima de la misma persona se rechazan: es un error de
             planificación, no un dato.
           </p>

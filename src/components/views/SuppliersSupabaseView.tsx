@@ -89,7 +89,7 @@ export const SuppliersSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Truck className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Truck className="w-5 h-5 text-brand" />}
           title="Proveedores" subtitle="Directorio de suplidores" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -101,7 +101,7 @@ export const SuppliersSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Truck className="w-5 h-5 text-indigo-400" />}
+        icon={<Truck className="w-5 h-5 text-brand" />}
         title="Proveedores"
         subtitle="A quién se compra: contacto, RNC e historial"
         actions={
@@ -112,7 +112,7 @@ export const SuppliersSupabaseView: React.FC = () => {
             )}
             {canManage && (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nuevo proveedor
           </button>
             )}
@@ -127,12 +127,12 @@ export const SuppliersSupabaseView: React.FC = () => {
       <SearchBox id="sup-search" label="Buscar proveedor" value={q.searchInput}
         onChange={q.setSearchInput} placeholder="Buscar por nombre, teléfono o RNC…" />
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Proveedores</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">PROVEEDOR</th>
                 <th scope="col" className="p-3 font-semibold">RNC</th>
                 <th scope="col" className="p-3 font-semibold">CONTACTO</th>
@@ -140,36 +140,36 @@ export const SuppliersSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={canManage ? 5 : 4} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 5 : 4}>
                     {q.searchInput ? 'Ningún proveedor coincide.' : 'Todavía no hay proveedores registrados.'}
                   </EmptyRow>
                 ) : q.rows.map(s => (
-                  <tr key={s.id} className="hover:bg-slate-800/40">
+                  <tr key={s.id} className="hover:bg-surface-2/40">
                     <td className="p-3">
-                      <div className="font-bold text-white">{s.name}</div>
-                      {s.notes && <div className="text-xs text-slate-500">{s.notes}</div>}
+                      <div className="font-bold text-strong">{s.name}</div>
+                      {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
                     </td>
-                    <td className="p-3 text-slate-400">{s.tax_id ?? '—'}</td>
-                    <td className="p-3 text-slate-400">
+                    <td className="p-3 text-muted">{s.tax_id ?? '—'}</td>
+                    <td className="p-3 text-muted">
                       <div>{s.phone ?? '—'}</div>
-                      {s.email && <div className="text-xs text-slate-500">{s.email}</div>}
+                      {s.email && <div className="text-xs text-faint">{s.email}</div>}
                     </td>
                     <td className="p-3">
                       {s.is_active
-                        ? <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Activo</span>
-                        : <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Inactivo</span>}
+                        ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activo</span>
+                        : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactivo</span>}
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
                         <button onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}
-                          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+                          className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button onClick={() => void toggleActive(s)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           {s.is_active ? 'Desactivar' : 'Activar'}
                         </button>
                       </td>

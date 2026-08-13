@@ -27,14 +27,14 @@ const KIND_FILTERS: { id: KindFilter; label: string }[] = [
 ];
 
 const KIND_STYLE: Record<InventoryMovementKind, string> = {
-  entrada: 'bg-emerald-500/20 text-emerald-300',
-  compra: 'bg-emerald-500/20 text-emerald-300',
-  venta: 'bg-indigo-500/20 text-indigo-300',
-  devolucion: 'bg-sky-500/20 text-sky-300',
-  consumo: 'bg-purple-500/20 text-purple-300',
-  ajuste: 'bg-amber-500/20 text-amber-300',
-  merma: 'bg-rose-500/20 text-rose-300',
-  transferencia: 'bg-slate-500/20 text-slate-300'
+  entrada: 'bg-success/20 text-success',
+  compra: 'bg-success/20 text-success',
+  venta: 'bg-brand/20 text-brand-hi',
+  devolucion: 'bg-info/20 text-info',
+  consumo: 'bg-brand/20 text-accent',
+  ajuste: 'bg-warning/20 text-warning',
+  merma: 'bg-danger/20 text-danger',
+  transferencia: 'bg-surface-3/20 text-body'
 };
 
 const KIND_LABEL: Record<InventoryMovementKind, string> = {
@@ -63,7 +63,7 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<History className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<History className="w-5 h-5 text-brand" />}
           title="Movimientos de inventario" subtitle="Kardex por producto" />
         <ReadOnlyNotice>
           El kardex registra los movimientos reales del servidor: está disponible al
@@ -78,7 +78,7 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<History className="w-5 h-5 text-indigo-400" />}
+        icon={<History className="w-5 h-5 text-brand" />}
         title="Movimientos de inventario"
         subtitle="Cada cambio de existencia con su clase, motivo y documento"
         actions={<ExportButton {...movementsExport()} />}
@@ -90,12 +90,12 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
         <FilterChips options={KIND_FILTERS} value={kind} onChange={setKind} />
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Movimientos de inventario</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">FECHA</th>
                 <th scope="col" className="p-3 font-semibold">PRODUCTO</th>
                 <th scope="col" className="p-3 font-semibold">CLASE</th>
@@ -104,7 +104,7 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold">MOTIVO / DOCUMENTO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={6} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={6}>
@@ -113,15 +113,15 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
                       : 'Todavía no hay movimientos: aparecerán con la primera venta, compra o ajuste.'}
                   </EmptyRow>
                 ) : q.rows.map(m => (
-                  <tr key={m.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 text-slate-400 whitespace-nowrap">
+                  <tr key={m.id} className="hover:bg-surface-2/40">
+                    <td className="p-3 text-muted whitespace-nowrap">
                       {new Date(m.created_at).toLocaleString('es-DO', {
                         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                       })}
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-white">{m.products?.name ?? '—'}</div>
-                      <div className="text-xs text-slate-500">{m.products?.code}</div>
+                      <div className="font-bold text-strong">{m.products?.name ?? '—'}</div>
+                      <div className="text-xs text-faint">{m.products?.code}</div>
                     </td>
                     <td className="p-3">
                       <span className={`px-2 py-0.5 rounded font-bold text-xs ${KIND_STYLE[m.kind]}`}>
@@ -129,17 +129,17 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
                       </span>
                     </td>
                     <td className={`p-3 text-right font-extrabold tabular-nums whitespace-nowrap ${
-                      m.qty_change > 0 ? 'text-emerald-400' : 'text-rose-400'
+                      m.qty_change > 0 ? 'text-success' : 'text-danger'
                     }`}>
                       {m.qty_change > 0
                         ? <><ArrowUpRight className="w-3.5 h-3.5 inline mr-0.5" />+{m.qty_change}</>
                         : <><ArrowDownRight className="w-3.5 h-3.5 inline mr-0.5" />{m.qty_change}</>}
                       {' '}{m.products?.unit}
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums whitespace-nowrap">
-                      {m.qty_before} → <strong className="text-white">{m.qty_after}</strong>
+                    <td className="p-3 text-right text-body tabular-nums whitespace-nowrap">
+                      {m.qty_before} → <strong className="text-strong">{m.qty_after}</strong>
                     </td>
-                    <td className="p-3 text-slate-400">
+                    <td className="p-3 text-muted">
                       {m.reason
                         ?? (m.invoice_id ? 'Comprobante vinculado'
                         : m.work_order_id ? 'Orden de servicio vinculada' : '—')}

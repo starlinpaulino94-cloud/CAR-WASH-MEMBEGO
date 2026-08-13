@@ -42,7 +42,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
   if (phase !== 'ready' || !allowed) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<PieChart className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<PieChart className="w-5 h-5 text-brand" />}
           title="Rentabilidad" subtitle="Margen por servicio y utilidad estimada" />
         <ReadOnlyNotice>
           {phase !== 'ready'
@@ -61,7 +61,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<PieChart className="w-5 h-5 text-indigo-400" />}
+        icon={<PieChart className="w-5 h-5 text-brand" />}
         title="Rentabilidad"
         subtitle="Ventas menos insumos consumidos y gastos: lo que de verdad queda"
       />
@@ -70,20 +70,20 @@ export const ProfitReportSupabaseView: React.FC = () => {
 
       {loading || !report ? (
         <div className="flex justify-center py-16" aria-busy="true">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
+          <Loader2 className="w-6 h-6 animate-spin text-faint" />
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Ventas" tone="text-emerald-400"
+            <StatCard label="Ventas" tone="text-success"
               value={formatCents(report.sales.total_cents, symbol)} />
-            <StatCard label="Insumos consumidos" tone="text-purple-300"
+            <StatCard label="Insumos consumidos" tone="text-accent"
               value={formatCents(report.consumption_cents, symbol)}
               hint="Según las recetas aplicadas al entregar" />
-            <StatCard label="Gastos" tone="text-amber-300"
+            <StatCard label="Gastos" tone="text-warning"
               value={formatCents(report.expenses_total_cents, symbol)} />
             <StatCard label="Utilidad bruta estimada"
-              tone={report.gross_profit_cents >= 0 ? 'text-emerald-400' : 'text-rose-400'}
+              tone={report.gross_profit_cents >= 0 ? 'text-success' : 'text-danger'}
               value={formatCents(report.gross_profit_cents, symbol)}
               hint="Ventas − insumos − gastos" />
           </div>
@@ -91,7 +91,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <StatCard label="Compras del periodo"
               value={formatCents(report.purchases_total_cents, symbol)} />
-            <StatCard label="Cuentas por pagar (vigentes)" tone="text-amber-300"
+            <StatCard label="Cuentas por pagar (vigentes)" tone="text-warning"
               value={formatCents(report.payables_cents, symbol)}
               hint="Saldo pendiente a proveedores, sin importar el rango" />
           </div>
@@ -104,12 +104,12 @@ export const ProfitReportSupabaseView: React.FC = () => {
             </InlineAlert>
           )}
 
-          <section className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
-            <h3 className="font-bold text-white text-sm px-4 pt-4">Margen por servicio</h3>
+          <section className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
+            <h3 className="font-bold text-strong text-sm px-4 pt-4">Margen por servicio</h3>
             <div className="overflow-x-auto p-2">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="text-slate-400 text-xs">
+                  <tr className="text-muted text-xs">
                     <th className="p-2 font-semibold">SERVICIO</th>
                     <th className="p-2 font-semibold text-right">VENTAS</th>
                     <th className="p-2 font-semibold text-right">INSUMOS</th>
@@ -117,10 +117,10 @@ export const ProfitReportSupabaseView: React.FC = () => {
                     <th className="p-2 font-semibold text-right">%</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line/60">
                   {margin.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="p-6 text-center text-slate-500 italic">
+                      <td colSpan={5} className="p-6 text-center text-faint italic">
                         Sin ventas de servicios en el periodo. El margen aparece cuando hay
                         ventas y las recetas registran consumo al entregar.
                       </td>
@@ -131,20 +131,20 @@ export const ProfitReportSupabaseView: React.FC = () => {
                       : null;
                     return (
                       <tr key={m.service_id ?? m.name}>
-                        <td className="p-2 text-white font-medium">{m.name}</td>
-                        <td className="p-2 text-right text-slate-300 tabular-nums whitespace-nowrap">
+                        <td className="p-2 text-strong font-medium">{m.name}</td>
+                        <td className="p-2 text-right text-body tabular-nums whitespace-nowrap">
                           {formatCents(m.sales_cents, symbol)}
                         </td>
-                        <td className="p-2 text-right text-purple-300 tabular-nums whitespace-nowrap">
+                        <td className="p-2 text-right text-accent tabular-nums whitespace-nowrap">
                           {formatCents(m.consumption_cents, symbol)}
                         </td>
                         <td className={`p-2 text-right font-bold tabular-nums whitespace-nowrap ${
-                          m.margin_cents >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          m.margin_cents >= 0 ? 'text-success' : 'text-danger'
                         }`}>
                           {formatCents(m.margin_cents, symbol)}
                         </td>
                         <td className={`p-2 text-right font-bold tabular-nums ${
-                          pct === null ? 'text-slate-500' : pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          pct === null ? 'text-faint' : pct >= 0 ? 'text-success' : 'text-danger'
                         }`}>
                           {pct === null ? '—' : `${pct}%`}
                         </td>
@@ -156,7 +156,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
             </div>
           </section>
 
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-faint">
             El margen descuenta SOLO los insumos con receta; no prorratea nómina, comisiones ni
             gastos fijos. Un servicio sin receta muestra margen igual a sus ventas.
           </p>

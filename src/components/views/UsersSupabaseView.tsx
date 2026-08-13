@@ -103,7 +103,7 @@ export const UsersSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-brand" />}
           title="Usuarios y roles" subtitle="Quién entra y qué puede hacer" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -131,7 +131,7 @@ export const UsersSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShieldCheck className="w-5 h-5 text-indigo-400" />}
+        icon={<ShieldCheck className="w-5 h-5 text-brand" />}
         title="Usuarios y roles"
         subtitle="Quién entra y qué puede hacer. El alta de personal vive en Personal › Empleados"
       />
@@ -146,12 +146,12 @@ export const UsersSupabaseView: React.FC = () => {
         serlo. Estas reglas las aplica la base de datos, no esta pantalla.
       </InlineAlert>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Usuarios de la empresa</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">PERSONA</th>
                 <th scope="col" className="p-3 font-semibold">CORREO</th>
                 <th scope="col" className="p-3 font-semibold">ROL</th>
@@ -159,59 +159,59 @@ export const UsersSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={cols} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={cols}>Todavía no hay usuarios.</EmptyRow>
                 ) : rows.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-800/40">
+                  <tr key={p.id} className="hover:bg-surface-2/40">
                     <td className="p-3">
-                      <div className="font-bold text-white">
+                      <div className="font-bold text-strong">
                         {p.full_name || '(sin nombre)'}
                         {p.id === profile?.id && (
-                          <span className="ml-1.5 text-xs font-normal text-slate-500">(usted)</span>
+                          <span className="ml-1.5 text-xs font-normal text-faint">(usted)</span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-faint">
                         {ROLES.find(r => r.id === p.role)?.nota ?? ''}
                       </div>
                     </td>
-                    <td className="p-3 text-slate-400">{p.email ?? '—'}</td>
+                    <td className="p-3 text-muted">{p.email ?? '—'}</td>
                     <td className="p-3">
                       {editable(p) ? (
                         <select
                           aria-label={`Rol de ${p.full_name}`}
-                          className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-white"
+                          className="bg-canvas border border-line rounded-lg px-2 py-1 text-xs text-strong"
                           value={p.role ?? ''}
                           onChange={e => void cambiarRol(p, e.target.value as Role)}>
                           {rolesOfrecidos.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
                         </select>
                       ) : (
-                        <span className="font-bold text-slate-300">
+                        <span className="font-bold text-body">
                           {ROLES.find(r => r.id === p.role)?.label ?? p.role ?? '—'}
                         </span>
                       )}
                     </td>
                     <td className="p-3">
                       {p.is_active
-                        ? <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Activo</span>
-                        : <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Sin acceso</span>}
+                        ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activo</span>
+                        : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Sin acceso</span>}
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
                         {editable(p) ? (
                           <>
                             <button onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                               <KeyRound className="w-3.5 h-3.5" /> Clave
                             </button>
                             <button onClick={() => void alternarActivo(p)}
-                              className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                              className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                               {p.is_active ? 'Quitar acceso' : 'Dar acceso'}
                             </button>
                           </>
                         ) : (
-                          <span className="text-xs text-slate-600">
+                          <span className="text-xs text-faint">
                             {p.id === profile?.id ? 'usted mismo' : 'fuera de su alcance'}
                           </span>
                         )}
@@ -239,7 +239,7 @@ export const UsersSupabaseView: React.FC = () => {
               onChange={e => setClave(e.target.value)}
               placeholder="Mínimo 6 caracteres" />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             No se envía por ningún lado: dígasela en persona y pídale que la cambie
             al entrar. Queda constancia en la bitácora de quién la reinició.
           </p>

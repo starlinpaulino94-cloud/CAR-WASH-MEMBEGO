@@ -71,10 +71,10 @@ const ENTITY_HELP: Record<ImportEntity, { titulo: string; columnas: string; ejem
 };
 
 const ACCION_ESTILO: Record<string, string> = {
-  crear:      'bg-emerald-500/20 text-emerald-300',
-  actualizar: 'bg-sky-500/20 text-sky-300',
-  omitir:     'bg-slate-700/50 text-slate-400',
-  error:      'bg-rose-500/20 text-rose-300'
+  crear:      'bg-success/20 text-success',
+  actualizar: 'bg-info/20 text-info',
+  omitir:     'bg-surface-3/50 text-muted',
+  error:      'bg-danger/20 text-danger'
 };
 
 export const ImportModal: React.FC<{
@@ -160,14 +160,14 @@ export const ImportModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onMouseDown={e => { if (e.target === e.currentTarget && !busy) onClose(); }}>
       <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
-        className="w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none">
+        className="w-full max-w-3xl bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none">
 
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
-          <h2 id={titleId} className="font-bold text-white text-sm flex items-center gap-2">
-            <Upload className="w-4 h-4 text-indigo-400" /> Importar {help.titulo.toLowerCase()}
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 id={titleId} className="font-bold text-strong text-sm flex items-center gap-2">
+            <Upload className="w-4 h-4 text-brand" /> Importar {help.titulo.toLowerCase()}
           </h2>
           <button onClick={() => { if (!busy) onClose(); }} disabled={busy} aria-label="Cerrar"
-            className="p-1 text-slate-400 hover:text-white disabled:opacity-40">
+            className="p-1 text-muted hover:text-strong disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,30 +183,30 @@ export const ImportModal: React.FC<{
             </InlineAlert>
           ) : (
             <>
-              <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-2">
-                <p className="text-sm text-slate-300">
+              <div className="bg-canvas/60 border border-line rounded-xl p-4 space-y-2">
+                <p className="text-sm text-body">
                   Un archivo <strong>CSV</strong> con la primera fila de encabezados. No hace falta
                   que coincidan exactamente: se aceptan mayúsculas, acentos y sinónimos comunes.
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-faint">
                   Columnas que se leen: {help.columnas}
                 </p>
                 <button onClick={plantilla}
-                  className="text-xs font-bold text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1">
+                  className="text-xs font-bold text-brand hover:text-brand-hi inline-flex items-center gap-1">
                   <FileSpreadsheet className="w-3.5 h-3.5" /> Descargar plantilla de ejemplo
                 </button>
               </div>
 
               <div>
                 <label htmlFor="import-file"
-                  className="block text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">
+                  className="block text-sm font-semibold text-muted uppercase tracking-wide mb-1">
                   Archivo
                 </label>
                 <input id="import-file" type="file" accept=".csv,text/csv,text/plain" disabled={busy}
                   onChange={e => { const f = e.target.files?.[0]; if (f) void leerArchivo(f); }}
-                  className="w-full text-sm text-slate-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700" />
+                  className="w-full text-sm text-body file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-surface-2 file:text-body hover:file:bg-surface-3" />
                 {rows.length > 0 && (
-                  <p className="text-xs text-slate-500 mt-1.5">
+                  <p className="text-xs text-faint mt-1.5">
                     {fileName}: {rows.length} {rows.length === 1 ? 'fila leída' : 'filas leídas'}.
                   </p>
                 )}
@@ -218,16 +218,16 @@ export const ImportModal: React.FC<{
             <div className="space-y-3">
               <div className="grid grid-cols-4 gap-2 text-center">
                 {([
-                  ['crear', 'Nuevos', 'text-emerald-300'],
-                  ['actualizar', 'Se actualizan', 'text-sky-300'],
-                  ['omitir', 'Sin cambios', 'text-slate-400'],
-                  ['error', 'Con error', 'text-rose-300']
+                  ['crear', 'Nuevos', 'text-success'],
+                  ['actualizar', 'Se actualizan', 'text-info'],
+                  ['omitir', 'Sin cambios', 'text-muted'],
+                  ['error', 'Con error', 'text-danger']
                 ] as const).map(([k, label, tone]) => (
-                  <div key={k} className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                  <div key={k} className="bg-canvas border border-line rounded-xl p-3">
                     <div className={`text-xl font-black tabular-nums ${tone}`}>
                       {resultado.resumen[k]}
                     </div>
-                    <div className="text-xs text-slate-500">{label}</div>
+                    <div className="text-xs text-faint">{label}</div>
                   </div>
                 ))}
               </div>
@@ -239,28 +239,28 @@ export const ImportModal: React.FC<{
                 </InlineAlert>
               )}
 
-              <div className="border border-slate-800 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+              <div className="border border-line rounded-xl overflow-hidden max-h-72 overflow-y-auto">
                 <table className="w-full text-left text-xs">
                   <caption className="sr-only">Detalle fila por fila de la importación</caption>
                   <thead className="sticky top-0">
-                    <tr className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                    <tr className="bg-canvas text-muted border-b border-line">
                       <th scope="col" className="p-2 font-semibold w-12">FILA</th>
                       <th scope="col" className="p-2 font-semibold w-28">ACCIÓN</th>
                       <th scope="col" className="p-2 font-semibold">REGISTRO</th>
                       <th scope="col" className="p-2 font-semibold">DETALLE</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-line/60">
                     {resultado.detalle.map(d => (
-                      <tr key={d.fila} className="hover:bg-slate-800/40">
-                        <td className="p-2 text-slate-500 tabular-nums">{d.fila}</td>
+                      <tr key={d.fila} className="hover:bg-surface-2/40">
+                        <td className="p-2 text-faint tabular-nums">{d.fila}</td>
                         <td className="p-2">
                           <span className={`px-1.5 py-0.5 rounded font-bold ${ACCION_ESTILO[d.accion]}`}>
                             {d.accion}
                           </span>
                         </td>
-                        <td className="p-2 text-white font-semibold">{d.clave ?? '—'}</td>
-                        <td className="p-2 text-slate-400">{d.nota ?? ''}</td>
+                        <td className="p-2 text-strong font-semibold">{d.clave ?? '—'}</td>
+                        <td className="p-2 text-muted">{d.nota ?? ''}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -270,15 +270,15 @@ export const ImportModal: React.FC<{
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-3.5">
+        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
           <button type="button" onClick={() => { if (!busy) onClose(); }} disabled={busy}
-            className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white disabled:opacity-40">
+            className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40">
             {applied ? 'Cerrar' : 'Cancelar'}
           </button>
 
           {!applied && !preview && (
             <button type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+              className="px-4 py-2 bg-surface-3 hover:bg-surface-3 disabled:bg-surface-2 disabled:text-faint text-strong font-bold text-sm rounded-xl flex items-center gap-2">
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Revisando…</>
                     : <><AlertTriangle className="w-4 h-4" /> Previsualizar</>}
             </button>
@@ -286,7 +286,7 @@ export const ImportModal: React.FC<{
 
           {!applied && preview && (
             <button type="button" onClick={() => void aplicar()} disabled={busy}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando…</>
                     : <><CheckCircle2 className="w-4 h-4" /> Aplicar esta importación</>}
             </button>
@@ -307,7 +307,7 @@ export const ImportButton: React.FC<{
   return (
     <>
       <button onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm rounded-xl border border-slate-700">
+        className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 text-body font-bold text-sm rounded-xl border border-line-strong">
         <Upload className="w-4 h-4" /> {label}
       </button>
       {open && (

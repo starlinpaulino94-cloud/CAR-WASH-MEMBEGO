@@ -7,18 +7,18 @@ export const ServicesView: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Layers className="w-5 h-5 text-indigo-400" /> Catálogo de Servicios & Matriz de Precios
+      <div className="border-b border-line pb-4">
+        <h2 className="text-xl font-bold text-strong flex items-center gap-2">
+          <Layers className="w-5 h-5 text-brand" /> Catálogo de Servicios & Matriz de Precios
         </h2>
-        <p className="text-xs text-slate-400">Tarifas por categoría de vehículo y comisiones por lavador</p>
+        <p className="text-xs text-muted">Tarifas por categoría de vehículo y comisiones por lavador</p>
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th className="p-3">CÓDIGO / SERVICIO</th>
                 <th className="p-3">SEDÁN</th>
                 <th className="p-3">SUV</th>
@@ -28,23 +28,23 @@ export const ServicesView: React.FC = () => {
                 <th className="p-3">MEMBEGO INCLUIDO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {services.map(s => (
-                <tr key={s.id} className="hover:bg-slate-800/40">
+                <tr key={s.id} className="hover:bg-surface-2/40">
                   <td className="p-3">
-                    <div className="font-bold text-white">{s.name}</div>
-                    <div className="text-xs text-slate-400">{s.code} • {s.category}</div>
+                    <div className="font-bold text-strong">{s.name}</div>
+                    <div className="text-xs text-muted">{s.code} • {s.category}</div>
                   </td>
-                  <td className="p-3 font-bold text-slate-200">{company.currencySymbol} {s.priceByVehicle.sedan}</td>
-                  <td className="p-3 font-bold text-slate-200">{company.currencySymbol} {s.priceByVehicle.suv}</td>
-                  <td className="p-3 font-bold text-slate-200">{company.currencySymbol} {s.priceByVehicle.pickup}</td>
-                  <td className="p-3 text-slate-300 font-semibold">{s.estimatedMinutes} min</td>
-                  <td className="p-3 font-bold text-indigo-400">{s.commissionPercent}%</td>
+                  <td className="p-3 font-bold text-body">{company.currencySymbol} {s.priceByVehicle.sedan}</td>
+                  <td className="p-3 font-bold text-body">{company.currencySymbol} {s.priceByVehicle.suv}</td>
+                  <td className="p-3 font-bold text-body">{company.currencySymbol} {s.priceByVehicle.pickup}</td>
+                  <td className="p-3 text-body font-semibold">{s.estimatedMinutes} min</td>
+                  <td className="p-3 font-bold text-brand">{s.commissionPercent}%</td>
                   <td className="p-3">
                     {s.includedInMembego ? (
-                      <span className="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded">SÍ</span>
+                      <span className="text-xs bg-success/20 text-success font-bold px-2 py-0.5 rounded">SÍ</span>
                     ) : (
-                      <span className="text-xs text-slate-500">NO</span>
+                      <span className="text-xs text-faint">NO</span>
                     )}
                   </td>
                 </tr>

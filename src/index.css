@@ -1,6 +1,174 @@
 @import "tailwindcss";
 
 /* ===========================================================================
+   COLOR · Tokens del Membego Design System
+   ===========================================================================
+   Antes de esto la interfaz escribía la paleta cruda de Tailwind a mano —3 024
+   clases `slate-*`, `indigo-*`, `emerald-*`— y eso tiene dos consecuencias que
+   se pagan juntas: no hay modo claro posible (un `bg-slate-900` es el mismo
+   gris en cualquier tema) y la marca deriva, porque nada dice cuál es el azul
+   bueno.
+   
+   Aquí cada color tiene NOMBRE SEMÁNTICO y dos valores. La pantalla dice qué
+   ES una cosa —lienzo, superficie, borde, marca, éxito— y el tema decide de qué
+   color se pinta. Los valores salen del Membego Design System v1.0 § 8, que es
+   la fuente oficial del ecosistema; el modo oscuro NO es el claro invertido:
+   tiene paleta propia diseñada, y por eso el azul de marca sube de #006bed a
+   #59a6ff (el de modo claro no contrasta sobre negro) y el texto sobre la marca
+   pasa a oscuro.
+
+   Cómo cambiar de tema: el atributo `data-theme` en <html>. Sin atributo manda
+   la preferencia del sistema operativo. Ver src/context/ThemeContext.tsx.
+   =========================================================================== */
+
+@theme inline {
+  /* Superficies, de atrás hacia delante */
+  --color-canvas:      var(--mb-canvas);
+  --color-surface:     var(--mb-surface);
+  --color-surface-2:   var(--mb-surface-2);
+  --color-surface-3:   var(--mb-surface-3);
+
+  /* Líneas */
+  --color-line:        var(--mb-line);
+  --color-line-strong: var(--mb-line-strong);
+
+  /* Texto, de más a menos peso */
+  --color-strong:      var(--mb-strong);
+  --color-body:        var(--mb-body);
+  --color-muted:       var(--mb-muted);
+  --color-faint:       var(--mb-faint);
+
+  /* Marca. `on-accent` es el texto que va ENCIMA del azul: blanco en claro,
+     casi negro en oscuro, porque en oscuro el azul es claro. */
+  --color-brand:       var(--mb-brand);
+  --color-brand-hi:    var(--mb-brand-hi);
+  --color-brand-soft:  var(--mb-brand-soft);
+  --color-on-accent:   var(--mb-on-accent);
+
+  /* Estados. El verde es EXCLUSIVAMENTE éxito (MDS § 8.3) y el cyan-info
+     nunca es color de acción: se leería como un botón. */
+  --color-success:     var(--mb-success);
+  --color-warning:     var(--mb-warning);
+  --color-danger:      var(--mb-danger);
+  --color-info:        var(--mb-info);
+
+  /* Acento categórico. Es el cyan que cierra el gradiente del logo de Membego,
+     y por eso NUNCA es color de acción: un botón cyan se lee como un aviso
+     informativo (MDS § 7.2 y § 8.4). Se usa para etiquetar familias que no son
+     estados —control de calidad, recetas, beneficios de Membego—, que es la
+     única excepción que el sistema admite a la paleta semántica. */
+  --color-accent:      var(--mb-accent);
+}
+
+/* --------------------------------------------------------------- Modo día */
+:root {
+  --mb-canvas:      #f4f6f8;
+  --mb-surface:     #ffffff;
+  --mb-surface-2:   #f0f2f4;
+  --mb-surface-3:   #e3e6ea;
+
+  --mb-line:        #d2d4d8;
+  --mb-line-strong: #b9bcc2;
+
+  --mb-strong:      #060911;
+  --mb-body:        #33363d;
+  --mb-muted:       #60636a;
+  --mb-faint:       #82858c;
+
+  --mb-brand:       #006bed;
+  --mb-brand-hi:    #0059ce;
+  --mb-brand-soft:  #ddecff;
+  --mb-on-accent:   #ffffff;
+
+  --mb-success:     #00864d;
+  --mb-warning:     #ab6300;
+  --mb-danger:      #e7000b;
+  --mb-info:        #00809b;
+  --mb-accent:      #0d6f8c;
+
+  color-scheme: light;
+}
+
+/* -------------------------------------------------------------- Modo noche
+   Paleta propia, no la inversa de la de arriba. Los neutros son grises puros
+   —no el azulado de `slate`— porque así los define Membego, y sobre ellos el
+   azul de marca sube de luminosidad para no quedar por debajo de AA. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mb-canvas:      #0a0b0d;
+    --mb-surface:     #121416;
+    --mb-surface-2:   #1b1e21;
+    --mb-surface-3:   #262a2e;
+
+    --mb-line:        rgba(255, 255, 255, 0.09);
+    --mb-line-strong: rgba(255, 255, 255, 0.16);
+
+    --mb-strong:      #f0f2f5;
+    --mb-body:        #cbced4;
+    --mb-muted:       #92969d;
+    --mb-faint:       #74777e;
+
+    --mb-brand:       #59a6ff;
+    --mb-brand-hi:    #8cc2ff;
+    --mb-brand-soft:  #12233a;
+    --mb-on-accent:   #06121f;
+
+    --mb-success:     #23ba7d;
+    --mb-warning:     #f0b135;
+    --mb-danger:      #ff6467;
+    --mb-info:        #35afc9;
+    --mb-accent:      #56c8de;
+
+    color-scheme: dark;
+  }
+}
+
+/* La elección explícita gana sobre la del sistema, en los dos sentidos. */
+:root[data-theme="dark"] {
+  --mb-canvas:      #0a0b0d;
+  --mb-surface:     #121416;
+  --mb-surface-2:   #1b1e21;
+  --mb-surface-3:   #262a2e;
+
+  --mb-line:        rgba(255, 255, 255, 0.09);
+  --mb-line-strong: rgba(255, 255, 255, 0.16);
+
+  --mb-strong:      #f0f2f5;
+  --mb-body:        #cbced4;
+  --mb-muted:       #92969d;
+  --mb-faint:       #74777e;
+
+  --mb-brand:       #59a6ff;
+  --mb-brand-hi:    #8cc2ff;
+  --mb-brand-soft:  #12233a;
+  --mb-on-accent:   #06121f;
+
+  --mb-success:     #23ba7d;
+  --mb-warning:     #f0b135;
+  --mb-danger:      #ff6467;
+  --mb-info:        #35afc9;
+  --mb-accent:      #56c8de;
+
+  color-scheme: dark;
+}
+
+/* El lienzo lo pinta el tema, no una clase suelta en App.tsx. */
+body {
+  background-color: var(--mb-canvas);
+  color: var(--mb-body);
+}
+
+/* Cambiar de tema no debe ser un parpadeo brusco, pero tampoco una animación
+   de medio segundo en cada panel: 150 ms es el token `--duration-fast` del
+   sistema de movimiento de Membego. */
+@media (prefers-reduced-motion: no-preference) {
+  body, body * {
+    transition-property: background-color, border-color;
+    transition-duration: 150ms;
+  }
+}
+
+/* ===========================================================================
    Escala tipográfica
    ===========================================================================
    La interfaz original abusaba de 10-12 px. Subir la raíz escala TODA la

@@ -42,15 +42,15 @@ export const FormModal: React.FC<{
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none`}
+        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none`}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
-          <h2 id={titleId} className="font-bold text-white text-sm">{title}</h2>
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 id={titleId} className="font-bold text-strong text-sm">{title}</h2>
           <button
             onClick={() => { if (!busy) onClose(); }}
             disabled={busy}
             aria-label="Cerrar"
-            className="p-1 text-slate-400 hover:text-white disabled:opacity-40"
+            className="p-1 text-muted hover:text-strong disabled:opacity-40"
           >
             <X className="w-5 h-5" />
           </button>
@@ -65,19 +65,19 @@ export const FormModal: React.FC<{
             {children}
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-3.5">
+          <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
             <button
               type="button"
               onClick={() => { if (!busy) onClose(); }}
               disabled={busy}
-              className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white disabled:opacity-40"
+              className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={busy}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-white font-bold text-sm rounded-xl flex items-center gap-2"
+              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 disabled:text-muted text-on-accent font-bold text-sm rounded-xl flex items-center gap-2"
             >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando…</> : submitLabel}
             </button>
@@ -96,13 +96,13 @@ export const Field: React.FC<{
   htmlFor?: string;
 }> = ({ label, children, hint, htmlFor }) => (
   <div className="space-y-1">
-    <label htmlFor={htmlFor} className="block text-sm font-semibold text-slate-400 uppercase tracking-wide">
+    <label htmlFor={htmlFor} className="block text-sm font-semibold text-muted uppercase tracking-wide">
       {label}
     </label>
     {children}
-    {hint && <p className="text-sm text-slate-500">{hint}</p>}
+    {hint && <p className="text-sm text-faint">{hint}</p>}
   </div>
 );
 
 export const textInputClass =
-  'w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500';
+  'w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand';

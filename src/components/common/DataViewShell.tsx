@@ -15,10 +15,10 @@ export const ViewHeader: React.FC<{
   subtitle?: string;
   actions?: React.ReactNode;
 }> = ({ icon, title, subtitle, actions }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-4">
     <div>
-      <h2 className="text-2xl font-bold text-white flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
-      {subtitle && <p className="text-sm text-slate-400 mt-0.5">{subtitle}</p>}
+      <h2 className="text-2xl font-bold text-strong flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
+      {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
     </div>
     {actions && <div className="flex items-center gap-2 self-start sm:self-auto">{actions}</div>}
   </div>
@@ -28,13 +28,13 @@ export const ErrorState: React.FC<{ message: string; onRetry: () => void; title?
   message, onRetry, title = 'No se pudieron cargar los datos'
 }) => (
   <div className="p-6 max-w-md mx-auto">
-    <div role="alert" className="bg-rose-950/40 border border-rose-500/40 rounded-2xl p-5 space-y-3">
-      <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
+    <div role="alert" className="bg-danger/40 border border-danger/40 rounded-2xl p-5 space-y-3">
+      <div className="flex items-center gap-2 text-danger font-bold text-sm">
         <AlertCircle className="w-5 h-5" /> {title}
       </div>
-      <p className="text-sm text-slate-300">{message}</p>
+      <p className="text-sm text-body">{message}</p>
       <button onClick={onRetry}
-        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2">
+        className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
         <RefreshCw className="w-4 h-4" /> Reintentar
       </button>
     </div>
@@ -47,9 +47,9 @@ export const InlineAlert: React.FC<{
   onDismiss?: () => void;
 }> = ({ tone, children, onDismiss }) => {
   const styles = {
-    error:   'bg-rose-950/50 border-rose-500/40 text-rose-200',
-    success: 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200',
-    warning: 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+    error:   'bg-danger/50 border-danger/40 text-danger',
+    success: 'bg-success/40 border-success/40 text-success',
+    warning: 'bg-warning/40 border-warning/40 text-warning'
   }[tone];
   return (
     <div role={tone === 'error' ? 'alert' : 'status'}
@@ -68,12 +68,12 @@ export const SearchBox: React.FC<{
   onChange: (v: string) => void; placeholder?: string;
 }> = ({ id, label, value, onChange, placeholder }) => (
   <div className="relative flex-1">
-    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
     <label htmlFor={id} className="sr-only">{label}</label>
     <input
       id={id} type="search" value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+      className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-2 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand"
     />
   </div>
 );
@@ -96,8 +96,8 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
       <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
         className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
           value === o.id
-            ? 'bg-indigo-600 text-white border-indigo-500'
-            : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+            ? 'bg-brand text-on-accent border-brand'
+            : 'bg-surface text-muted border-line hover:border-line-strong'
         }`}>
         {o.label}
       </button>
@@ -111,55 +111,55 @@ export const SkeletonRows: React.FC<{ rows?: number; cols: number }> = ({ rows =
   <>
     {Array.from({ length: rows }).map((_, i) => (
       <tr key={i} aria-hidden="true">
-        <td colSpan={cols} className="p-3"><div className="h-5 bg-slate-800/60 rounded animate-pulse" /></td>
+        <td colSpan={cols} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
       </tr>
     ))}
   </>
 );
 
 export const EmptyRow: React.FC<{ cols: number; children: React.ReactNode }> = ({ cols, children }) => (
-  <tr><td colSpan={cols} className="p-10 text-center text-slate-500 italic">{children}</td></tr>
+  <tr><td colSpan={cols} className="p-10 text-center text-faint italic">{children}</td></tr>
 );
 
 export const Pagination: React.FC<{
   page: number; pageCount: number; total: number; pageSize: number;
   loading?: boolean; onPage: (p: number) => void;
 }> = ({ page, pageCount, total, pageSize, loading, onPage }) => (
-  <div className="flex items-center justify-between px-4 py-3 border-t border-slate-800 text-sm">
-    <span className="text-slate-400">
+  <div className="flex items-center justify-between px-4 py-3 border-t border-line text-sm">
+    <span className="text-muted">
       {total === 0 ? 'Sin resultados'
         : <>Mostrando {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} de {total}</>}
     </span>
     <div className="flex items-center gap-2">
       <button onClick={() => onPage(Math.max(0, page - 1))} disabled={page === 0 || loading}
         aria-label="Página anterior"
-        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-slate-300">
+        className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
         <ChevronLeft className="w-4 h-4" />
       </button>
-      <span className="text-slate-400 tabular-nums">{page + 1} / {pageCount}</span>
+      <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
       <button onClick={() => onPage(Math.min(pageCount - 1, page + 1))} disabled={page >= pageCount - 1 || loading}
         aria-label="Página siguiente"
-        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-slate-300">
+        className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
         <ChevronRight className="w-4 h-4" />
       </button>
-      {loading && <Loader2 className="w-4 h-4 animate-spin text-slate-500" />}
+      {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
     </div>
   </div>
 );
 
 export const StatCard: React.FC<{ label: string; value: string; tone?: string; hint?: string }> = ({
-  label, value, tone = 'text-white', hint
+  label, value, tone = 'text-strong', hint
 }) => (
-  <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-1">
-    <div className="text-sm text-slate-400">{label}</div>
+  <div className="bg-surface border border-line rounded-2xl p-4 space-y-1">
+    <div className="text-sm text-muted">{label}</div>
     <div className={`text-2xl font-black ${tone} tabular-nums`}>{value}</div>
-    {hint && <div className="text-xs text-slate-500">{hint}</div>}
+    {hint && <div className="text-xs text-faint">{hint}</div>}
   </div>
 );
 
 /** Aviso de permiso insuficiente, uniforme en todas las vistas. */
 export const ReadOnlyNotice: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div role="status" className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 text-sm text-amber-200">
+  <div role="status" className="bg-warning/40 border border-warning/40 rounded-xl px-4 py-3 text-sm text-warning">
     {children}
   </div>
 );

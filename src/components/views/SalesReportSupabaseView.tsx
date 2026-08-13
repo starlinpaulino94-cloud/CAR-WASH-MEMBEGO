@@ -71,24 +71,24 @@ const SimpleTable: React.FC<{
   rows: (string | number)[][];
   empty: string;
 }> = ({ title, headers, rows, empty }) => (
-  <section className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
-    <h3 className="font-bold text-white text-sm px-4 pt-4">{title}</h3>
+  <section className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
+    <h3 className="font-bold text-strong text-sm px-4 pt-4">{title}</h3>
     <div className="overflow-x-auto p-2">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="text-slate-400 text-xs">
+          <tr className="text-muted text-xs">
             {headers.map((h, i) => (
               <th key={h} className={`p-2 font-semibold ${i > 0 ? 'text-right' : ''}`}>{h.toUpperCase()}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody className="divide-y divide-line/60">
           {rows.length === 0 ? (
-            <tr><td colSpan={headers.length} className="p-4 text-center text-slate-500 italic">{empty}</td></tr>
+            <tr><td colSpan={headers.length} className="p-4 text-center text-faint italic">{empty}</td></tr>
           ) : rows.map((cells, ri) => (
             <tr key={ri}>
               {cells.map((c, ci) => (
-                <td key={ci} className={`p-2 ${ci === 0 ? 'text-white font-medium' : 'text-right text-slate-300 tabular-nums whitespace-nowrap'}`}>
+                <td key={ci} className={`p-2 ${ci === 0 ? 'text-strong font-medium' : 'text-right text-body tabular-nums whitespace-nowrap'}`}>
                   {c}
                 </td>
               ))}
@@ -132,7 +132,7 @@ export const SalesReportSupabaseView: React.FC = () => {
   if (phase !== 'ready' || !allowed) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<TrendingUp className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<TrendingUp className="w-5 h-5 text-brand" />}
           title="Ventas" subtitle="Reporte comercial del periodo" />
         <ReadOnlyNotice>
           {phase !== 'ready'
@@ -148,12 +148,12 @@ export const SalesReportSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<TrendingUp className="w-5 h-5 text-indigo-400" />}
+        icon={<TrendingUp className="w-5 h-5 text-brand" />}
         title="Ventas"
         subtitle="Qué se vendió, quién lo vendió y cómo se cobró"
         actions={report ? (
           <button onClick={() => exportCsv(report, symbol)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 text-strong font-bold text-xs rounded-xl">
             <Download className="w-4 h-4" /> Exportar CSV
           </button>
         ) : undefined}
@@ -164,24 +164,24 @@ export const SalesReportSupabaseView: React.FC = () => {
       {loading || !report ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" aria-busy="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />
+            <div key={i} className="h-24 bg-surface border border-line rounded-2xl animate-pulse" />
           ))}
           <div className="col-span-2 lg:col-span-4 flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-600" />
+            <Loader2 className="w-6 h-6 animate-spin text-faint" />
           </div>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Ventas del periodo" tone="text-emerald-400"
+            <StatCard label="Ventas del periodo" tone="text-success"
               value={formatCents(report.sales.total_cents, symbol)}
               hint={`${report.sales.invoice_count} facturas`} />
             <StatCard label="Ticket promedio"
               value={formatCents(report.sales.avg_ticket_cents, symbol)} />
-            <StatCard label="Anulado" tone="text-rose-400"
+            <StatCard label="Anulado" tone="text-danger"
               value={formatCents(report.sales.annulled_cents, symbol)}
               hint={`${report.sales.annulled_count} facturas`} />
-            <StatCard label="Gastos del periodo" tone="text-amber-300"
+            <StatCard label="Gastos del periodo" tone="text-warning"
               value={formatCents(report.expenses_total_cents, symbol)} />
           </div>
 

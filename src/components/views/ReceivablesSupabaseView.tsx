@@ -193,7 +193,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Landmark className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Landmark className="w-5 h-5 text-brand" />}
           title="Por cobrar" subtitle="Crédito de clientes y cuentas pendientes" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -209,7 +209,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Landmark className="w-5 h-5 text-indigo-400" />}
+        icon={<Landmark className="w-5 h-5 text-brand" />}
         title="Por cobrar"
         subtitle="Lo fiado no es ingreso hasta que se cobra"
         actions={<ExportButton {...receivablesExport()} />}
@@ -226,13 +226,13 @@ export const ReceivablesSupabaseView: React.FC = () => {
           <StatCard label="Corriente" value={formatCents(aging.totals.corriente, symbol)}
             hint="Aún no vence" />
           <StatCard label="1 a 30 días" value={formatCents(aging.totals.d1_30, symbol)}
-            tone="text-amber-400" hint="Vencido" />
+            tone="text-warning" hint="Vencido" />
           <StatCard label="31 a 60 días" value={formatCents(aging.totals.d31_60, symbol)}
-            tone="text-orange-400" hint="Vencido" />
+            tone="text-warning" hint="Vencido" />
           <StatCard label="61 a 90 días" value={formatCents(aging.totals.d61_90, symbol)}
-            tone="text-red-400" hint="Vencido" />
+            tone="text-danger" hint="Vencido" />
           <StatCard label="Más de 90 días" value={formatCents(aging.totals.d90_mas, symbol)}
-            tone="text-red-500" hint="Cobro dudoso" />
+            tone="text-danger" hint="Cobro dudoso" />
         </section>
       )}
 
@@ -243,12 +243,12 @@ export const ReceivablesSupabaseView: React.FC = () => {
       <SearchBox id="rec-search" label="Buscar cuenta" value={q.searchInput}
         onChange={q.setSearchInput} placeholder="Buscar por cliente…" />
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Cuentas por cobrar</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">CLIENTE</th>
                 <th scope="col" className="p-3 font-semibold">FACTURA</th>
                 <th scope="col" className="p-3 font-semibold">VENCE</th>
@@ -257,7 +257,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
                 {canCollect && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={cols} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={cols}>
@@ -268,39 +268,39 @@ export const ReceivablesSupabaseView: React.FC = () => {
                   const late = daysLate(r.due_on);
                   const overdue = r.status === 'pendiente' && late > 0;
                   return (
-                    <tr key={r.id} className="hover:bg-slate-800/40">
-                      <td className="p-3 font-bold text-white">{r.customer_name}</td>
-                      <td className="p-3 text-slate-400">{r.invoice_number}</td>
+                    <tr key={r.id} className="hover:bg-surface-2/40">
+                      <td className="p-3 font-bold text-strong">{r.customer_name}</td>
+                      <td className="p-3 text-muted">{r.invoice_number}</td>
                       <td className="p-3">
-                        <div className={overdue ? 'text-red-400 font-bold' : 'text-slate-400'}>{r.due_on}</div>
+                        <div className={overdue ? 'text-danger font-bold' : 'text-muted'}>{r.due_on}</div>
                         {r.status === 'pendiente' && (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-faint">
                             {late > 0 ? `${late} día(s) de atraso` : `faltan ${-late} día(s)`}
                           </div>
                         )}
                       </td>
                       <td className="p-3 text-right">
-                        <div className="font-bold text-white">{formatCents(balance, symbol)}</div>
+                        <div className="font-bold text-strong">{formatCents(balance, symbol)}</div>
                         {r.paid_cents > 0 && (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-faint">
                             abonado {formatCents(r.paid_cents, symbol)} de {formatCents(r.total_cents, symbol)}
                           </div>
                         )}
                       </td>
                       <td className="p-3">
                         {r.status === 'pagada'
-                          ? <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Saldada</span>
+                          ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Saldada</span>
                           : r.status === 'anulada'
-                            ? <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Anulada</span>
+                            ? <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Anulada</span>
                             : overdue
-                              ? <span className="bg-red-500/20 text-red-400 font-bold px-2 py-0.5 rounded text-xs">Vencida</span>
-                              : <span className="bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded text-xs">Pendiente</span>}
+                              ? <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Vencida</span>
+                              : <span className="bg-warning/20 text-warning font-bold px-2 py-0.5 rounded text-xs">Pendiente</span>}
                       </td>
                       {canCollect && (
                         <td className="p-3 text-right">
                           {r.status === 'pendiente' && (
                             <button onClick={() => openPay(r)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg">
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-lg">
                               <HandCoins className="w-3.5 h-3.5" /> Cobrar
                             </button>
                           )}
@@ -319,37 +319,37 @@ export const ReceivablesSupabaseView: React.FC = () => {
       {/* ------------------------------------------------- Cupos autorizados */}
       {canAuthorize && (
         <section aria-label="Clientes con crédito"
-          className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+          className="bg-surface/80 border border-line rounded-2xl p-5 space-y-4">
           <header className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-base font-bold text-white">Clientes con crédito</h2>
+              <ShieldCheck className="w-4 h-4 text-brand" />
+              <h2 className="text-base font-bold text-strong">Clientes con crédito</h2>
             </div>
             <button onClick={openCreditPicker}
-              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+              className="px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
               Autorizar crédito
             </button>
           </header>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             El cupo solo se cambia aquí: ningún otro camino puede tocarlo. Un cliente
             con facturas vencidas queda bloqueado hasta que se ponga al día.
           </p>
           {creditCustomers.length === 0 ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted">
               Todavía no hay clientes autorizados a comprar a crédito.
             </p>
           ) : (
-            <ul className="divide-y divide-slate-800/60">
+            <ul className="divide-y divide-line/60">
               {creditCustomers.map(c => (
                 <li key={c.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div>
-                    <div className="font-bold text-white text-sm">{c.name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="font-bold text-strong text-sm">{c.name}</div>
+                    <div className="text-xs text-faint">
                       Cupo {formatCents(c.credit_limit_cents, symbol)} · {c.credit_terms_days} días de plazo
                     </div>
                   </div>
                   <button onClick={() => openCredit(c)}
-                    className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+                    className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                     Ajustar cupo
                   </button>
                 </li>
@@ -369,9 +369,9 @@ export const ReceivablesSupabaseView: React.FC = () => {
           onClose={() => setPaying(null)}
           onDismissError={() => setError(null)}
         >
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted">
             Factura {paying.invoice_number} · saldo{' '}
-            <strong className="text-white">
+            <strong className="text-strong">
               {formatCents(paying.total_cents - paying.paid_cents, symbol)}
             </strong>
           </p>
@@ -391,7 +391,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
               placeholder="Nº de transferencia, voucher…" />
           </Field>
           {method === 'efectivo' && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-faint">
               El efectivo entra a la caja abierta de la sucursal.
             </p>
           )}
@@ -414,15 +414,15 @@ export const ReceivablesSupabaseView: React.FC = () => {
               placeholder="Nombre, teléfono o RNC…" />
           </Field>
           {picks.length === 0 ? (
-            <p className="text-xs text-slate-400">Ningún cliente coincide.</p>
+            <p className="text-xs text-muted">Ningún cliente coincide.</p>
           ) : (
-            <ul className="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+            <ul className="max-h-64 overflow-y-auto divide-y divide-line/60">
               {picks.map(c => (
                 <li key={c.id}>
                   <button type="button" onClick={() => openCredit(c)}
-                    className="w-full text-left py-2.5 px-2 hover:bg-slate-800/60 rounded-lg">
-                    <div className="font-bold text-white text-sm">{c.name}</div>
-                    <div className="text-xs text-slate-500">
+                    className="w-full text-left py-2.5 px-2 hover:bg-surface-2/60 rounded-lg">
+                    <div className="font-bold text-strong text-sm">{c.name}</div>
+                    <div className="text-xs text-faint">
                       {c.phone ?? 'sin teléfono'}
                       {c.credit_enabled
                         ? ` · cupo ${formatCents(c.credit_limit_cents, symbol)}`
@@ -454,12 +454,12 @@ export const ReceivablesSupabaseView: React.FC = () => {
             <input id="cred-terms" className={textInputClass} value={termsInput}
               inputMode="numeric" onChange={e => setTermsInput(e.target.value)} />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             El cupo no puede quedar por debajo de lo que el cliente ya debe, y el
             crédito no se retira con saldo pendiente.
           </p>
           <button type="button" onClick={() => void submitCredit(false)} disabled={busy}
-            className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50">
+            className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-surface-2 hover:bg-surface-3 text-body disabled:opacity-50">
             Retirar el crédito a este cliente
           </button>
         </FormModal>

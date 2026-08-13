@@ -123,7 +123,7 @@ export const ProductsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Package className="w-5 h-5 text-indigo-400" />}
+        icon={<Package className="w-5 h-5 text-brand" />}
         title="Productos e insumos"
         subtitle="Existencias, costo y precio de venta"
         actions={
@@ -134,7 +134,7 @@ export const ProductsSupabaseView: React.FC = () => {
             )}
             {editable && (
               <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
                 <Plus className="w-4 h-4" /> Nuevo producto
               </button>
             )}
@@ -158,12 +158,12 @@ export const ProductsSupabaseView: React.FC = () => {
         </InlineAlert>
       )}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Inventario de productos</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">PRODUCTO</th>
                 <th scope="col" className="p-3 font-semibold">CATEGORÍA</th>
                 <th scope="col" className="p-3 font-semibold text-right">COSTO</th>
@@ -172,7 +172,7 @@ export const ProductsSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold">ESTADO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={6} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={6}>
@@ -183,16 +183,16 @@ export const ProductsSupabaseView: React.FC = () => {
                 ) : q.rows.map(p => {
                   const low = p.stock <= p.min_stock;
                   return (
-                    <tr key={p.id} className="hover:bg-slate-800/40">
+                    <tr key={p.id} className="hover:bg-surface-2/40">
                       <td className="p-3">
-                        <div className="font-bold text-white">{p.name}</div>
-                        <div className="text-xs text-slate-500">{p.code}</div>
+                        <div className="font-bold text-strong">{p.name}</div>
+                        <div className="text-xs text-faint">{p.code}</div>
                       </td>
-                      <td className="p-3 text-slate-400">{p.category || '—'}</td>
-                      <td className="p-3 text-slate-300 text-right whitespace-nowrap">
+                      <td className="p-3 text-muted">{p.category || '—'}</td>
+                      <td className="p-3 text-body text-right whitespace-nowrap">
                         {formatCents(p.cost_cents, symbol)}
                       </td>
-                      <td className="p-3 font-bold text-indigo-300 text-right whitespace-nowrap">
+                      <td className="p-3 font-bold text-brand-hi text-right whitespace-nowrap">
                         {p.is_for_sale ? formatCents(p.price_cents, symbol) : 'Uso interno'}
                       </td>
                       <td className="p-3 text-right">
@@ -202,8 +202,8 @@ export const ProductsSupabaseView: React.FC = () => {
                           aria-label={`Existencia de ${p.name}`}
                           title={editable ? 'Ajustar existencia (queda en el kardex)' : undefined}
                           className={`px-2 py-1 rounded font-extrabold tabular-nums ${
-                            p.stock < 0 ? 'text-rose-400' : 'text-white'
-                          } ${editable ? 'hover:bg-slate-800' : 'cursor-default'}`}
+                            p.stock < 0 ? 'text-danger' : 'text-strong'
+                          } ${editable ? 'hover:bg-surface-2' : 'cursor-default'}`}
                         >
                           {p.stock} {p.unit}
                           {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
@@ -211,15 +211,15 @@ export const ProductsSupabaseView: React.FC = () => {
                       </td>
                       <td className="p-3">
                         {p.stock < 0 ? (
-                          <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs inline-flex items-center gap-1">
+                          <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs inline-flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" /> Negativo
                           </span>
                         ) : low ? (
-                          <span className="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-xs">
+                          <span className="bg-warning/20 text-warning font-bold px-2 py-0.5 rounded text-xs">
                             Bajo (mín. {p.min_stock})
                           </span>
                         ) : (
-                          <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">
+                          <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">
                             Normal
                           </span>
                         )}
@@ -244,8 +244,8 @@ export const ProductsSupabaseView: React.FC = () => {
           onClose={() => setAdjusting(null)}
           onDismissError={() => setActionError(null)}
         >
-          <p className="text-sm text-slate-400">
-            Existencia actual: <strong className="text-white tabular-nums">{adjusting.stock} {adjusting.unit}</strong>.
+          <p className="text-sm text-muted">
+            Existencia actual: <strong className="text-strong tabular-nums">{adjusting.stock} {adjusting.unit}</strong>.
             El ajuste queda registrado en el kardex con su motivo, autor y fecha.
           </p>
           <Field label="Nueva existencia *" htmlFor="adj-qty">
@@ -320,8 +320,8 @@ export const ProductsSupabaseView: React.FC = () => {
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-            <input type="checkbox" checked={form.forSale} className="accent-indigo-600"
+          <label className="flex items-center gap-2 text-xs text-body cursor-pointer">
+            <input type="checkbox" checked={form.forSale} className="accent-brand"
               onChange={e => setForm(f => ({ ...f, forSale: e.target.checked }))} />
             A la venta en el punto de venta (desmarque si es solo de uso interno)
           </label>

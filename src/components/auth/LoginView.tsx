@@ -39,23 +39,23 @@ export const LoginView: React.FC = () => {
   const message = localError ?? error;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-canvas text-strong flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-600/30 mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-2xl shadow-lg shadow-brand/30 mx-auto">
             M
           </div>
-          <h1 className="text-xl font-bold text-white">Membego Car Wash</h1>
-          <p className="text-xs text-slate-400">Acceso al sistema operacional</p>
+          <h1 className="text-xl font-bold text-strong">Membego Car Wash</h1>
+          <p className="text-xs text-muted">Acceso al sistema operacional</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl"
+          className="bg-surface border border-line rounded-2xl p-6 space-y-4 shadow-xl"
           noValidate
         >
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <label htmlFor="email" className="text-xs font-semibold text-muted uppercase tracking-wider">
               Correo electrónico
             </label>
             <input
@@ -65,12 +65,12 @@ export const LoginView: React.FC = () => {
               value={email}
               onChange={e => setEmail(e.target.value)}
               disabled={busy}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <label htmlFor="password" className="text-xs font-semibold text-muted uppercase tracking-wider">
               Contraseña
             </label>
             <input
@@ -80,13 +80,13 @@ export const LoginView: React.FC = () => {
               value={password}
               onChange={e => setPassword(e.target.value)}
               disabled={busy}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+              className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50"
             />
           </div>
 
           {message && (
-            <div role="alert" className="flex items-start gap-2 p-3 bg-rose-950/50 border border-rose-500/40 rounded-xl text-xs text-rose-200">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
+            <div role="alert" className="flex items-start gap-2 p-3 bg-danger/50 border border-danger/40 rounded-xl text-xs text-danger">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-danger mt-0.5" />
               <span>{message}</span>
             </div>
           )}
@@ -94,15 +94,15 @@ export const LoginView: React.FC = () => {
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-colors flex items-center justify-center gap-2"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
             {busy ? 'Verificando…' : 'Entrar'}
           </button>
         </form>
 
-        <p className="text-xs text-slate-500 text-center leading-relaxed flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+        <p className="text-xs text-faint text-center leading-relaxed flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-success" />
           Cada acceso queda registrado en la bitácora de auditoría.
         </p>
       </div>
@@ -114,20 +114,20 @@ export const LoginView: React.FC = () => {
 export const UnprovisionedView: React.FC = () => {
   const { signOut, profile } = useAuth();
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 text-center">
-        <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/30">
+    <div className="min-h-screen bg-canvas text-strong flex items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-md bg-surface border border-line rounded-2xl p-6 space-y-4 text-center">
+        <div className="w-12 h-12 bg-warning/20 text-warning rounded-2xl flex items-center justify-center mx-auto border border-warning/30">
           <AlertCircle className="w-6 h-6" />
         </div>
-        <h1 className="font-bold text-white">Su cuenta aún no tiene acceso</h1>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          La cuenta <strong className="text-slate-200">{profile?.email}</strong> existe, pero todavía
+        <h1 className="font-bold text-strong">Su cuenta aún no tiene acceso</h1>
+        <p className="text-xs text-muted leading-relaxed">
+          La cuenta <strong className="text-body">{profile?.email}</strong> existe, pero todavía
           no está asignada a ninguna empresa ni tiene un rol. Un administrador debe habilitarla
           antes de que pueda operar.
         </p>
         <button
           onClick={() => void signOut()}
-          className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-colors"
+          className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold text-xs rounded-xl transition-colors"
         >
           Cerrar sesión
         </button>

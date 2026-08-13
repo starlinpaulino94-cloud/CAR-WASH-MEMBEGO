@@ -149,7 +149,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 backdrop-blur-md p-4 overflow-y-auto"
       onMouseDown={e => { if (e.target === e.currentTarget && !busy) onClose(); }}
     >
       <div
@@ -157,20 +157,20 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
         role="dialog"
         aria-modal="true"
         aria-label="Registrar llegada de vehículo"
-        className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="bg-surface border border-line w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
       >
-        <div className="bg-gradient-to-r from-indigo-900/50 to-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-brand-soft/50 to-surface px-6 py-4 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600/30 text-indigo-400 rounded-xl border border-indigo-500/30">
+            <div className="p-2 bg-brand/30 text-brand rounded-xl border border-brand/30">
               <Car className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Registrar llegada</h2>
-              <p className="text-xs text-slate-400">{branch?.name}</p>
+              <h2 className="text-base font-bold text-strong">Registrar llegada</h2>
+              <p className="text-xs text-muted">{branch?.name}</p>
             </div>
           </div>
           <button onClick={onClose} disabled={busy} aria-label="Cerrar"
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-40">
+            className="text-muted hover:text-strong p-2 rounded-xl hover:bg-surface-2 transition-colors disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -178,62 +178,62 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
         <div className="p-6 space-y-5 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label htmlFor="na-plate" className="text-xs font-semibold text-slate-400 uppercase">Placa *</label>
+              <label htmlFor="na-plate" className="text-xs font-semibold text-muted uppercase">Placa *</label>
               <input
                 id="na-plate" ref={firstFieldRef} type="text" value={plate}
                 onChange={e => setPlate(e.target.value.toUpperCase())}
                 disabled={busy}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold tracking-wider text-white uppercase focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm font-bold tracking-wider text-strong uppercase focus:outline-none focus:border-brand disabled:opacity-50"
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="na-cat" className="text-xs font-semibold text-slate-400 uppercase">Categoría *</label>
+              <label htmlFor="na-cat" className="text-xs font-semibold text-muted uppercase">Categoría *</label>
               <select
                 id="na-cat" value={category} disabled={busy}
                 onChange={e => setCategory(e.target.value as VehicleCategory)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50"
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50"
               >
                 {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="na-cust" className="text-xs font-semibold text-slate-400 uppercase">Cliente</label>
+              <label htmlFor="na-cust" className="text-xs font-semibold text-muted uppercase">Cliente</label>
               <input id="na-cust" type="text" value={customerName} disabled={busy}
                 onChange={e => setCustomerName(e.target.value)} placeholder="Cliente General"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand disabled:opacity-50" />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="na-phone" className="text-xs font-semibold text-slate-400 uppercase">Teléfono</label>
+              <label htmlFor="na-phone" className="text-xs font-semibold text-muted uppercase">Teléfono</label>
               <input id="na-phone" type="tel" value={customerPhone} disabled={busy}
                 onChange={e => setCustomerPhone(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50" />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="na-make" className="text-xs font-semibold text-slate-400 uppercase">Marca</label>
+              <label htmlFor="na-make" className="text-xs font-semibold text-muted uppercase">Marca</label>
               <input id="na-make" type="text" value={make} disabled={busy}
                 onChange={e => setMake(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50" />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="na-model" className="text-xs font-semibold text-slate-400 uppercase">Modelo</label>
+              <label htmlFor="na-model" className="text-xs font-semibold text-muted uppercase">Modelo</label>
               <input id="na-model" type="text" value={model} disabled={busy}
                 onChange={e => setModel(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50" />
             </div>
           </div>
 
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400 uppercase">
+            <span className="text-xs font-semibold text-muted uppercase">
               Servicios para {CATEGORIES.find(c => c.id === category)?.label} *
             </span>
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3" aria-busy="true">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-slate-950 border border-slate-800 rounded-xl animate-pulse" />
+                  <div key={i} className="h-16 bg-canvas border border-line rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : services.length === 0 ? (
-              <p className="text-xs text-slate-500 italic py-6 text-center">
+              <p className="text-xs text-faint italic py-6 text-center">
                 No hay servicios con precio para esta categoría.
               </p>
             ) : (
@@ -248,17 +248,17 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                       disabled={busy}
                       className={`p-3 rounded-xl border text-left transition-all disabled:opacity-50 ${
                         on
-                          ? 'bg-indigo-950/50 border-indigo-500 text-white'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                          ? 'bg-brand-soft/50 border-brand text-strong'
+                          : 'bg-canvas/60 border-line text-body hover:border-line-strong'
                       }`}
                     >
                       <span className="flex items-start justify-between gap-2">
                         <span className="font-bold text-sm">{s.name}</span>
-                        <span className="text-sm font-bold text-indigo-300 whitespace-nowrap">
+                        <span className="text-sm font-bold text-brand-hi whitespace-nowrap">
                           {formatCents(s.price_cents, symbol)}
                         </span>
                       </span>
-                      <span className="block text-xs text-slate-500 mt-0.5">
+                      <span className="block text-xs text-faint mt-0.5">
                         ~{s.estimated_minutes} min
                       </span>
                     </button>
@@ -269,19 +269,19 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="na-notes" className="text-xs font-semibold text-slate-400 uppercase">Observaciones</label>
+            <label htmlFor="na-notes" className="text-xs font-semibold text-muted uppercase">Observaciones</label>
             <textarea id="na-notes" rows={2} value={notes} disabled={busy}
               onChange={e => setNotes(e.target.value)}
               placeholder="Ej: cuidado con la pintura de la puerta izquierda…"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 disabled:opacity-50" />
+              className="w-full bg-canvas border border-line rounded-xl p-3 text-xs text-strong placeholder-faint focus:outline-none focus:border-brand disabled:opacity-50" />
           </div>
 
           {error && (
-            <div role="alert" className="flex items-start gap-2 p-3 bg-rose-950/50 border border-rose-500/40 rounded-xl text-xs text-rose-200">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
+            <div role="alert" className="flex items-start gap-2 p-3 bg-danger/50 border border-danger/40 rounded-xl text-xs text-danger">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-danger mt-0.5" />
               <div className="space-y-1">
                 <p>{error}</p>
-                <p className="text-xs text-rose-300/80">
+                <p className="text-xs text-danger/80">
                   Puede reintentar: la llegada conserva su identificador y no se registrará dos veces.
                 </p>
               </div>
@@ -289,21 +289,21 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
           )}
         </div>
 
-        <div className="bg-slate-950/60 px-6 py-4 border-t border-slate-800 flex items-center justify-between gap-4">
-          <div className="text-xs text-slate-400">
+        <div className="bg-canvas/60 px-6 py-4 border-t border-line flex items-center justify-between gap-4">
+          <div className="text-xs text-muted">
             {selected.size > 0 ? (
               <>
-                <strong className="text-white">{formatCents(preview.subtotal, symbol)}</strong>
-                <span className="text-slate-500"> · ~{preview.minutes} min</span>
+                <strong className="text-strong">{formatCents(preview.subtotal, symbol)}</strong>
+                <span className="text-faint"> · ~{preview.minutes} min</span>
               </>
             ) : (
-              <span className="text-slate-600">Seleccione al menos un servicio</span>
+              <span className="text-faint">Seleccione al menos un servicio</span>
             )}
           </div>
           <button
             onClick={() => void handleSubmit()}
             disabled={!canSubmit}
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2"
+            className="px-5 py-2.5 bg-success hover:bg-success disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-success/30 transition-all flex items-center gap-2"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
             {busy ? 'Registrando…' : 'Registrar llegada'}

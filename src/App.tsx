@@ -122,8 +122,8 @@ const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.Re
 /** Marcador mientras llega un fragmento cargado bajo demanda. */
 const ChunkFallback: React.FC = () => (
   <div className="p-6 max-w-7xl mx-auto space-y-4" aria-busy="true">
-    <div className="h-8 w-56 bg-slate-800/60 rounded-lg animate-pulse" />
-    <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />
+    <div className="h-8 w-56 bg-surface-2/60 rounded-lg animate-pulse" />
+    <div className="h-64 bg-surface border border-line rounded-2xl animate-pulse" />
   </div>
 );
 
@@ -140,7 +140,7 @@ const AppContent: React.FC = () => {
   const { isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="h-screen overflow-hidden bg-canvas text-strong flex flex-col font-sans selection:bg-brand selection:text-on-accent">
       <StorageAlertBanner />
       <DemoModeBanner />
       <Navbar />
@@ -180,7 +180,7 @@ const DemoModeBanner: React.FC = () => {
   const { phase } = useAuth();
   if (phase !== 'demo') return null;
   return (
-    <div role="status" className="bg-indigo-950/60 border-b border-indigo-500/40 px-4 py-2 text-center text-xs text-indigo-200">
+    <div role="status" className="bg-brand-soft/60 border-b border-brand/40 px-4 py-2 text-center text-xs text-brand-hi">
       <strong className="font-bold">Modo demostración.</strong>{' '}
       Sin base de datos conectada: los datos se guardan solo en este navegador y pueden perderse.
       Configure Supabase para trabajar contra la base de datos real.
@@ -194,10 +194,10 @@ const AuthGate: React.FC = () => {
 
   if (phase === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center" aria-busy="true">
+      <div className="min-h-screen bg-canvas flex items-center justify-center" aria-busy="true">
         <div className="space-y-3 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 mx-auto animate-pulse" />
-          <p className="text-sm text-slate-500">Cargando…</p>
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand to-accent mx-auto animate-pulse" />
+          <p className="text-sm text-faint">Cargando…</p>
         </div>
       </div>
     );

@@ -815,6 +815,55 @@ check('la procedencia no se reescribe ni llamando al API directamente',
     } catch { return true; }
   })());
 
+
+// --- [16] Modo día y modo noche.
+const fondo = () => page.evaluate(() =>
+  getComputedStyle(document.body).backgroundColor);
+
+// El navegador de ensayo arranca con preferencia de sistema CLARA, así que la
+// noche hay que pedirla: dar por supuesto el punto de partida haría que la
+// comparación de abajo pasara sin comparar nada.
+await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.waitForTimeout(600);
+const fondoNoche = await fondo();
+
+await page.getByRole('button', { name: 'Modo día' }).click();
+await page.waitForTimeout(600);
+const fondoDia = await fondo();
+
+check('el modo día cambia el lienzo de verdad',
+  fondoDia !== fondoNoche, `${fondoNoche} → ${fondoDia}`);
+
+// El de día tiene que ser CLARO y el de noche OSCURO: que cambie no basta.
+const luminancia = (rgb) => {
+  const [r, g, b] = rgb.match(/\d+/g).map(Number);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+};
+check('de día el fondo es claro y de noche oscuro',
+  luminancia(fondoDia) > 0.8 && luminancia(fondoNoche) < 0.2,
+  `día ${luminancia(fondoDia).toFixed(2)} · noche ${luminancia(fondoNoche).toFixed(2)}`);
+
+check('el atributo del tema queda puesto en la raíz',
+  (await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'light');
+
+// La elección sobrevive a recargar: si no, el cajero la repite cada mañana.
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+check('la preferencia se recuerda al recargar',
+  (await fondo()) === fondoDia, await fondo());
+
+// «Como el sistema» quita el atributo para que mande el sistema operativo.
+await page.getByRole('button', { name: 'Como el sistema' }).click();
+await page.waitForTimeout(600);
+check('«como el sistema» devuelve la decisión al sistema operativo',
+  (await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === null);
+
+// El ticket se imprime en papel: su blanco NO sigue al tema.
+await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.waitForTimeout(600);
+check('el modo noche vuelve a oscurecer',
+  luminancia(await fondo()) < 0.2, await fondo());
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

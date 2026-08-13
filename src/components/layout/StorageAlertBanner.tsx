@@ -27,9 +27,9 @@ export const StorageAlertBanner: React.FC = () => {
     return (
       <div
         role="status"
-        className="bg-amber-950/60 border-b border-amber-500/40 px-4 py-2.5 flex items-start sm:items-center gap-3 text-amber-200"
+        className="bg-warning/60 border-b border-warning/40 px-4 py-2.5 flex items-start sm:items-center gap-3 text-warning"
       >
-        <Database className="w-4 h-4 flex-shrink-0 text-amber-400 mt-0.5 sm:mt-0" />
+        <Database className="w-4 h-4 flex-shrink-0 text-warning mt-0.5 sm:mt-0" />
         <p className="text-xs leading-relaxed">
           <strong className="font-bold">Almacenamiento local al {percent}% de su capacidad.</strong>{' '}
           Este dispositivo guarda los datos en el navegador y tiene un límite. Al alcanzarlo
@@ -51,11 +51,11 @@ export const StorageAlertBanner: React.FC = () => {
     <div
       role="alert"
       aria-live="assertive"
-      className="bg-rose-950/70 border-b border-rose-500/50 px-4 py-3 flex items-start gap-3 text-rose-100"
+      className="bg-danger/70 border-b border-danger/50 px-4 py-3 flex items-start gap-3 text-danger"
     >
-      <AlertTriangle className="w-5 h-5 flex-shrink-0 text-rose-400 mt-0.5" />
+      <AlertTriangle className="w-5 h-5 flex-shrink-0 text-danger mt-0.5" />
       <div className="space-y-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-rose-300">
+        <p className="text-xs font-bold uppercase tracking-wider text-danger">
           Los datos no se están guardando
         </p>
         <p className="text-xs leading-relaxed">

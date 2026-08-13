@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { supabase } from '../../lib/supabase';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 // Portal de Membego (el hub de fidelización). Respaldo si el SSO no está
 // disponible (sesión demo, config pendiente, etc.).
@@ -64,20 +65,20 @@ export const Navbar: React.FC = () => {
   } = useApp();
 
   return (
-    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between text-white">
+    <header className="bg-surface border-b border-line sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between text-strong">
       {/* Brand & Branch */}
       <div className="flex items-center gap-4">
         {/* Hamburguesa: abre el menú (drawer) en pantallas pequeñas. */}
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Abrir menú"
-          className="md:hidden p-2 -ml-1 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800"
+          className="md:hidden p-2 -ml-1 text-body hover:text-strong rounded-lg hover:bg-surface-2"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center font-black text-lg shadow-lg shadow-indigo-600/30 text-white">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-lg shadow-lg shadow-brand/30 text-strong">
             M
           </div>
           <div>
@@ -85,7 +86,7 @@ export const Navbar: React.FC = () => {
               {authenticated ? realCompany?.trade_name : company.tradeName}
             </h1>
             {authenticated && realBranch?.name && (
-              <p className="text-xs text-slate-400">{realBranch.name}</p>
+              <p className="text-xs text-muted">{realBranch.name}</p>
             )}
           </div>
         </div>
@@ -93,23 +94,23 @@ export const Navbar: React.FC = () => {
         {/* Sucursal. Con sesión real es un dato del perfil, no algo elegible:
             la sucursal la determina la asignación del usuario, y RLS la aplica. */}
         {authenticated ? (
-          <div className="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-medium">
-            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+          <div className="hidden md:flex items-center gap-1.5 bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs text-body font-medium">
+            <Building2 className="w-3.5 h-3.5 text-muted" />
             {realBranch?.name ?? 'Sin sucursal'}
           </div>
         ) : (
-        <div className="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
-          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+        <div className="hidden md:flex items-center gap-1.5 bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs">
+          <Building2 className="w-3.5 h-3.5 text-muted" />
           <select
             value={currentBranch.id}
             onChange={e => {
               const b = branches.find(br => br.id === e.target.value);
               if (b) setCurrentBranch(b);
             }}
-            className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer"
+            className="bg-transparent text-body font-medium focus:outline-none cursor-pointer"
           >
             {branches.map(b => (
-              <option key={b.id} value={b.id} className="bg-slate-900 text-white">
+              <option key={b.id} value={b.id} className="bg-surface text-strong">
                 {b.name}
               </option>
             ))}
@@ -120,9 +121,11 @@ export const Navbar: React.FC = () => {
 
       {/* Center Actions */}
       <div className="flex items-center gap-2">
+        <ThemeToggle />
+
         <button
           onClick={() => setIsNuevaLlegadaOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition-all transform hover:scale-[1.02]"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand to-accent hover:from-brand hover:to-accent text-strong font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all transform hover:scale-[1.02]"
         >
           <Plus className="w-4 h-4" />
           <span>Nueva Llegada</span>
@@ -134,7 +137,7 @@ export const Navbar: React.FC = () => {
           onClick={() => void irAMembego()}
           disabled={yendoMembego}
           title="Entrar a Membego (tu cuenta) en una pestaña nueva"
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-70 text-slate-900 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/30 transition-all transform hover:scale-[1.02]"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-warning to-warning hover:from-warning hover:to-warning disabled:opacity-70 text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-warning/30 transition-all transform hover:scale-[1.02]"
         >
           {yendoMembego ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
           <span>Ir a Membego</span>
@@ -147,34 +150,34 @@ export const Navbar: React.FC = () => {
             iniciar sesión. El desplegable de la demo permitía convertirse en
             propietario con dos clics (§7.1 de la auditoría). */}
         {authenticated ? (
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs">
-            <User className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-slate-200 font-medium max-w-[150px] truncate">
+          <div className="flex items-center gap-2 bg-canvas border border-line rounded-xl px-2.5 py-1 text-xs">
+            <User className="w-3.5 h-3.5 text-brand" />
+            <span className="text-body font-medium max-w-[150px] truncate">
               {profile?.full_name}
             </span>
-            <span className="text-xs text-slate-500 uppercase">{profile?.role}</span>
+            <span className="text-xs text-faint uppercase">{profile?.role}</span>
             <button
               onClick={() => void signOut()}
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
-              className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+              className="p-1 text-muted hover:text-danger transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
-        <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 text-xs">
-          <User className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="flex items-center gap-2 bg-canvas border border-line rounded-xl px-2.5 py-1 text-xs">
+          <User className="w-3.5 h-3.5 text-brand" />
           <select
             value={currentUser.id}
             onChange={e => {
               const u = users.find(usr => usr.id === e.target.value);
               if (u) setCurrentUser(u);
             }}
-            className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer max-w-[150px] truncate"
+            className="bg-transparent text-body font-medium focus:outline-none cursor-pointer max-w-[150px] truncate"
           >
             {users.map(u => (
-              <option key={u.id} value={u.id} className="bg-slate-900 text-white">
+              <option key={u.id} value={u.id} className="bg-surface text-strong">
                 {u.name} ({u.role})
               </option>
             ))}

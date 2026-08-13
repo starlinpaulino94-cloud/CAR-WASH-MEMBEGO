@@ -48,7 +48,7 @@ export function ExportButton<T>({ columns, fetchRows, filename, label = 'Exporta
       <button
         onClick={() => void run()}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-bold text-sm rounded-xl border border-slate-700"
+        className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 text-body font-bold text-sm rounded-xl border border-line-strong"
       >
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
         {label}

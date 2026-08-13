@@ -7,11 +7,11 @@ export const BaysView: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Warehouse className="w-5 h-5 text-indigo-400" /> Control de Bahías y Estaciones
+      <div className="border-b border-line pb-4">
+        <h2 className="text-xl font-bold text-strong flex items-center gap-2">
+          <Warehouse className="w-5 h-5 text-brand" /> Control de Bahías y Estaciones
         </h2>
-        <p className="text-xs text-slate-400">Ocupación física de las estaciones de lavado y detallado</p>
+        <p className="text-xs text-muted">Ocupación física de las estaciones de lavado y detallado</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -20,39 +20,39 @@ export const BaysView: React.FC = () => {
             key={bay.id}
             className={`p-4 rounded-2xl border space-y-3 ${
               bay.status === 'ocupada'
-                ? 'bg-indigo-950/40 border-indigo-500/50'
+                ? 'bg-brand-soft/40 border-brand/50'
                 : bay.status === 'mantenimiento'
-                ? 'bg-amber-950/40 border-amber-500/50'
-                : 'bg-slate-900 border-slate-800'
+                ? 'bg-warning/40 border-warning/50'
+                : 'bg-surface border-line'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-white">{bay.name}</span>
+              <span className="font-bold text-sm text-strong">{bay.name}</span>
               <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
-                bay.status === 'ocupada' ? 'bg-indigo-500/20 text-indigo-300' :
-                bay.status === 'disponible' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'
+                bay.status === 'ocupada' ? 'bg-brand/20 text-brand-hi' :
+                bay.status === 'disponible' ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'
               }`}>
                 {bay.status}
               </span>
             </div>
 
             {bay.status === 'ocupada' && (
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-xs">
-                <div className="font-bold text-white">Vehículo: {bay.currentVehiclePlate}</div>
-                <div className="text-slate-400">Lavador: {bay.assignedEmployeeName || 'Asignado'}</div>
+              <div className="p-3 bg-canvas rounded-xl border border-line space-y-1 text-xs">
+                <div className="font-bold text-strong">Vehículo: {bay.currentVehiclePlate}</div>
+                <div className="text-muted">Lavador: {bay.assignedEmployeeName || 'Asignado'}</div>
               </div>
             )}
 
             <div className="flex gap-2 pt-2">
               <button
                 onClick={() => updateBayStatus(bay.id, 'disponible')}
-                className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-lg"
+                className="flex-1 py-1.5 bg-surface-2 hover:bg-surface-3 text-body font-bold text-xs rounded-lg"
               >
                 Liberar
               </button>
               <button
                 onClick={() => updateBayStatus(bay.id, 'mantenimiento')}
-                className="py-1.5 px-3 bg-amber-600/30 text-amber-300 font-bold text-xs rounded-lg border border-amber-500/30"
+                className="py-1.5 px-3 bg-warning/30 text-warning font-bold text-xs rounded-lg border border-warning/30"
               >
                 Mantenimiento
               </button>

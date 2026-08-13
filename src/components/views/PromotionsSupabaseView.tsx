@@ -181,7 +181,7 @@ export const PromotionsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Tag className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Tag className="w-5 h-5 text-brand" />}
           title="Descuentos" subtitle="Promociones con reglas, no rebajas a dedo" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -199,7 +199,7 @@ export const PromotionsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Tag className="w-5 h-5 text-indigo-400" />}
+        icon={<Tag className="w-5 h-5 text-brand" />}
         title="Descuentos"
         subtitle="Promociones con reglas, no rebajas a dedo"
         actions={
@@ -210,7 +210,7 @@ export const PromotionsSupabaseView: React.FC = () => {
             )}
             {canManage && (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva promoción
           </button>
             )}
@@ -233,12 +233,12 @@ export const PromotionsSupabaseView: React.FC = () => {
         </span>
       </InlineAlert>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Promociones</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">CÓDIGO</th>
                 <th scope="col" className="p-3 font-semibold">DESCUENTO</th>
                 <th scope="col" className="p-3 font-semibold">APLICA A</th>
@@ -248,50 +248,50 @@ export const PromotionsSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={cols} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={cols}>Todavía no hay promociones.</EmptyRow>
                 ) : rows.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-800/40">
+                  <tr key={p.id} className="hover:bg-surface-2/40">
                     <td className="p-3">
-                      <div className="font-bold text-white tabular-nums">{p.code}</div>
-                      <div className="text-xs text-slate-500">{p.name}</div>
+                      <div className="font-bold text-strong tabular-nums">{p.code}</div>
+                      <div className="text-xs text-faint">{p.name}</div>
                     </td>
-                    <td className="p-3 font-bold text-emerald-400 tabular-nums">{valueOf(p)}</td>
-                    <td className="p-3 text-slate-400">
+                    <td className="p-3 font-bold text-success tabular-nums">{valueOf(p)}</td>
+                    <td className="p-3 text-muted">
                       <div>{scopeOf(p)}</div>
                       {p.min_purchase_cents > 0 && (
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-faint">
                           desde {formatCents(p.min_purchase_cents, symbol)}
                         </div>
                       )}
                     </td>
-                    <td className="p-3 text-slate-400 tabular-nums">
+                    <td className="p-3 text-muted tabular-nums">
                       <div>{p.starts_on} {p.ends_on ? `→ ${p.ends_on}` : '→ sin fin'}</div>
-                      <div className="text-xs text-slate-500">{daysOf(p)}</div>
+                      <div className="text-xs text-faint">{daysOf(p)}</div>
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">
+                    <td className="p-3 text-right text-body tabular-nums">
                       {p.uses_count}{p.max_uses ? ` / ${p.max_uses}` : ''}
                       {p.max_uses_per_customer && (
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-faint">
                           máx. {p.max_uses_per_customer} por cliente
                         </div>
                       )}
                     </td>
                     <td className="p-3">
                       {p.is_active
-                        ? <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Activa</span>
-                        : <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
+                        ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
+                        : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
                         <button onClick={() => openEdit(p)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           Editar
                         </button>
                         <button onClick={() => void toggleActive(p)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           {p.is_active ? 'Desactivar' : 'Activar'}
                         </button>
                       </td>
@@ -382,20 +382,20 @@ export const PromotionsSupabaseView: React.FC = () => {
           </div>
 
           <fieldset>
-            <legend className="text-sm text-slate-400 mb-1.5">Días en que aplica</legend>
+            <legend className="text-sm text-muted mb-1.5">Días en que aplica</legend>
             <div className="flex gap-1.5">
               {DAYS.map(d => (
                 <button key={d.n} type="button" onClick={() => toggleDay(d.n)}
                   aria-pressed={form.weekdays.includes(d.n)}
                   className={`w-9 h-9 rounded-lg font-bold text-xs ${
                     form.weekdays.includes(d.n)
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                      ? 'bg-brand text-on-accent'
+                      : 'bg-surface-2 text-muted hover:bg-surface-3'}`}>
                   {d.label}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">Sin marcar ninguno, aplica todos los días.</p>
+            <p className="text-xs text-faint mt-1.5">Sin marcar ninguno, aplica todos los días.</p>
           </fieldset>
 
           <div className="grid grid-cols-3 gap-3">
@@ -414,7 +414,7 @@ export const PromotionsSupabaseView: React.FC = () => {
                 placeholder="sin tope" />
             </Field>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Un tope por cliente obliga a identificarlo al cobrar: sin saber quién es,
             no se puede contar cuántas veces la usó.
           </p>
