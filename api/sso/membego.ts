@@ -23,6 +23,9 @@ interface TokenMembego {
   email: string;
   rol: string;
   companyId: string;
+  /** Nombre comercial de la empresa (claim opcional de Membego): con él, la
+   *  auto-vinculación crea el tenant con su nombre real y no con un marcador. */
+  companyName?: string;
   exp: number;
 }
 
@@ -76,6 +79,10 @@ export async function GET(request: Request): Promise<Response> {
         p_sub: String(datos.sub),
         p_email: String(datos.email),
         p_rol: String(datos.rol),
+        // Auto-vinculación: el nombre real si Membego lo manda; null mantiene
+        // el comportamiento del marcador. La RPC vieja de 4 argumentos ya no
+        // existe (migración 20260812210000), así que no hay ambigüedad.
+        p_company_name: datos.companyName ? String(datos.companyName) : null,
       }),
     });
     if (!upsert.ok) {
@@ -93,12 +100,29 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     // 2) Acuñar la sesión de Supabase con un enlace mágico y redirigir el navegador.
+    //
+    // `redirect_to` va en la RAÍZ del cuerpo: eso es la API REST de GoTrue.
+    // `options.redirectTo` es la convención del CLIENTE JS (supabase-js), que
+    // la traduce por dentro. Anidado aquí viajaba como campo desconocido, Go lo
+    // ignoraba en silencio y el enlace salía con el SITE_URL por defecto — el
+    // usuario aterrizaba en el sitio equivocado sin que nada diera error.
     const gen = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
       method: 'POST',
       headers: { apikey: SERVICE_ROLE, Authorization: `Bearer ${SERVICE_ROLE}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'magiclink', email: String(datos.email), options: { redirect_to: `${url.origin}/` } }),
+      body: JSON.stringify({ type: 'magiclink', email: String(datos.email), redirect_to: `${url.origin}/` }),
     });
-    if (!gen.ok) return new Response('No se pudo iniciar la sesión.', { status: 502 });
+    if (!gen.ok) {
+      // El motivo REAL de Supabase, como ya se hace con la RPC de arriba: sin
+      // esto, un 401 por service_role equivocada, un dominio fuera de las
+      // Redirect URLs y un usuario inexistente se ven todos iguales — y cada
+      // diagnóstico cuesta un deploy a ciegas.
+      const detalle = await gen.text().catch(() => '');
+      console.error('[sso/membego] generate_link falló', gen.status, detalle.slice(0, 500));
+      return new Response(
+        `No se pudo iniciar la sesión (proveedor ${gen.status}): ${detalle.slice(0, 300) || 'sin detalle'}`,
+        { status: 502 }
+      );
+    }
 
     const link = await gen.json().catch(() => ({} as Record<string, unknown>));
     const dest =

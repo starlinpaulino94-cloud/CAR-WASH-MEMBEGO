@@ -6,7 +6,7 @@
 --
 -- Por qué existe teniendo ya `estado_migraciones.sql`: aquel busca UN objeto por
 -- migración, así que solo sabe si el parche arrancó. Este comprueba los 510
--- objetos que crean las 33 migraciones —tablas, columnas, funciones, tipos,
+-- objetos que crean las 40 migraciones —tablas, columnas, funciones, tipos,
 -- disparadores, políticas e índices— uno por uno. Si un parche se cortó a la
 -- mitad, aquí sale «INCOMPLETA» con el nombre de lo que falta; allá salía
 -- «aplicada».
@@ -551,7 +551,8 @@ with esperadas (num, modulo, parche, tipo, objeto) as (
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_bool'),
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.slug_code'),
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_vehicle_category'),
-    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'public.import_batch')
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'public.import_batch'),
+    ('0036', 'SSO Membego (7 parches)', '(ya en el repositorio: supabase/migrations)', 'srcfunc', 'public.membego_sso_upsert_user::app.branch_ctx')
 ),
 -- Cada objeto se busca donde de verdad vive, no por su nombre a secas.
 detectadas as (
@@ -576,6 +577,14 @@ detectadas as (
         where table_schema = split_part(e.objeto, '.', 1)
           and table_name   = split_part(e.objeto, '.', 2)
           and column_name  = split_part(e.objeto, '.', 3))
+      -- Una migración que solo REEMPLAZA una función existente no crea ningún
+      -- objeto nuevo: buscar por nombre siempre diría que sí. Se busca dentro
+      -- del cuerpo instalado una marca que solo trae esa versión.
+      when 'srcfunc' then exists (
+        select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = split_part(e.objeto, '.', 1)
+          and p.proname = split_part(split_part(e.objeto, '.', 2), '::', 1)
+          and p.prosrc like '%' || split_part(e.objeto, '::', 2) || '%')
     end as presente
   from esperadas e
 ),
@@ -621,7 +630,7 @@ from (
     (select count(*) filter (where hay = total) || ' / ' || count(*)
        from veredicto) as "Objetos",
     case when (select count(*) from veredicto where hay <> total) = 0
-         then 'Las 33 migraciones están completas. No hay nada pendiente.'
+         then 'Las 40 migraciones están completas. No hay nada pendiente.'
          else 'Ejecute estos parches EN ESTE ORDEN, uno por uno:'
     end as "Qué falta",
     coalesce((select string_agg(coalesce(parche, '(esquema base)'), '  →  '
