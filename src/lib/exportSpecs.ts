@@ -40,6 +40,7 @@ export interface ExportSpec<T> {
 // --------------------------------------------------------------- Clientes
 
 interface CustomerExport {
+  origin: 'carwash' | 'membego';
   name: string; phone: string | null; email: string | null; tax_id: string | null;
   address: string | null; notes: string | null; total_visits: number;
   total_spent_cents: number; last_visit_at: string | null; created_at: string;
@@ -51,6 +52,9 @@ export const customersExport = (): ExportSpec<CustomerExport> => ({
   filename: 'clientes',
   columns: [
     { header: 'nombre',        value: r => text(r.name) },
+    // Procedencia, no vínculo: un cliente propio que se hizo de Membego sigue
+    // saliendo aquí como «Car wash». Ver la migración 0037.
+    { header: 'procedencia',   value: r => r.origin === 'membego' ? 'Membego' : 'Car wash' },
     { header: 'telefono',      value: r => text(r.phone) },
     { header: 'correo',        value: r => text(r.email) },
     { header: 'rnc',           value: r => text(r.tax_id) },
@@ -66,7 +70,7 @@ export const customersExport = (): ExportSpec<CustomerExport> => ({
   ],
   fetchRows: () => fetchAllRows<CustomerExport>(
     'customers',
-    'name,phone,email,tax_id,address,notes,total_visits,total_spent_cents,' +
+    'origin,name,phone,email,tax_id,address,notes,total_visits,total_spent_cents,' +
     'last_visit_at,created_at,credit_enabled,credit_limit_cents,credit_terms_days',
     { column: 'name', ascending: true })
 });

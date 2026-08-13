@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**157 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
+**163 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
 `orders-kanban` y `admin-views`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
@@ -38,6 +38,7 @@ debe:
 | Flotillas | La tarifa pactada gana al catálogo sin descuentos a mano; el vehículo entra a la flotilla y la orden queda sellada con ella |
 | Crédito | El cupo solo se autoriza por su RPC; lo fiado abre cuenta por cobrar y **no entra a la caja**; el abono se guarda en centavos con su forma de pago |
 | Importación | La previsualización no escribe ni una fila y aun así clasifica cada una; al aplicar, el mismo teléfono escrito de dos formas no duplica al cliente, y el cajero no importa ni llamando al API |
+| Procedencia | La base sella de dónde vino cada cliente; el filtro pregunta al servidor; y vincular a Membego un cliente propio no lo cambia de canal, ni llamando al API |
 | Membego | La pantalla declara que no consulta a Membego; el intento sí queda persistido |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la

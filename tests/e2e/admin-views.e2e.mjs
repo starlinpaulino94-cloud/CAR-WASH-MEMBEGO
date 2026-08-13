@@ -764,6 +764,57 @@ check('un cajero no importa, aunque se salte la pantalla',
     } catch { return true; }
   })());
 
+
+// El diálogo de importar sigue abierto tras aplicar: se cierra antes de seguir,
+// o su capa tapa los clics de todo lo que venga después.
+await page.getByRole('dialog').getByRole('button', { name: 'Cerrar', exact: true }).last().click();
+await page.waitForTimeout(600);
+
+// --- [15] Procedencia: de dónde vino el cliente, y que no se pueda reescribir.
+sql(`insert into public.customers (company_id, branch_id, name, phone, membego_customer_id)
+     values ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222',
+             'Vino De Membego','809-700-0001','MG-E2E-1');`);
+
+await go(page, /^Clientes/, /^Clientes/);
+await page.waitForTimeout(1500);
+
+check('la base sella la procedencia de quien llega por Membego',
+  sql("select origin::text from customers where name='Vino De Membego'") === 'membego');
+check('y el que registró el car wash queda como propio',
+  sql("select origin::text from customers where name='Ramona Ventura'") === 'carwash');
+
+// El filtro pregunta al servidor: el contador tiene que ser el de la base.
+await page.getByRole('button', { name: 'De Membego', exact: true }).click();
+await page.waitForTimeout(1800);
+
+const deMembego = Number(sql("select count(*) from customers where origin='membego'"));
+check('el filtro «De Membego» trae exactamente los de Membego',
+  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 1
+  && (await page.getByRole('cell', { name: 'Ramona Ventura' }).count()) === 0,
+  `en la base hay ${deMembego}`);
+
+await page.getByRole('button', { name: 'Del car wash', exact: true }).click();
+await page.waitForTimeout(1800);
+check('y «Del car wash» deja fuera a los de Membego',
+  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 0);
+
+// Vincular después a Membego NO cambia de dónde vino: es lo que hace fiable la
+// atribución de ventas entre los dos canales.
+sql(`update public.customers set membego_customer_id='MG-E2E-TARDIO'
+      where name='Ramona Ventura';`);
+check('vincular a Membego un cliente propio no lo transfiere de canal',
+  sql("select origin::text from customers where name='Ramona Ventura'") === 'carwash');
+
+check('la procedencia no se reescribe ni llamando al API directamente',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+           set role authenticated;
+           update public.customers set origin='membego' where name='Ramona Ventura';`);
+      return false;
+    } catch { return true; }
+  })());
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

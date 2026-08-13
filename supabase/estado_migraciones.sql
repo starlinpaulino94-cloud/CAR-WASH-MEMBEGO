@@ -68,7 +68,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications'),
     ('0034','credit_notes',          'notas_credito_0034.sql','func',   'credit_note_invoice'),
     ('0035','import_export',         'importacion_0035.sql', 'func',   'import_batch'),
-    ('0036','membego_sso_parches',  null,                   'func',   'membego_sso_upsert_user')
+    ('0036','membego_sso_parches',  null,                   'func',   'membego_sso_upsert_user'),
+    ('0037','customer_origin',       'procedencia_0037.sql', 'func',   'customer_origin_summary')
 ),
 detectadas as (
   select e.*,
@@ -126,7 +127,8 @@ with esperadas (version, name, patch_file, kind, obj) as (
     ('0033','notifications',         'avisos_0033.sql',       'table',  'notifications'),
     ('0034','credit_notes',          'notas_credito_0034.sql','func',   'credit_note_invoice'),
     ('0035','import_export',         'importacion_0035.sql', 'func',   'import_batch'),
-    ('0036','membego_sso_parches',  null,                   'func',   'membego_sso_upsert_user')
+    ('0036','membego_sso_parches',  null,                   'func',   'membego_sso_upsert_user'),
+    ('0037','customer_origin',       'procedencia_0037.sql', 'func',   'customer_origin_summary')
 ),
 detectadas as (
   select e.*,
