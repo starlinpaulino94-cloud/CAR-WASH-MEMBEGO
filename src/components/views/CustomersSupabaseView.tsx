@@ -11,6 +11,10 @@ import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert
 } from '../common/DataViewShell';
 import { MembegoCustomerModal } from '../modals/MembegoCustomerModal';
+import { ExportButton } from '../common/ExportButton';
+import { ImportButton } from '../common/ImportModal';
+import { customersExport } from '../../lib/exportSpecs';
+import { can } from '../../lib/auth';
 
 const PAGE_SIZE = 25;
 
@@ -21,7 +25,7 @@ const PAGE_SIZE = 25;
  * cada pulsación. Aquí la búsqueda y la paginación las resuelve la base.
  */
 export const CustomersSupabaseView: React.FC = () => {
-  const { company, branch } = useAuth();
+  const { company, branch, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
 
   const q = usePagedQuery<Customer>({ fetcher: fetchCustomerPage, pageSize: PAGE_SIZE });
@@ -81,6 +85,14 @@ export const CustomersSupabaseView: React.FC = () => {
         icon={<Users className="w-5 h-5 text-indigo-400" />}
         title="Directorio de clientes"
         subtitle="Historial de visitas, consumo y vinculación con Membego"
+        actions={
+          <>
+            <ExportButton {...customersExport()} />
+            {can(profile, 'importData') && (
+              <ImportButton entity="clientes" onImported={q.reload} />
+            )}
+          </>
+        }
       />
 
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}

@@ -10,6 +10,9 @@ import {
   InlineAlert, ReadOnlyNotice, FilterChips
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { ExportButton } from '../common/ExportButton';
+import { ImportButton } from '../common/ImportModal';
+import { productsExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -123,12 +126,20 @@ export const ProductsSupabaseView: React.FC = () => {
         icon={<Package className="w-5 h-5 text-indigo-400" />}
         title="Productos e insumos"
         subtitle="Existencias, costo y precio de venta"
-        actions={editable ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
-            <Plus className="w-4 h-4" /> Nuevo producto
-          </button>
-        ) : undefined}
+        actions={
+          <>
+            <ExportButton {...productsExport()} />
+            {can(profile, 'importData') && (
+              <ImportButton entity="productos" onImported={q.reload} />
+            )}
+            {editable && (
+              <button onClick={openCreate}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                <Plus className="w-4 h-4" /> Nuevo producto
+              </button>
+            )}
+          </>
+        }
       />
 
       {!editable && <ReadOnlyNotice>Su rol permite consultar el inventario, pero no ajustarlo.</ReadOnlyNotice>}

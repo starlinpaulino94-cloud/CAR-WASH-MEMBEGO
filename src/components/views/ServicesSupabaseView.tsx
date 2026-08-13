@@ -9,6 +9,9 @@ import {
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { RecipeModal } from '../modals/RecipeModal';
+import { ExportButton } from '../common/ExportButton';
+import { ImportButton } from '../common/ImportModal';
+import { servicesExport } from '../../lib/exportSpecs';
 
 const emptyServiceForm = {
   name: '', code: '', description: '', minutes: '30', commission: '0',
@@ -121,12 +124,20 @@ export const ServicesSupabaseView: React.FC = () => {
         icon={<Layers className="w-5 h-5 text-indigo-400" />}
         title="Servicios y matriz de precios"
         subtitle="Tarifa por categoría de vehículo y comisión por lavador"
-        actions={editable ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
-            <Plus className="w-4 h-4" /> Nuevo servicio
-          </button>
-        ) : undefined}
+        actions={
+          <>
+            <ExportButton {...servicesExport()} />
+            {can(profile, 'importData') && (
+              <ImportButton entity="servicios" onImported={() => void load()} />
+            )}
+            {editable && (
+              <button onClick={openCreate}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                <Plus className="w-4 h-4" /> Nuevo servicio
+              </button>
+            )}
+          </>
+        }
       />
 
       {!editable && (

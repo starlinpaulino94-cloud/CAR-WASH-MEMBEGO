@@ -15,6 +15,8 @@ import {
   InlineAlert, ReadOnlyNotice, FilterChips, StatCard
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { ExportButton } from '../common/ExportButton';
+import { receivablesExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
@@ -210,6 +212,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
         icon={<Landmark className="w-5 h-5 text-indigo-400" />}
         title="Por cobrar"
         subtitle="Lo fiado no es ingreso hasta que se cobra"
+        actions={<ExportButton {...receivablesExport()} />}
       />
 
       {!canCollect && <ReadOnlyNotice>Su rol permite consultar las cuentas, no cobrarlas.</ReadOnlyNotice>}

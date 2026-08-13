@@ -2778,6 +2778,12 @@ export interface Database {
         Args: { p_profile_id: string; p_password: string };
         Returns: void;
       };
+      // 0035: importación masiva. p_apply=false hace el trabajo y lo revierte,
+      // devolviendo el informe de lo que habría pasado.
+      import_batch: {
+        Args: { p_entity: string; p_rows: Json; p_apply: boolean };
+        Returns: Json;
+      };
       refresh_alerts: {
         Args: Record<string, never>;
         Returns: Json;

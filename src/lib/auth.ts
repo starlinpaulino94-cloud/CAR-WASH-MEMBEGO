@@ -47,7 +47,12 @@ export const PERMISSIONS = {
   // La nómina completa es información sensible: solo quien la firma. Mismos
   // roles que la política de payroll_periods en la migración 0030.
   runPayroll:        ['propietario', 'administrador', 'contador', 'superadmin'],
-  viewAllCommissions:['propietario', 'administrador', 'supervisor', 'contador', 'superadmin']
+  viewAllCommissions:['propietario', 'administrador', 'supervisor', 'contador', 'superadmin'],
+  // Importar reescribe el maestro del negocio de una sentada. Mismos roles que
+  // el gate de import_batch() en la migración 0035. Exportar no lleva permiso
+  // propio: quien ve un listado puede llevarse lo que ya está viendo, y RLS
+  // decide qué filas son esas.
+  importData:        ['propietario', 'administrador', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

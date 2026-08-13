@@ -5,8 +5,8 @@
 -- veredicto; debajo va el detalle, una fila por migración.
 --
 -- Por qué existe teniendo ya `estado_migraciones.sql`: aquel busca UN objeto por
--- migración, así que solo sabe si el parche arrancó. Este comprueba los 501
--- objetos que crean las 32 migraciones —tablas, columnas, funciones, tipos,
+-- migración, así que solo sabe si el parche arrancó. Este comprueba los 510
+-- objetos que crean las 33 migraciones —tablas, columnas, funciones, tipos,
 -- disparadores, políticas e índices— uno por uno. Si un parche se cortó a la
 -- mitad, aquí sale «INCOMPLETA» con el nombre de lo que falta; allá salía
 -- «aplicada».
@@ -542,7 +542,16 @@ with esperadas (num, modulo, parche, tipo, objeto) as (
     ('0034', 'Notas de crédito, fiscal y usuarios', 'notas_credito_0034.sql', 'func', 'public.credit_note_invoice'),
     ('0034', 'Notas de crédito, fiscal y usuarios', 'notas_credito_0034.sql', 'func', 'public.reset_employee_password'),
     ('0034', 'Notas de crédito, fiscal y usuarios', 'notas_credito_0034.sql', 'column', 'public.invoices.credited_cents'),
-    ('0034', 'Notas de crédito, fiscal y usuarios', 'notas_credito_0034.sql', 'column', 'public.invoice_items.credited_quantity')
+    ('0034', 'Notas de crédito, fiscal y usuarios', 'notas_credito_0034.sql', 'column', 'public.invoice_items.credited_quantity'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.import_text'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.phone_key'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.format_phone'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_money'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_int'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_bool'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.slug_code'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_vehicle_category'),
+    ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'public.import_batch')
 ),
 -- Cada objeto se busca donde de verdad vive, no por su nombre a secas.
 detectadas as (
@@ -612,7 +621,7 @@ from (
     (select count(*) filter (where hay = total) || ' / ' || count(*)
        from veredicto) as "Objetos",
     case when (select count(*) from veredicto where hay <> total) = 0
-         then 'Las 32 migraciones están completas. No hay nada pendiente.'
+         then 'Las 33 migraciones están completas. No hay nada pendiente.'
          else 'Ejecute estos parches EN ESTE ORDEN, uno por uno:'
     end as "Qué falta",
     coalesce((select string_agg(coalesce(parche, '(esquema base)'), '  →  '

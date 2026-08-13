@@ -11,6 +11,10 @@ import {
   ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, SkeletonRows, EmptyRow
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { ExportButton } from '../common/ExportButton';
+import { ImportButton } from '../common/ImportModal';
+import { promotionsExport } from '../../lib/exportSpecs';
+import { can } from '../../lib/auth';
 
 const KINDS: { id: PromotionKind; label: string }[] = [
   { id: 'porcentaje', label: 'Porcentaje' },
@@ -198,12 +202,20 @@ export const PromotionsSupabaseView: React.FC = () => {
         icon={<Tag className="w-5 h-5 text-indigo-400" />}
         title="Descuentos"
         subtitle="Promociones con reglas, no rebajas a dedo"
-        actions={canManage ? (
+        actions={
+          <>
+            <ExportButton {...promotionsExport()} />
+            {can(profile, 'importData') && (
+              <ImportButton entity="promociones" onImported={() => setNonce(n => n + 1)} />
+            )}
+            {canManage && (
           <button onClick={openCreate}
             className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva promoción
           </button>
-        ) : undefined}
+            )}
+          </>
+        }
       />
 
       {!canManage && <ReadOnlyNotice>Su rol permite consultar las promociones, no administrarlas.</ReadOnlyNotice>}

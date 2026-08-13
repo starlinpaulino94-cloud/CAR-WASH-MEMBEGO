@@ -699,6 +699,71 @@ check('nadie se asciende a sí mismo, ni el propietario',
     } catch { return true; }
   })());
 
+
+// --- [14] Importar y exportar: el ensayo enseña qué pasará y no escribe nada.
+await go(page, /^Clientes/, /^Clientes/);
+await page.waitForTimeout(1200);
+
+const clientesAntes = Number(sql("select count(*) from customers"));
+
+// Un archivo con tres filas: una nueva, una repetida (mismo teléfono que la
+// primera, escrito distinto) y una sin nombre, que debe caer sola.
+const csv = [
+  'Nombre,Apellido,Teléfono,Correo',
+  'Ramona,Ventura,809-777-1234,ramona@ejemplo.com',
+  'Ramona Ventura,,1-809-777-1234,',
+  ',,809-777-9999,'   // sin nombre NI apellido: esta es la que debe caer
+].join('\r\n');
+
+await page.getByRole('button', { name: /^Importar/ }).click();
+await page.getByRole('dialog').waitFor();
+await page.locator('#import-file').setInputFiles({
+  name: 'clientes.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8')
+});
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /Previsualizar/ }).click();
+await page.waitForTimeout(2000);
+
+check('la previsualización NO escribió nada todavía',
+  Number(sql("select count(*) from customers")) === clientesAntes,
+  `antes ${clientesAntes}, ahora ${sql("select count(*) from customers")}`);
+
+const dialogo = page.getByRole('dialog');
+check('la previsualización avisa de que no ha guardado nada',
+  (await dialogo.getByText(/todavía no se ha guardado nada/i).count()) > 0);
+check('la previsualización clasifica las tres filas',
+  (await dialogo.getByText('crear', { exact: true }).count()) === 1
+  && (await dialogo.getByText('error', { exact: true }).count()) === 1);
+
+// Ahora sí: aplicar.
+await dialogo.getByRole('button', { name: /Aplicar esta importación/ }).click();
+await page.waitForTimeout(2500);
+
+check('al aplicar entra UNA sola clienta, no dos',
+  Number(sql("select count(*) from customers")) === clientesAntes + 1,
+  `${clientesAntes} → ${sql("select count(*) from customers")}`);
+check('el mismo teléfono con el 1 delante no duplicó a Ramona',
+  sql("select count(*) from customers where name='Ramona Ventura'") === '1');
+check('el teléfono quedó normalizado a formato dominicano',
+  sql("select phone from customers where name='Ramona Ventura'") === '809-777-1234',
+  sql("select phone from customers where name='Ramona Ventura'"));
+check('la fila sin nombre ni apellido no entró',
+  sql("select count(*) from customers where phone like '%777-9999%'") === '0');
+check('la importación quedó en la bitácora',
+  sql("select count(*) from audit_logs where action='IMPORTAR'") === '1');
+
+// Un cajero no puede importar ni llamando al API directamente.
+check('un cajero no importa, aunque se salte la pantalla',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false);
+           set role authenticated;
+           select public.import_batch('clientes',
+             jsonb_build_array(jsonb_build_object('nombre','Pirata')), true);`);
+      return false;
+    } catch { return true; }
+  })());
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
