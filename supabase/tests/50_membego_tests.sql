@@ -128,8 +128,35 @@ select test.set_var('sso_uid',  public.membego_sso_upsert_user('MG-A', 'mg-sub-1
 select test.set_var('sso_uid1', public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE')::text);
 select test.set_var('sso_uid3', public.membego_sso_upsert_user('MG-A', 'mg-sub-2', 'adminemp@alfa.test', 'ADMIN_EMPRESA')::text);
 select test.set_var('sso_uid4', public.membego_sso_upsert_user('MG-A', 'mg-sub-3', 'plataforma@alfa.test', 'SUPERADMIN')::text);
-select test.expect_error('SSO rechaza una empresa de Membego no vinculada',
-  $q$select public.membego_sso_upsert_user('MG-DESCONOCIDA','s','x@y.com','EMPLEADO')$q$);
+-- Desde la auto-vinculación (20260812210000) una empresa desconocida ya NO se
+-- rechaza: se vincula sola. Es una decisión de producto —el sistema es para
+-- todo el vertical car wash de Membego, no para una lista blanca sembrada a
+-- mano— y se apoya en que llegar hasta aquí ya exigió un token firmado.
+select test.set_var('sso_nueva',
+  public.membego_sso_upsert_user('MG-DESCONOCIDA','s','x@y.com','EMPLEADO')::text);
+
+select test.check('SSO auto-vincula una empresa de Membego que no conocía',
+  exists (select 1 from public.membego_company_links
+          where membego_company_id = 'MG-DESCONOCIDA' and is_active));
+select test.check('y el empleado nace dentro de esa empresa nueva, no en otra',
+  (select p.company_id = l.company_id
+     from public.profiles p, public.membego_company_links l
+    where p.id = test.var('sso_nueva')::uuid
+      and l.membego_company_id = 'MG-DESCONOCIDA'));
+
+-- Lo que la auto-vinculación NO puede hacer es resucitar un vínculo que alguien
+-- desactivó a mano: desactivar es una decisión deliberada del operador, y esta
+-- es la invariante que de verdad hay que vigilar.
+set role postgres;
+insert into public.membego_company_links (company_id, membego_company_id, is_active)
+values (test.var('c_b')::uuid, 'MG-APAGADA', false);
+set role service_role;
+
+select test.expect_error('SSO SÍ rechaza un vínculo desactivado a mano',
+  $q$select public.membego_sso_upsert_user('MG-APAGADA','s3','z@y.com','EMPLEADO')$q$);
+select test.check('y no lo vuelve a encender por la puerta de atrás',
+  (select not is_active from public.membego_company_links
+   where membego_company_id = 'MG-APAGADA'));
 select test.expect_error('SSO rechaza un rol de Membego no reconocido (403 limpio, no 500)',
   $q$select public.membego_sso_upsert_user('MG-A','s2','otro@alfa.test','ROL_DE_PLATAFORMA_NUEVO')$q$);
 
@@ -148,8 +175,15 @@ select test.check('SSO: SUPERADMIN se mapea a superadmin (admin máximo, acotado
      from public.profiles where id = test.var('sso_uid4')::uuid));
 
 set role postgres;
-select test.check('SSO: el empleado queda con acceso (contraseña presente)',
-  (select encrypted_password is not null from auth.users where email = 'gerente@alfa.test'));
+-- La 20260807150000 dejó de generar contraseña a propósito, y es MÁS seguro:
+-- estos usuarios entran siempre por enlace mágico, así que un hash de una
+-- cadena aleatoria solo sería un secreto que custodiar. `null` significa
+-- literalmente «esta cuenta no tiene contraseña» y no hay nada que atacar.
+-- Lo que da acceso no es la clave: es el correo confirmado.
+select test.check('SSO: la cuenta nace SIN contraseña que atacar',
+  (select encrypted_password is null from auth.users where email = 'gerente@alfa.test'));
+select test.check('SSO: y aun así queda con acceso, por correo confirmado',
+  (select email_confirmed_at is not null from auth.users where email = 'gerente@alfa.test'));
 
 -- ---- SSO SALIENTE (car wash → Membego): el borde pide identidad para firmar.
 -- El dueño de Alfa (empresa vinculada a MG-A) recibe su companyId de Membego.

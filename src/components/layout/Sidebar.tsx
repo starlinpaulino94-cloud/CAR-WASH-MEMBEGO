@@ -1,6 +1,5 @@
 import React from 'react';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useQueueCount } from '../../context/QueueCountContext';
@@ -18,13 +17,10 @@ import { visibleModules } from '../../lib/navigation';
 const NavList: React.FC<{ iconsOnly?: boolean }> = ({ iconsOnly = false }) => {
   const { path, navigate } = useNavigation();
   const { profile, phase } = useAuth();
-  const { workOrders } = useApp();
   const { count: liveQueueCount } = useQueueCount();
 
   // Contador de órdenes activas: de la base con sesión real; local en demo.
-  const queueCount = phase === 'demo'
-    ? workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length
-    : liveQueueCount ?? undefined;
+  const queueCount = liveQueueCount;
 
   const modules = visibleModules(profile);
   const activeModId = path.split('/')[1];

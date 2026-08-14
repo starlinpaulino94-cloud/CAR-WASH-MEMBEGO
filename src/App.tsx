@@ -1,5 +1,4 @@
 import React, { Suspense, lazy } from 'react';
-import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { QueueCountProvider } from './context/QueueCountContext';
@@ -8,8 +7,6 @@ import { LoginView, UnprovisionedView } from './components/auth/LoginView';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { ModulePage } from './components/layout/ModulePage';
-import { StorageAlertBanner } from './components/layout/StorageAlertBanner';
-import { NuevaLlegadaModal } from './components/modals/NuevaLlegadaModal';
 import type { ViewKey } from './lib/navigation';
 
 // Todas las vistas se cargan bajo demanda. Antes se importaban las 16 de forma
@@ -55,21 +52,6 @@ const ProfitReportView      = lazyView(() => import('./components/views/ProfitRe
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
 
 // --- Vistas de demostración (sin base de datos conectada)
-const DashboardView = lazyView(() => import('./components/views/DashboardView'), 'DashboardView');
-const OrdersView    = lazyView(() => import('./components/views/OrdersView'), 'OrdersView');
-const KanbanView    = lazyView(() => import('./components/views/KanbanView'), 'KanbanView');
-const BaysView      = lazyView(() => import('./components/views/BaysView'), 'BaysView');
-const PosView       = lazyView(() => import('./components/views/PosView'), 'PosView');
-const CashView      = lazyView(() => import('./components/views/CashView'), 'CashView');
-const InvoicesView  = lazyView(() => import('./components/views/InvoicesView'), 'InvoicesView');
-const CustomersView = lazyView(() => import('./components/views/CustomersView'), 'CustomersView');
-const VehiclesView  = lazyView(() => import('./components/views/VehiclesView'), 'VehiclesView');
-const ServicesView  = lazyView(() => import('./components/views/ServicesView'), 'ServicesView');
-const ProductsView  = lazyView(() => import('./components/views/ProductsView'), 'ProductsView');
-const TeamView      = lazyView(() => import('./components/views/TeamView'), 'TeamView');
-const ExpensesView  = lazyView(() => import('./components/views/ExpensesView'), 'ExpensesView');
-const ReportsView   = lazyView(() => import('./components/views/ReportsView'), 'ReportsView');
-const SettingsView  = lazyView(() => import('./components/views/SettingsView'), 'SettingsView');
 
 const PhaseArchitectureReportModal = lazy(() =>
   import('./components/modals/PhaseArchitectureReportModal').then(m => ({ default: m.PhaseArchitectureReportModal })));
@@ -79,44 +61,44 @@ const PhaseArchitectureReportModal = lazy(() =>
  * La arquitectura de información (módulos/submódulos) vive en
  * lib/navigation.ts; aquí solo se resuelve QUÉ componente pinta cada clave.
  */
-const VIEW_REGISTRY: Record<ViewKey, { ready: React.ReactElement; demo: React.ReactElement }> = {
-  dashboard: { ready: <DashboardSupabaseView />, demo: <DashboardView /> },
-  orders:    { ready: <OrdersSupabaseView />,    demo: <OrdersView /> },
-  kanban:    { ready: <KanbanSupabaseView />,    demo: <KanbanView /> },
-  bays:      { ready: <BaysSupabaseView />,      demo: <BaysView /> },
-  quality:   { ready: <QualityView />,           demo: <QualityView /> },
-  equipment: { ready: <EquipmentView />,         demo: <EquipmentView /> },
-  appointments: { ready: <AppointmentsView />,   demo: <AppointmentsView /> },
-  claims:    { ready: <ClaimsView />,            demo: <ClaimsView /> },
-  receivables: { ready: <ReceivablesView />,     demo: <ReceivablesView /> },
-  fleets:    { ready: <FleetsView />,            demo: <FleetsView /> },
-  shifts:    { ready: <ShiftsView />,            demo: <ShiftsView /> },
-  attendance: { ready: <AttendanceView />,       demo: <AttendanceView /> },
-  payroll:   { ready: <PayrollView />,           demo: <PayrollView /> },
-  branches:  { ready: <BranchesView />,          demo: <BranchesView /> },
-  promotions: { ready: <PromotionsView />,       demo: <PromotionsView /> },
-  alerts:    { ready: <AlertsView />,            demo: <AlertsView /> },
-  'credit-notes': { ready: <CreditNotesView />,  demo: <CreditNotesView /> },
-  fiscal:    { ready: <FiscalView />,            demo: <FiscalView /> },
-  users:     { ready: <UsersView />,             demo: <UsersView /> },
-  pos:       { ready: <PosSupabaseView />,       demo: <PosView /> },
-  services:  { ready: <ServicesSupabaseView />,  demo: <ServicesView /> },
-  invoices:  { ready: <InvoicesSupabaseView />,  demo: <InvoicesView /> },
-  cash:      { ready: <CashSupabaseView />,      demo: <CashView /> },
-  expenses:  { ready: <ExpensesSupabaseView />,  demo: <ExpensesView /> },
-  customers: { ready: <CustomersSupabaseView />, demo: <CustomersView /> },
-  vehicles:  { ready: <VehiclesSupabaseView />,  demo: <VehiclesView /> },
-  products:  { ready: <ProductsSupabaseView />,  demo: <ProductsView /> },
-  'inventory-moves': { ready: <InventoryMovesView />, demo: <InventoryMovesView /> },
-  purchases: { ready: <PurchasesView />, demo: <PurchasesView /> },
-  suppliers: { ready: <SuppliersView />, demo: <SuppliersView /> },
-  team:      { ready: <TeamSupabaseView />,      demo: <TeamView /> },
-  reports:   { ready: <ReportsSupabaseView />,   demo: <ReportsView /> },
-  'report-sales':  { ready: <SalesReportView />,  demo: <SalesReportView /> },
-  'report-margin': { ready: <ProfitReportView />, demo: <ProfitReportView /> },
-  'settings-empresa':   { ready: <SettingsSupabaseView seccion="empresa" />,   demo: <SettingsView /> },
-  'settings-impresion': { ready: <SettingsSupabaseView seccion="impresion" />, demo: <SettingsView /> },
-  'settings-membego':   { ready: <SettingsSupabaseView seccion="membego" />,   demo: <SettingsView /> }
+const VIEW_REGISTRY: Record<ViewKey, React.ReactElement> = {
+  dashboard: <DashboardSupabaseView />,
+  orders: <OrdersSupabaseView />,
+  kanban: <KanbanSupabaseView />,
+  bays: <BaysSupabaseView />,
+  quality: <QualityView />,
+  equipment: <EquipmentView />,
+  appointments: <AppointmentsView />,
+  claims: <ClaimsView />,
+  receivables: <ReceivablesView />,
+  fleets: <FleetsView />,
+  shifts: <ShiftsView />,
+  attendance: <AttendanceView />,
+  payroll: <PayrollView />,
+  branches: <BranchesView />,
+  promotions: <PromotionsView />,
+  alerts: <AlertsView />,
+  'credit-notes': <CreditNotesView />,
+  fiscal: <FiscalView />,
+  users: <UsersView />,
+  pos: <PosSupabaseView />,
+  services: <ServicesSupabaseView />,
+  invoices: <InvoicesSupabaseView />,
+  cash: <CashSupabaseView />,
+  expenses: <ExpensesSupabaseView />,
+  customers: <CustomersSupabaseView />,
+  vehicles: <VehiclesSupabaseView />,
+  products: <ProductsSupabaseView />,
+  'inventory-moves': <InventoryMovesView />,
+  purchases: <PurchasesView />,
+  suppliers: <SuppliersView />,
+  team: <TeamSupabaseView />,
+  reports: <ReportsSupabaseView />,
+  'report-sales': <SalesReportView />,
+  'report-margin': <ProfitReportView />,
+  'settings-empresa': <SettingsSupabaseView seccion="empresa" />,
+  'settings-impresion': <SettingsSupabaseView seccion="impresion" />,
+  'settings-membego': <SettingsSupabaseView seccion="membego" />,
 };
 
 /** Marcador mientras llega un fragmento cargado bajo demanda. */
@@ -132,17 +114,12 @@ const ActiveView: React.FC = () => {
   const { sub } = useNavigation();
   const { phase } = useAuth();
   if (!sub.view) return null; // los "pronto" los pinta ModulePage
-  const entry = VIEW_REGISTRY[sub.view];
-  return phase === 'ready' ? entry.ready : entry.demo;
+  return VIEW_REGISTRY[sub.view];
 };
 
 const AppContent: React.FC = () => {
-  const { isNuevaLlegadaOpen, setIsNuevaLlegadaOpen, isArchModalOpen, setIsArchModalOpen } = useApp();
-
   return (
     <div className="h-screen overflow-hidden bg-canvas text-strong flex flex-col font-sans selection:bg-brand selection:text-on-accent">
-      <StorageAlertBanner />
-      <DemoModeBanner />
       <Navbar />
 
       {/* min-h-0 permite que la barra lateral y el contenido tengan CADA UNO su
@@ -159,31 +136,6 @@ const AppContent: React.FC = () => {
         </main>
       </div>
 
-      <NuevaLlegadaModal isOpen={isNuevaLlegadaOpen} onClose={() => setIsNuevaLlegadaOpen(false)} />
-      {isArchModalOpen && (
-        <Suspense fallback={null}>
-          <PhaseArchitectureReportModal isOpen onClose={() => setIsArchModalOpen(false)} />
-        </Suspense>
-      )}
-    </div>
-  );
-};
-
-/**
- * Aviso permanente cuando la aplicación corre sin base de datos.
- *
- * Existe porque en modo demostración los datos viven solo en este navegador y
- * pueden perderse: decirlo es más honesto que dejar que un operador crea que
- * está registrando ventas reales.
- */
-const DemoModeBanner: React.FC = () => {
-  const { phase } = useAuth();
-  if (phase !== 'demo') return null;
-  return (
-    <div role="status" className="bg-brand-soft/60 border-b border-brand/40 px-4 py-2 text-center text-xs text-brand-hi">
-      <strong className="font-bold">Modo demostración.</strong>{' '}
-      Sin base de datos conectada: los datos se guardan solo en este navegador y pueden perderse.
-      Configure Supabase para trabajar contra la base de datos real.
     </div>
   );
 };
@@ -203,19 +155,46 @@ const AuthGate: React.FC = () => {
     );
   }
 
+  // Sin base de datos el sistema NO funciona, y lo dice en vez de fingir.
+  //
+  // Antes había un «modo demostración» que arrancaba con datos inventados en el
+  // navegador. Parecía inofensivo y no lo era: un operador podía pasar el día
+  // cobrando contra datos falsos —el aviso de arriba se ignora en cuanto la
+  // pantalla siguiente se ve normal— y al cerrar el navegador no quedaba nada.
+  // En un sistema de caja, una interfaz que responde sin guardar es peor que
+  // una que no abre.
+  if (phase === 'unconfigured') {
+    return (
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+        <div role="alert" className="max-w-md space-y-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-danger/20 border border-danger/40 mx-auto flex items-center justify-center">
+            <span className="text-danger text-2xl font-black">!</span>
+          </div>
+          <h1 className="text-xl font-bold text-strong">Sin base de datos</h1>
+          <p className="text-sm text-body">
+            El sistema no está conectado a Supabase, así que no puede registrar
+            nada. No se abre en modo de prueba a propósito: cobrar contra datos
+            que no se guardan es peor que no poder cobrar.
+          </p>
+          <p className="text-xs text-faint">
+            Configure <code className="text-muted">VITE_SUPABASE_URL</code> y{' '}
+            <code className="text-muted">VITE_SUPABASE_ANON_KEY</code> y vuelva a
+            cargar.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (phase === 'signed_out') return <LoginView />;
   if (phase === 'unprovisioned') return <UnprovisionedView />;
 
-  // 'demo' y 'ready' comparten la misma aplicación; cada vista decide su origen
-  // de datos.
   return (
-    <AppProvider>
-      <QueueCountProvider>
+    <QueueCountProvider>
         <NavigationProvider>
           <AppContent />
         </NavigationProvider>
-      </QueueCountProvider>
-    </AppProvider>
+    </QueueCountProvider>
   );
 };
 

@@ -3,7 +3,6 @@ import { ChevronRight, Home, Hammer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useQueueCount } from '../../context/QueueCountContext';
-import { useApp } from '../../context/AppContext';
 import { DEFAULT_PATH, pathFor, visibleItems } from '../../lib/navigation';
 
 /**
@@ -44,12 +43,9 @@ const Breadcrumb: React.FC = () => {
 const SubModuleTabs: React.FC = () => {
   const { mod, sub, navigate } = useNavigation();
   const { profile, phase } = useAuth();
-  const { workOrders } = useApp();
   const { count: liveQueueCount } = useQueueCount();
 
-  const queueCount = phase === 'demo'
-    ? workOrders.filter(w => w.status !== 'entregado' && w.status !== 'cancelado').length
-    : liveQueueCount ?? undefined;
+  const queueCount = liveQueueCount;
 
   const items = visibleItems(profile, mod);
   // Con un único submódulo no hay nada que elegir: sin pestañas.

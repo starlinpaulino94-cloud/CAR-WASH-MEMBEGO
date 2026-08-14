@@ -178,13 +178,17 @@ export function resolvePath(path: string): { mod: Module; sub: SubModule } | nul
 }
 
 /**
- * ¿Puede este perfil ver el submódulo? Sin sesión real (modo demostración)
- * se muestra todo, como hasta ahora: la ocultación por rol aplica solo cuando
- * hay un perfil con rol conocido.
+ * ¿Puede este perfil ver el submódulo?
+ *
+ * Sin perfil no se ve nada que exija permiso. Antes se mostraba todo, porque el
+ * modo demostración corría sin sesión y había que enseñar la aplicación
+ * entera; ahora no hay pantalla sin sesión, así que un `profile` nulo solo
+ * puede significar que algo falló al cargarlo — y ante la duda se cierra, no se
+ * abre. La autorización de verdad la aplica RLS igualmente.
  */
 export function canSee(profile: Profile | null, sub: SubModule): boolean {
   if (!sub.permission) return true;
-  if (!profile) return true; // demo
+  if (!profile) return false;
   return can(profile, sub.permission);
 }
 
