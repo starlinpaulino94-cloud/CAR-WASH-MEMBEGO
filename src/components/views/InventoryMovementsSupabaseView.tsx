@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
@@ -63,7 +63,7 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<History className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Movimientos de inventario" subtitle="Kardex por producto" />
         <ReadOnlyNotice>
           El kardex registra los movimientos reales del servidor: está disponible al
@@ -78,7 +78,6 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<History className="w-5 h-5 text-brand" />}
         title="Movimientos de inventario"
         subtitle="Cada cambio de existencia con su clase, motivo y documento"
         actions={<ExportButton {...movementsExport()} />}

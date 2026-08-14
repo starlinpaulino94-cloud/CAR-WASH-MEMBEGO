@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer, Download, Check, ShieldCheck } from 'lucide-react';
+import { X, Printer } from 'lucide-react';
 import { Invoice, Company } from '../../types';
 
 interface Props {

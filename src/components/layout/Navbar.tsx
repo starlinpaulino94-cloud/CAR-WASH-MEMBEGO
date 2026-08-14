@@ -3,6 +3,7 @@ import { User, LogOut, ExternalLink, Loader2, Menu, Settings, ChevronDown } from
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { supabase } from '../../lib/supabase';
+import { LogoMark } from '../common/Logo';
 
 // Portal de Membego (el hub de fidelización). Respaldo si el SSO no está
 // disponible (sesión demo, config pendiente, etc.).
@@ -99,9 +100,10 @@ export const Navbar: React.FC = () => {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-lg shadow-lg shadow-brand/30 text-strong">
-          M
-        </div>
+        {/* Solo el símbolo: el nombre que va al lado es el del LOCAL, que puede
+            no llamarse MembeGo. Poner también el nombre de la marca dejaría dos
+            nombres compitiendo en el mismo centímetro. */}
+        <LogoMark className="w-9 h-9 flex-shrink-0" simple title="MembeGo Car Wash" />
         <div className="min-w-0">
           <h1 className="font-bold text-[15px] tracking-tight truncate">
             {realCompany?.trade_name}

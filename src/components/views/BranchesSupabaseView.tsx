@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Store, Plus, Star, Users } from 'lucide-react';
+import { Plus, Star, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   fetchBranches, upsertBranch, setEmployeeBranch,
@@ -130,7 +130,7 @@ export const BranchesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Store className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Sucursales" subtitle="Locales de la empresa y quién ve cada uno" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -146,7 +146,6 @@ export const BranchesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Store className="w-5 h-5 text-brand" />}
         title="Sucursales"
         subtitle="Locales de la empresa y quién ve cada uno"
         actions={canManage ? (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Landmark, HandCoins, ShieldCheck } from 'lucide-react';
+import { HandCoins, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -192,7 +192,7 @@ export const ReceivablesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Landmark className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Por cobrar" subtitle="Crédito de clientes y cuentas pendientes" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -208,7 +208,6 @@ export const ReceivablesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Landmark className="w-5 h-5 text-brand" />}
         title="Por cobrar"
         subtitle="Lo fiado no es ingreso hasta que se cobra"
         actions={<ExportButton {...receivablesExport()} />}

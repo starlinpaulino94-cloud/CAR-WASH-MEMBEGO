@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingCart, Plus, Trash2, HandCoins } from 'lucide-react';
+import { Plus, Trash2, HandCoins } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -147,7 +147,7 @@ export const PurchasesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShoppingCart className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Compras" subtitle="Compras a proveedores y cuentas por pagar" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -161,7 +161,6 @@ export const PurchasesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShoppingCart className="w-5 h-5 text-brand" />}
         title="Compras"
         subtitle="Cada compra entra el inventario; el crédito queda como cuenta por pagar"
         actions={canManage ? (

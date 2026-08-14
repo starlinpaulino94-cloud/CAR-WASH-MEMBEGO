@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, Loader2, Car, BadgeCheck, Store, Network } from 'lucide-react';
+import { Plus, Loader2, Car, BadgeCheck, Store, Network } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -102,7 +102,6 @@ export const CustomersSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Users className="w-5 h-5 text-brand" />}
         title="Directorio de clientes"
         // Sin subtítulo a propósito: decía «separados por procedencia, los del
         // car wash y los de Membego» justo encima de las dos tarjetas que ya

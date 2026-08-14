@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Warehouse, Loader2, Wrench, CheckCircle2, Plus } from 'lucide-react';
+import { Loader2, Wrench, CheckCircle2, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { fetchAllBays, setBayStatus, createBay, Bay, BayStatus, BayType } from '../../data/adminRepository';
@@ -92,7 +92,6 @@ export const BaysSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Warehouse className="w-5 h-5 text-brand" />}
         title="Bahías y estaciones"
         subtitle={loading ? branch?.name : `${branch?.name} · ${free} de ${bays.length} libres`}
         actions={editable ? (

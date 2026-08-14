@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { PieChart, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
@@ -42,7 +42,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
   if (phase !== 'ready' || !allowed) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<PieChart className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Rentabilidad" subtitle="Margen por servicio y utilidad estimada" />
         <ReadOnlyNotice>
           {phase !== 'ready'
@@ -61,7 +61,6 @@ export const ProfitReportSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<PieChart className="w-5 h-5 text-brand" />}
         title="Rentabilidad"
         subtitle="Ventas menos insumos consumidos y gastos: lo que de verdad queda"
       />

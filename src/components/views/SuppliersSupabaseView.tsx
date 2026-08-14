@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Truck, Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
@@ -89,7 +89,7 @@ export const SuppliersSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Truck className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Proveedores" subtitle="Directorio de suplidores" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -101,7 +101,6 @@ export const SuppliersSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Truck className="w-5 h-5 text-brand" />}
         title="Proveedores"
         subtitle="A quién se compra: contacto, RNC e historial"
         actions={

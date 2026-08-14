@@ -3,6 +3,7 @@ import { X, Printer, Loader2, AlertCircle, Ban } from 'lucide-react';
 import { formatCents, bpsToPercent } from '../../lib/money';
 import { fetchInvoiceItems, Invoice, InvoiceItem } from '../../data/billingRepository';
 import { Tables } from '../../lib/database.types';
+import { LogoMark } from '../common/Logo';
 
 interface Props {
   invoice: Invoice | null;
@@ -125,6 +126,10 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
               }}
             >
               <div className="text-center space-y-1 pb-2 border-b border-dashed border-slate-400">
+                {/* El símbolo en un solo tono: la térmica no tiene tinta de
+                    color y un degradado sale como una mancha gris. Va pequeño
+                    porque el papel es caro y el comprobante empieza abajo. */}
+                <LogoMark className="w-8 h-8 mx-auto text-slate-900" simple mono />
                 <div className="font-extrabold text-sm uppercase tracking-tight">{company?.trade_name}</div>
                 <div className="text-[10px]">{company?.legal_name}</div>
                 <div className="text-[10px]">RNC: {company?.tax_id}</div>

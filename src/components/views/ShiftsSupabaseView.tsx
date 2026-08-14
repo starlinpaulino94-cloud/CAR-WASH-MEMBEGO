@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarClock, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   fetchStaff, fetchShifts, scheduleShift, deleteShift,
@@ -121,7 +121,7 @@ export const ShiftsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<CalendarClock className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Horarios" subtitle="Turnos planificados por empleado" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -155,7 +155,6 @@ export const ShiftsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<CalendarClock className="w-5 h-5 text-brand" />}
         title="Horarios"
         subtitle="Lo que está planificado; Asistencia registra lo que pasó"
       />

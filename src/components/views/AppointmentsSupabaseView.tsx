@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  CalendarDays, Plus, ChevronLeft, ChevronRight, Loader2, CheckCircle2,
-  XCircle, CarFront, Clock
-} from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CarFront, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
   fetchDayAppointments, bookAppointment, updateAppointmentStatus,
@@ -174,7 +171,7 @@ export const AppointmentsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<CalendarDays className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Agenda" subtitle="Citas y reservaciones" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -192,7 +189,6 @@ export const AppointmentsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <ViewHeader
-        icon={<CalendarDays className="w-5 h-5 text-brand" />}
         title="Agenda"
         subtitle="Reservas del día · la capacidad la marcan las bahías"
         actions={canBook ? (

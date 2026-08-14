@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Layers, Loader2, Check, X, Pencil, Plus, FlaskConical } from 'lucide-react';
+import { Loader2, Check, X, Pencil, Plus, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
@@ -121,7 +121,6 @@ export const ServicesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Layers className="w-5 h-5 text-brand" />}
         title="Servicios y matriz de precios"
         subtitle="Tarifa por categoría de vehículo y comisión por lavador"
         actions={

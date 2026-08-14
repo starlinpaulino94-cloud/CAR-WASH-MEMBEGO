@@ -1,5 +1,4 @@
 import React from 'react';
-import { Car } from 'lucide-react';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import { fetchVehiclePage, VehicleRow } from '../../data/adminRepository';
 import {
@@ -23,7 +22,6 @@ export const VehiclesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Car className="w-5 h-5 text-brand" />}
         title="Flotilla y vehículos"
         subtitle="Historial por placa, modelo y categoría"
         actions={

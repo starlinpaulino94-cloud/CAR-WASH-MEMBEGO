@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import {
@@ -68,7 +68,7 @@ export const QualitySupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-accent" />}
+        <ViewHeader
           title="Calidad" subtitle="Puntos de revisión antes de entregar" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -82,7 +82,6 @@ export const QualitySupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShieldCheck className="w-5 h-5 text-accent" />}
         title="Calidad"
         subtitle="Qué se revisa antes de entregar un vehículo"
       />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Briefcase, Loader2, Plus, UserCheck } from 'lucide-react';
+import { Loader2, Plus, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, bpsToPercent } from '../../lib/money';
@@ -137,7 +137,6 @@ export const TeamSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Briefcase className="w-5 h-5 text-brand" />}
         title="Equipo y comisiones"
         subtitle="Personal de la sucursal y comisiones generadas al entregar"
         actions={

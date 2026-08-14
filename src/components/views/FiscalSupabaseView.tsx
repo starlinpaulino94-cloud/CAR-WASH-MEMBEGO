@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileCheck2, Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { fetchNcfSequences, saveNcfSequence, NcfSequence, NcfType } from '../../data/fiscalRepository';
@@ -115,7 +115,7 @@ export const FiscalSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Fiscal" subtitle="Rangos NCF autorizados por la DGII" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -125,7 +125,7 @@ export const FiscalSupabaseView: React.FC = () => {
   if (!canView) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Fiscal" subtitle="Rangos NCF autorizados por la DGII" />
         <ReadOnlyNotice>
           Los rangos NCF son un recurso fiscal controlado: solo los ve la propiedad,
@@ -148,7 +148,6 @@ export const FiscalSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<FileCheck2 className="w-5 h-5 text-brand" />}
         title="Fiscal"
         subtitle="Rangos NCF: sin uno vigente se emite recibo interno, no comprobante fiscal"
         actions={canManage ? (

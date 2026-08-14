@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { LayoutDashboard, RefreshCw, Loader2, ArrowRight, Clock, Car, CheckCircle2, DollarSign } from 'lucide-react';
+import { RefreshCw, Loader2, ArrowRight, Clock, Car, CheckCircle2, DollarSign } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
@@ -72,10 +72,6 @@ export const DashboardSupabaseView: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <ViewHeader
-        // El único título que se pinta en grande: «Hola, Starlin» no lo repite
-        // ninguna pestaña —la de aquí dice «Resumen»—, así que no es ruido.
-        prominent
-        icon={<LayoutDashboard className="w-5 h-5 text-brand" />}
         title={`Hola, ${profile?.full_name?.split(' ')[0] ?? ''}`}
         subtitle={`${branch?.name} · ${RANGES.find(r => r.id === range)?.label.toLowerCase()}`}
         actions={
