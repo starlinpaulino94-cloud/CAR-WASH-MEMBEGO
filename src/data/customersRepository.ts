@@ -19,6 +19,8 @@ export interface CustomerMatch {
   phone: string | null;
   origin: Enums['customer_origin'];
   membego_status: 'active' | 'inactive' | 'none';
+  /** Identificador en Membego. Sin él no hay ficha que pedir. */
+  membego_customer_id: string | null;
   total_visits: number;
   credit_enabled: boolean;
 }
@@ -26,7 +28,8 @@ export interface CustomerMatch {
 // No se trae la fila entera: el mostrador solo necesita saber a quién está
 // mirando. Traer columnas que no se pintan es tráfico y es exponer datos del
 // cliente sin motivo.
-const CAMPOS = 'id, name, phone, origin, membego_status, total_visits, credit_enabled';
+const CAMPOS =
+  'id, name, phone, origin, membego_status, membego_customer_id, total_visits, credit_enabled';
 
 /**
  * Busca clientes ya registrados por nombre o teléfono.
@@ -103,5 +106,99 @@ export async function lookupVehicleByPlate(plate: string): Promise<VehicleMatch 
   return {
     id: v.id, plate: v.plate, make: v.make, model: v.model, color: v.color,
     category: v.category, customer
+  };
+}
+
+// ─────────────────────────────────────────────────── La ficha de Membego
+
+/**
+ * Lo que Membego sabe de un cliente: sus vehículos y sus beneficios de hoy.
+ *
+ * Se pide a NUESTRO borde (`/api/membego/ficha`), nunca a Membego directamente:
+ * la credencial de la Platform API es un secreto de servidor y un navegador no
+ * puede tenerla. Ese borde pone el token y reenvía.
+ *
+ * NADA de esto se guarda. Los vehículos podrían copiarse, pero los beneficios
+ * NO —lo dice el contrato de Membego: una copia desfasada regala un lavado ya
+ * consumido—, y tener la mitad en caché y la mitad no es peor que no tener
+ * ninguna: nadie recuerda cuál de las dos estaba fresca.
+ */
+
+export interface CoberturaMembego {
+  /** Tope de vehículo del plan. `null` = acepta cualquiera. */
+  vehicleLevelMax: number | null;
+  unlimited: boolean;
+  washesIncluded: number;
+  vehicles: { vehiculoId: string; placa: string | null; nivelTarifario: number }[];
+  /** `true` cubre · `false` no cubre · `null` no se preguntó. */
+  covers: boolean | null;
+  reason: string | null;
+}
+
+export interface BeneficioMembego {
+  id: string;
+  nombre: string;
+  eligible: boolean;
+  /** Lavados que le quedan. */
+  usesLeft: number;
+  /** Cuándo se le vence. */
+  expiresAt: string | null;
+  reason: string | null;
+  coverage: CoberturaMembego | null;
+}
+
+export interface VehiculoMembego {
+  id: string;
+  placa: string | null;
+  marca: string;
+  modelo: string;
+}
+
+export interface FichaMembego {
+  vehicles: VehiculoMembego[];
+  memberships: BeneficioMembego[];
+  promotions: BeneficioMembego[];
+  evaluatedAt: string;
+}
+
+/** Motivo por el que no se pudo consultar. Se enseña, no se traga. */
+export class ErrorFichaMembego extends Error {
+  constructor(readonly codigo: string, mensaje: string) {
+    super(mensaje);
+  }
+}
+
+export async function fetchFichaMembego(
+  membegoCustomerId: string,
+  opciones: { placa?: string | null; nivelVehiculo?: number | null } = {}
+): Promise<FichaMembego> {
+  const res = await fetch('/api/membego/ficha', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      membegoCustomerId,
+      plate: opciones.placa ?? null,
+      vehicleLevel: opciones.nivelVehiculo ?? null
+    })
+  }).catch(() => null);
+
+  if (!res) throw new ErrorFichaMembego('SIN_RED', 'No se pudo contactar con Membego.');
+
+  const body = (await res.json().catch(() => ({}))) as {
+    error?: string; message?: string;
+  } & Partial<FichaMembego>;
+
+  if (!res.ok) {
+    throw new ErrorFichaMembego(
+      body.error ?? 'NO_DISPONIBLE',
+      body.message ?? 'Membego no respondió.'
+    );
+  }
+
+  return {
+    vehicles: body.vehicles ?? [],
+    memberships: body.memberships ?? [],
+    promotions: body.promotions ?? [],
+    evaluatedAt: body.evaluatedAt ?? new Date().toISOString()
   };
 }

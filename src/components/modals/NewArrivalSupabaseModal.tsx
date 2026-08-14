@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History } from 'lucide-react';
+import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import {
   createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
 import {
-  lookupVehicleByPlate, normalizePlate, searchCustomers, CustomerMatch, VehicleMatch
+  lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
+  CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
@@ -44,14 +45,18 @@ const Etiqueta: React.FC<{ children: React.ReactNode; tono?: 'ok' | 'info' }> = 
 /**
  * Registro de llegada.
  *
- * Versión sobre Supabase del asistente de nueva llegada. Deja fuera el canje de
- * beneficios Membego: las membresías y promociones ENTRAN solas por webhook y se
- * pueden consultar, pero aplicarlas a una venta exige avisar a Membego de que se
- * consumieron, y ese contrato no lo tenemos. Antes eso lo tapaba un simulador en
- * el cliente; se retiró, porque fingir la respuesta del proveedor no acerca la
- * integración, solo esconde que falta. Lo que sí hace esta pantalla —crear
- * cliente, vehículo, orden y líneas— ocurre en una sola transacción del
- * servidor.
+ * Versión sobre Supabase del asistente de nueva llegada. Crear cliente,
+ * vehículo, orden y líneas ocurre en una sola transacción del servidor.
+ *
+ * Al elegir un cliente que viene de Membego se le pregunta a Membego, en vivo,
+ * qué tiene: su membresía con los lavados que le quedan y cuándo se le vence,
+ * sus promociones disponibles y sus vehículos. Y si ya hay placa, si esa
+ * membresía cubre ESE carro.
+ *
+ * Nada de eso se guarda. Los beneficios NO se proyectan —lo dice el contrato de
+ * Membego— porque una copia desfasada regala un lavado ya consumido. Y si
+ * Membego no contesta, el aviso va al lado del cliente y no sobre el botón: un
+ * lavadero no deja de recibir carros porque la fidelización esté caída.
  *
  * El cliente puede ser uno de tres:
  *
@@ -86,6 +91,13 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [resultados, setResultados] = useState<CustomerMatch[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [conocido, setConocido] = useState<VehicleMatch | null>(null);
+
+  // Lo que Membego sabe del cliente elegido: sus vehículos y sus beneficios.
+  // Se pide al elegirlo y se vuelve a pedir si cambia la placa, porque la
+  // respuesta depende del carro: la misma membresía cubre un sedán y no una SUV.
+  const [ficha, setFicha] = useState<FichaMembego | null>(null);
+  const [fichaBuscando, setFichaBuscando] = useState(false);
+  const [fichaError, setFichaError] = useState<string | null>(null);
 
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +183,42 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     setCliente(null);
     setCustomerName('');
     setCustomerPhone('');
+    setFicha(null);
+    setFichaError(null);
   }, []);
+
+  /**
+   * La ficha de Membego del cliente elegido.
+   *
+   * Depende de la placa: la misma membresía cubre un sedán y no una SUV, así
+   * que cambiar el carro cambia la respuesta y hay que volver a preguntar.
+   *
+   * Si Membego no contesta, se avisa y se sigue. Un lavadero no puede dejar de
+   * recibir carros porque un servicio de fidelización esté caído: el error se
+   * enseña al lado del cliente, no encima del botón de registrar.
+   */
+  useEffect(() => {
+    const idMembego = cliente?.membego_customer_id;
+    if (!idMembego) { setFicha(null); setFichaError(null); return; }
+
+    let active = true;
+    setFichaBuscando(true);
+    setFichaError(null);
+    const t = setTimeout(() => {
+      fetchFichaMembego(idMembego, { placa: plate || null })
+        .then(f => { if (active) setFicha(f); })
+        .catch(err => {
+          if (!active) return;
+          setFicha(null);
+          setFichaError(err instanceof ErrorFichaMembego
+            ? err.message
+            : 'No se pudo consultar Membego.');
+        })
+        .finally(() => { if (active) setFichaBuscando(false); });
+    }, 300);
+
+    return () => { active = false; clearTimeout(t); };
+  }, [cliente, plate]);
 
   // Diálogo accesible: foco inicial, Escape y foco atrapado.
   useEffect(() => {
@@ -365,6 +412,108 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                   {cliente.credit_enabled && <Etiqueta tono="info">Con crédito</Etiqueta>}
                   <Etiqueta>{cliente.total_visits} {cliente.total_visits === 1 ? 'visita' : 'visitas'}</Etiqueta>
                 </div>
+
+
+                {/* Lo que Membego sabe de él. Aparece solo, sin pedirlo. */}
+                {cliente.membego_customer_id && (
+                  <div className="mt-3 pt-3 border-t border-brand/30 space-y-2">
+                    {fichaBuscando && (
+                      <p className="text-xs text-muted flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Consultando Membego…
+                      </p>
+                    )}
+
+                    {/* Si Membego no contesta se avisa y se sigue: un lavadero
+                        no deja de recibir carros porque la fidelización esté
+                        caída. Por eso el aviso vive aquí y no sobre el botón. */}
+                    {fichaError && !fichaBuscando && (
+                      <p className="text-xs text-warning flex items-start gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <span>Membego no respondió ({fichaError}). Puede registrar la llegada igual.</span>
+                      </p>
+                    )}
+
+                    {ficha?.memberships.map(m => {
+                      const cubre = m.coverage?.covers;
+                      return (
+                        <div key={m.id} className="space-y-1">
+                          <p className="text-sm font-bold text-strong flex items-center gap-1.5">
+                            <BadgeCheck className="w-4 h-4 text-warning flex-shrink-0" />
+                            {m.nombre}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Etiqueta tono={m.usesLeft > 0 ? 'ok' : undefined}>
+                              {m.coverage?.unlimited
+                                ? 'Lavados ilimitados'
+                                : `${m.usesLeft} ${m.usesLeft === 1 ? 'lavado' : 'lavados'} restantes`}
+                            </Etiqueta>
+                            {m.expiresAt && (
+                              <Etiqueta>
+                                Vence {new Date(m.expiresAt).toLocaleDateString('es-DO',
+                                  { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </Etiqueta>
+                            )}
+                          </div>
+
+                          {/* El veredicto sobre ESTE carro. `null` es «no se
+                              preguntó» —todavía no hay placa— y no se pinta:
+                              enseñarlo como «no cubre» sería cobrar de más. */}
+                          {cubre === true && (
+                            <p className="text-xs text-success font-bold">
+                              Cubre este vehículo.
+                            </p>
+                          )}
+                          {cubre === false && (
+                            <p className="text-xs text-warning">
+                              {m.coverage?.reason === 'VEHICLE_LEVEL_ABOVE_PLAN'
+                                ? 'Este vehículo es de categoría superior a la del plan: la diferencia se cobra.'
+                                : m.coverage?.reason === 'VEHICLE_NOT_IN_MEMBERSHIP'
+                                  ? 'Esta placa no está en su membresía: el lavado se cobra completo.'
+                                  : 'Sin lavados disponibles: el lavado se cobra completo.'}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {ficha && ficha.memberships.length === 0 && !fichaError && (
+                      <p className="text-xs text-faint">Sin membresía activa en Membego.</p>
+                    )}
+
+                    {ficha && ficha.promotions.filter(p => p.eligible).length > 0 && (
+                      <p className="text-xs text-body">
+                        <strong>{ficha.promotions.filter(p => p.eligible).length}</strong>{' '}
+                        {ficha.promotions.filter(p => p.eligible).length === 1
+                          ? 'promoción disponible' : 'promociones disponibles'}
+                        : {ficha.promotions.filter(p => p.eligible).map(p => p.nombre).join(' · ')}
+                      </p>
+                    )}
+
+                    {/* Sus carros en Membego. Tocar uno pone su placa: es lo que
+                        la recepción iba a teclear mirando la matrícula. */}
+                    {ficha && ficha.vehicles.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-xs font-semibold text-muted uppercase">Sus vehículos</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ficha.vehicles.map(v => (
+                            <button key={v.id} type="button" disabled={busy}
+                              onClick={() => setPlate(v.placa ?? '')}
+                              className={`px-2 py-1 rounded-lg border text-xs transition-colors disabled:opacity-50 ${
+                                v.placa && normalizePlate(v.placa) === normalizePlate(plate)
+                                  ? 'bg-brand text-on-accent border-brand font-bold'
+                                  : 'bg-surface border-line text-body hover:border-brand'
+                              }`}>
+                              <strong>{v.placa ?? 'sin placa'}</strong>
+                              {(v.marca || v.modelo) && (
+                                <span className="font-normal opacity-80"> · {[v.marca, v.modelo].filter(Boolean).join(' ')}</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* El carro figura a nombre de otro. Puede ser correcto —lo trae
                     un familiar, se vendió— pero se avisa: colgar la venta de
