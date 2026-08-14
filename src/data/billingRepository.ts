@@ -12,7 +12,25 @@ import { Tables, Enums } from '../lib/database.types';
 
 export type Service = Tables<'services'>;
 export type Product = Tables<'products'>;
-export type Invoice = Tables<'invoices'>;
+/**
+ * Los tipos se generan contra la base (`npm run db:types`), y las columnas del
+ * canje llegaron en la migración 0039 —después de la última generación—. Se
+ * declaran a mano hasta la siguiente: sin ellas, anular una factura no sabría
+ * qué visita devolverle al cliente.
+ */
+export interface MembegoCanjeFields {
+  membego_membership_id: string | null;
+  /** La visita en Membego. Es con lo que se deshace el canje. */
+  membego_visit_id: string | null;
+  membego_covered_cents: number;
+  membego_canje_estado:
+    'sin_beneficio' | 'pendiente' | 'canjeado' | 'fallido' | 'revertido';
+  membego_canje_error: string | null;
+  membego_canjeado_at: string | null;
+  membego_revertido_at: string | null;
+}
+
+export type Invoice = Tables<'invoices'> & Partial<MembegoCanjeFields>;
 export type CashSession = Tables<'cash_sessions'>;
 export type CashMovement = Tables<'cash_movements'>;
 export type VehicleCategory = Enums['vehicle_category'];
@@ -66,6 +84,30 @@ export async function fetchServices(category: VehicleCategory): Promise<ServiceW
     };
     return { ...service, price_cents: service_prices[0]?.price_cents ?? 0 };
   });
+}
+
+/**
+ * Precios de TODOS los servicios en una categoría, sin traerse los servicios.
+ *
+ * Hace falta para calcular la diferencia cuando un cliente llega en un carro por
+ * encima de su plan: la membresía absorbe lo que valdría ese lavado en la
+ * categoría tope del plan, y ese precio no está en el catálogo que el punto de
+ * venta tiene cargado —el catálogo trae la categoría del carro que está delante,
+ * no la del plan.
+ */
+export async function fetchServicePricesForCategory(
+  category: VehicleCategory
+): Promise<Record<string, number>> {
+  const { data, error } = await requireSupabase()
+    .from('service_prices')
+    .select('service_id, price_cents')
+    .eq('vehicle_category', category);
+
+  if (error) throw error;
+
+  const mapa: Record<string, number> = {};
+  for (const fila of data ?? []) mapa[fila.service_id] = fila.price_cents;
+  return mapa;
 }
 
 export async function fetchProducts(): Promise<Product[]> {

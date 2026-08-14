@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import {
-  fetchInvoicePage, fetchInvoiceTotals, annulInvoice, fetchFiscalStatus,
+  fetchInvoicePage, fetchInvoiceTotals, annulInvoice, fetchFiscalStatus, revertirEnMembego,
   Invoice, InvoiceKindFilter, FiscalStatus
 } from '../../data/billingRepository';
 import { TicketSupabaseModal, AnnulInvoiceDialog } from '../modals/TicketSupabaseModal';
@@ -108,9 +108,33 @@ export const InvoicesSupabaseView: React.FC = () => {
     setAnnulError(null);
     try {
       const credit = await annulInvoice(toAnnul.id, reason, annulRequestId.current);
+
+      /*
+       * Devolverle el lavado al cliente.
+       *
+       * Sin esto, anular era medio trabajo: se le devolvía el dinero y se le
+       * quedaba consumido el lavado de su membresía. Perdía el cliente, en
+       * silencio y sin forma de reclamarlo.
+       *
+       * Va DESPUÉS de anular y su fallo no deshace la anulación: la factura ya
+       * está anulada y esa es la parte que no puede quedar a medias. Si Membego
+       * no contesta, se dice y se puede reintentar —la reversa es idempotente,
+       * repetirla devuelve un lavado y no dos.
+       */
+      let avisoMembego = '';
+      if (toAnnul.membego_visit_id && toAnnul.membego_canje_estado === 'canjeado') {
+        const r = await revertirEnMembego(
+          toAnnul.id, toAnnul.membego_visit_id, `Factura ${toAnnul.invoice_number} anulada: ${reason}`
+        );
+        avisoMembego = r.ok
+          ? ' Se le devolvió el lavado de su membresía.'
+          : ` OJO: el lavado de su membresía NO se devolvió (${r.mensaje}). Reinténtelo.`;
+      }
+
       setNotice(
         `Factura ${toAnnul.invoice_number} anulada. Nota de crédito ${credit.invoice_number}` +
-        `${credit.ncf ? ` (NCF ${credit.ncf})` : ''} emitida por ${formatCents(credit.total_cents, symbol)}.`
+        `${credit.ncf ? ` (NCF ${credit.ncf})` : ''} emitida por ${formatCents(credit.total_cents, symbol)}.` +
+        avisoMembego
       );
       annulRequestId.current = null;   // operación cerrada
       setToAnnul(null);
