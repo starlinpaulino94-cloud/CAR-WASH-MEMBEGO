@@ -10,10 +10,9 @@
  * no servir: basta con que dos de ellas no se hablen. Eso no lo detecta ninguna
  * prueba de módulo — solo se ve al recorrer el camino entero.
  *
- * ESTE ENSAYO FALLA A PROPÓSITO mientras el flujo esté roto. No es inestable ni
- * está a medias: cada fallo es un hueco real, medido, con el dato que lo prueba.
- * El día que se cierren, se pone verde solo y a partir de ahí vigila que no se
- * vuelvan a abrir.
+ * Nació en rojo: cinco de sus comprobaciones fallaban, y todas por lo mismo —el
+ * punto de venta no sabía nada de las órdenes de trabajo—. Ya está en verde, y a
+ * partir de aquí su trabajo es que ese hueco no se vuelva a abrir.
  *
  * Requiere `tests/e2e/reset.sh`, el proxy en el 3002 y la aplicación en el 4174.
  */
@@ -179,23 +178,25 @@ paso(4, 'El cliente paga: se cobra la orden en el punto de venta');
 await go(/^Ventas/, /^Punto de venta/);
 await page.waitForTimeout(1800);
 
-// ¿Ofrece la pantalla cobrar una orden que ya existe?
-const buscadorOrden = page.getByRole('textbox', { name: /orden|placa pendiente|cobrar orden/i });
-const listaPendientes = page.getByText(/órdenes? (pendientes?|por cobrar|sin cobrar)/i);
-const puedeCobrarLaOrden =
-  (await buscadorOrden.count()) > 0 || (await listaPendientes.count()) > 0;
-
+// La orden se TRAE al cobro: no se vuelve a teclear la venta.
+const panelOrdenes = page.getByText('Cobrar una orden', { exact: false }).first();
 check('el punto de venta permite cobrar una orden ya registrada',
-  puedeCobrarLaOrden,
-  puedeCobrarLaOrden ? '' : 'no hay forma de traer la orden al cobro');
+  (await panelOrdenes.count()) > 0,
+  (await panelOrdenes.count()) > 0 ? '' : 'no hay forma de traer la orden al cobro');
+await panelOrdenes.click();
+await page.waitForTimeout(1200);
 
-// Se cobra como se puede: tecleando la venta de nuevo.
-await page.getByRole('button', { name: /Lavado/ }).first().click();
-await page.waitForTimeout(600);
-const placaPos = page.getByLabel(/Placa/i).first();
-if (await placaPos.count()) await placaPos.fill('FLU-1234');
-const nombrePos = page.getByLabel(/Cliente/i).first();
-if (await nombrePos.count()) await nombrePos.fill('Cliente Del Flujo');
+const filaOrden = page.getByRole('button').filter({ hasText: 'FLU1234' }).first();
+check('la orden del cliente aparece entre las que faltan por cobrar',
+  (await filaOrden.count()) > 0);
+await filaOrden.click();
+await page.waitForTimeout(1500);
+
+// Las líneas vienen de la orden, no las teclea el cajero.
+check('el carrito se llena con lo que dice la orden',
+  (await page.getByText('de la orden').count()) > 0);
+check('la línea de la orden no se puede eliminar a mano',
+  (await page.getByRole('button', { name: /Eliminar Lavado/i }).count()) === 0);
 
 // El cliente pide factura con NCF: es una casilla, y por omisión va apagada.
 const casillaNcf = page.getByLabel(/comprobante fiscal/i);
@@ -203,11 +204,17 @@ check('el punto de venta ofrece emitir comprobante fiscal',
   (await casillaNcf.count()) > 0);
 if (await casillaNcf.count()) { await casillaNcf.check(); await page.waitForTimeout(500); }
 
+// Y se puede fiar: la forma de pago existe y dice por qué se bloquea.
+const metodos = await page.getByRole('button', { name: /Efectivo|Tarjeta|Transfer|Crédito/ }).allInnerTexts();
+check('el punto de venta permite fiar a un cliente con cupo',
+  metodos.some(t => /cr[ée]dito/i.test(t)),
+  `formas de pago ofrecidas: ${metodos.join(', ')}`);
+
 const totalTexto = await page.getByText(/RD\$/).last().innerText().catch(() => '');
 await page.getByLabel(/Recibido|Efectivo|Monto/i).first().fill('5000').catch(() => {});
 await page.waitForTimeout(400);
 await page.getByRole('button', { name: /^Cobrar/ }).click();
-await page.waitForTimeout(3000);
+await page.waitForTimeout(3500);
 
 const factura = sql("select id from invoices order by created_at desc limit 1");
 check('la venta emite una factura', factura.length === 36, totalTexto);
@@ -221,16 +228,9 @@ check('el efectivo entra a la caja',
 const pagoOrden = sql(`select payment_status::text from work_orders where id='${ordenId}'`);
 check('la orden del cliente queda marcada como PAGADA',
   pagoOrden === 'pagado', `payment_status = ${pagoOrden}`);
-// El cobro identifica al cliente por NOMBRE ESCRITO A MANO, no por su ficha.
 check('la factura queda enlazada a la ficha del cliente',
   sql(`select count(*) from invoices where id='${factura}' and customer_id is not null`) === '1',
-  'la factura guarda el nombre como texto, sin apuntar al cliente');
-
-// Y sin ficha de cliente no se puede fiar: la base lo exige, con razón.
-const metodos = await page.getByRole('button', { name: /Efectivo|Tarjeta|Transfer|Crédito/ }).allInnerTexts();
-check('el punto de venta permite fiar a un cliente con cupo',
-  metodos.some(t => /cr[ée]dito/i.test(t)),
-  `formas de pago ofrecidas: ${metodos.join(', ')}`);
+  sql(`select coalesce(customer_id::text,'sin cliente') from invoices where id='${factura}'`));
 
 check('la factura queda enlazada a la orden que se lavó',
   sql(`select coalesce(work_order_id::text,'sin enlace') from invoices where id='${factura}'`) === ordenId,

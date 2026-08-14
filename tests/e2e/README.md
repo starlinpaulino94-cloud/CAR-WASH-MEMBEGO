@@ -3,9 +3,8 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**169 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
-`orders-kanban` y `admin-views`), más `flujo-completo`, que recorre el viaje
-entero del cliente y **falla a propósito** donde el flujo está roto (ver abajo).
+**199 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
+`orders-kanban`, `admin-views` y `flujo-completo`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 
@@ -82,8 +81,8 @@ verificar sin depender de la red.
 
 ## El recorrido completo — `flujo-completo.e2e.mjs`
 
-Los cuatro ensayos de arriba prueban módulos. Este prueba el **negocio**: hace
-el viaje entero por la interfaz real, en orden —llega el cliente, se registra la
+Los otros cuatro ensayos prueban módulos. Este prueba el **negocio**: hace el
+viaje entero por la interfaz real, en orden —llega el cliente, se registra la
 placa, se asigna bahía y operario, se lava, control de calidad, aviso al
 cliente, cobro, entrega, reimpresión— y después de cada paso pregunta a
 PostgreSQL qué quedó escrito.
@@ -91,16 +90,9 @@ PostgreSQL qué quedó escrito.
 Existe porque un sistema puede tener todas sus piezas funcionando y aun así no
 servir: basta con que dos de ellas no se hablen.
 
-**22 de 27 pasan.** Los cinco que fallan son huecos reales, y salen de una sola
-raíz: *el punto de venta no sabe nada de las órdenes de trabajo*.
-
-| Falla | Qué significa |
-|---|---|
-| El POS no cobra una orden ya registrada | Hay que teclear la venta otra vez, y puede cobrarse un importe distinto al de la orden |
-| La orden nunca queda `pagado` | `work_orders.payment_status` solo lo escribe `create_invoice`, y solo si recibe la orden. La aplicación nunca se la pasa |
-| La factura no apunta a la orden | Nada ata el lavado a su comprobante: el reporte no puede cruzar operación con ingreso |
-| La factura no apunta a la ficha del cliente | El cobro guarda el nombre como texto libre. El cliente no tiene historial de facturas |
-| No se puede fiar en el mostrador | El POS solo ofrece efectivo, tarjeta y transferencia. Las cuentas por cobrar de la 0028 solo pueden nacer de una consolidación de flotilla |
-
-El ensayo se pondrá verde solo el día que se cierren, y a partir de ahí vigila
-que no se vuelvan a abrir.
+**30 de 30 pasan.** Cuando se escribió, cinco fallaban, y todas por lo mismo:
+el punto de venta no sabía nada de las órdenes de trabajo. `create_invoice`
+aceptaba `p_work_order_id` desde la 0008 y desde la 0028 lo usaba para decidir
+si la orden quedaba pagada, pendiente o parcial — pero la aplicación nunca se lo
+pasaba. Ahora Ventas › Punto de venta trae la orden al cobro, y con ella el
+comprobante queda atado al lavado y a la ficha del cliente.

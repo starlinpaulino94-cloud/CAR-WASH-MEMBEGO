@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Building,
+  Landmark, ClipboardList, X as XIcon,
   CheckCircle2, Loader2, AlertCircle, RefreshCw, Receipt, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -9,10 +10,12 @@ import { formatCents, parseAmountToCents, centsToInput, taxFromBps, bpsToPercent
 import { validatePromotion, PromotionPreview } from '../../data/promotionRepository';
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
+  fetchChargeableOrders, ChargeableOrder,
   lookupMembegoByPhone,
   ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice,
   FiscalStatus, MembegoBenefitSummary
 } from '../../data/billingRepository';
+import { fetchCreditStatus, CreditStatus } from '../../data/creditRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
   { id: 'sedan', label: 'Sedán' },
@@ -23,10 +26,20 @@ const CATEGORIES: { id: VehicleCategory; label: string }[] = [
   { id: 'motorcycle', label: 'Moto' }
 ];
 
+const ESTADO_ORDEN: Record<string, string> = {
+  pendiente: 'Recién llegado', en_espera: 'En espera', asignada: 'Asignada',
+  en_proceso: 'Lavándose', control_calidad: 'En revisión', listo: 'Listo para entregar',
+  entregado: 'Entregado'
+};
+
 const METHODS: { id: PaymentMethod; label: string; icon: typeof Banknote }[] = [
   { id: 'efectivo', label: 'Efectivo', icon: Banknote },
   { id: 'tarjeta', label: 'Tarjeta', icon: CreditCard },
-  { id: 'transferencia', label: 'Transfer', icon: Building }
+  { id: 'transferencia', label: 'Transfer', icon: Building },
+  // Fiar exige cliente identificado: la base lo rechaza si no lo hay, y con
+  // razón —una deuda sin deudor no se puede cobrar—. El botón se deshabilita
+  // solo hasta que se elige la ficha.
+  { id: 'credito', label: 'Crédito', icon: Landmark }
 ];
 
 /**
@@ -63,6 +76,16 @@ export const PosSupabaseView: React.FC = () => {
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
   const [tenderedInput, setTenderedInput] = useState('');
   const [wantsNcf, setWantsNcf] = useState(false);
+
+  // --- Cobro de una orden de trabajo ya registrada
+  const [orden, setOrden] = useState<ChargeableOrder | null>(null);
+  const [ordenes, setOrdenes] = useState<ChargeableOrder[]>([]);
+  const [buscarOrden, setBuscarOrden] = useState('');
+  const [ordenesBusy, setOrdenesBusy] = useState(false);
+  // La ficha del cliente, no su nombre escrito a mano: sin ella no hay historial
+  // de facturas ni se puede fiar.
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [credito, setCredito] = useState<CreditStatus | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -131,6 +154,69 @@ export const PosSupabaseView: React.FC = () => {
   }, [branch, category]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // ------------------------------------------- Cobrar una orden registrada
+
+  const cargarOrdenes = useCallback(async () => {
+    if (!branch) return;
+    setOrdenesBusy(true);
+    try { setOrdenes(await fetchChargeableOrders(branch.id, buscarOrden)); }
+    catch { setOrdenes([]); }
+    finally { setOrdenesBusy(false); }
+  }, [branch, buscarOrden]);
+
+  useEffect(() => {
+    if (!branch) return;
+    const t = setTimeout(() => void cargarOrdenes(), 300);
+    return () => clearTimeout(t);
+  }, [branch, cargarOrdenes]);
+
+  /**
+   * Trae la orden al cobro.
+   *
+   * Las líneas se copian tal como se pactaron al recibir el vehículo y NO se
+   * pueden editar: si el cajero pudiera cambiarlas, volveríamos al problema que
+   * esto resuelve —cobrar un importe distinto al que dice la orden—. Para añadir
+   * algo (una bebida, un servicio extra) se usa el catálogo, y esa línea sí es
+   * suya. Los precios, como siempre, los vuelve a resolver el servidor al
+   * emitir; aquí solo se previsualizan.
+   */
+  const elegirOrden = async (o: ChargeableOrder) => {
+    ensureRequestId();
+    setOrden(o);
+    setCategory(o.vehicle_category);
+    setCustomerId(o.customer_id);
+    setCustomerName(o.customer_name ?? '');
+    setVehiclePlate(o.vehicle_plate ?? '');
+    setLines((o.work_order_items ?? []).map(i => ({
+      key: crypto.randomUUID(),
+      itemType: i.item_type,
+      serviceId: i.service_id,
+      productId: i.product_id,
+      name: i.name,
+      quantity: i.quantity,
+      unitPriceCents: i.unit_price_cents,
+      discountCents: i.discount_cents,
+      isMembegoCovered: i.is_membego_covered,
+      // Marca de origen: distingue lo pactado de lo que añade el cajero.
+      deLaOrden: true
+    } as CartLine & { deLaOrden?: boolean })));
+    setCredito(null);
+    if (o.customer_id) {
+      try { setCredito(await fetchCreditStatus(o.customer_id)); } catch { setCredito(null); }
+    }
+  };
+
+  const soltarOrden = () => {
+    setOrden(null);
+    setCustomerId(null);
+    setCredito(null);
+    setLines([]);
+    setCustomerName('');
+    setVehiclePlate('');
+    if (method === 'credito') setMethod('efectivo');
+    requestIdRef.current = null;
+  };
 
   // --------------------------------------------------------------- Carrito
 
@@ -218,11 +304,24 @@ export const PosSupabaseView: React.FC = () => {
   // El cobro NO depende de la facturación fiscal: sin NCF configurado se emite un
   // recibo interno (sin comprobante fiscal). Si hay rangos NCF, se ofrece además
   // emitir el comprobante fiscal.
+  // Fiar exige ficha de cliente, cupo suficiente y ninguna factura vencida. La
+  // base lo comprueba otra vez al emitir: esto solo evita ofrecer un botón que
+  // va a fallar, y explicar por qué.
+  const creditoDisponible = credito?.available_cents ?? 0;
+  const motivoSinCredito =
+    !customerId                 ? 'Elija una orden con cliente para poder fiar'
+    : !credito?.credit_enabled  ? 'Este cliente no tiene crédito autorizado'
+    : credito.blocked           ? 'Tiene facturas vencidas: el crédito está cortado'
+    : creditoDisponible < preview.total
+        ? `Cupo disponible insuficiente (${formatCents(creditoDisponible, symbol)})`
+    : null;
+
   const canCheckout =
     lines.length > 0 &&
     !submitting &&
     can(profile, 'issueInvoice') &&
     (!needsCashSession || session !== null) &&
+    (method !== 'credito' || motivoSinCredito === null) &&
     effectiveTendered >= preview.total;
 
   // -------------------------------------------------------------- Checkout
@@ -239,6 +338,10 @@ export const PosSupabaseView: React.FC = () => {
         lines,
         payments: [{ method, amountCents: effectiveTendered }],
         vehicleCategory: category,
+        // Lo que faltaba: sin la orden, `create_invoice` no puede marcarla
+        // pagada ni enlazar el comprobante con el lavado.
+        workOrderId: orden?.id ?? null,
+        customerId,
         customerName: customerName.trim() || 'Consumidor Final',
         customerTaxId: customerTaxId.trim() || null,
         vehiclePlate: vehiclePlate.trim().toUpperCase() || null,
@@ -249,6 +352,9 @@ export const PosSupabaseView: React.FC = () => {
       });
 
       setLastInvoice(invoice);
+      // La orden acaba de dejar de estar pendiente: fuera del panel.
+      setOrden(null); setCustomerId(null); setCredito(null);
+      void cargarOrdenes();
       // La venta terminó: a partir de aquí, la siguiente es otra operación.
       requestIdRef.current = null;
       setLines([]);
@@ -446,6 +552,80 @@ export const PosSupabaseView: React.FC = () => {
             </span>
           </div>
 
+          {/* ---------------------------------------- Cobrar una orden ya registrada
+              El vehículo se recibe en Operaciones; aquí se cobra. Sin esto el
+              cajero teclea la venta otra vez y la orden no se entera de que se
+              pagó. */}
+          {orden ? (
+            <div className="bg-brand-soft/40 border border-brand/40 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-strong text-sm flex items-center gap-1.5">
+                    <ClipboardList className="w-4 h-4 text-brand flex-shrink-0" />
+                    Orden {orden.order_number}
+                  </div>
+                  <div className="text-xs text-muted truncate">
+                    {orden.vehicle_plate} · {orden.customer_name || 'Sin cliente'}
+                  </div>
+                </div>
+                <button onClick={soltarOrden} aria-label="Quitar la orden y cobrar una venta suelta"
+                  className="p-1 text-muted hover:text-strong flex-shrink-0">
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-muted">
+                Las líneas del lavado vienen de la orden y no se editan. Puede
+                añadir del catálogo lo que consuma además.
+              </p>
+            </div>
+          ) : (
+            <details className="bg-canvas/60 border border-line rounded-xl">
+              <summary className="cursor-pointer px-3 py-2.5 text-sm font-bold text-body flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-brand" />
+                Cobrar una orden
+                {ordenes.length > 0 && (
+                  <span className="ml-auto bg-warning/20 text-warning px-2 py-0.5 rounded font-bold text-xs">
+                    {ordenes.length} sin cobrar
+                  </span>
+                )}
+              </summary>
+              <div className="px-3 pb-3 space-y-2">
+                <label htmlFor="pos-orden-buscar" className="sr-only">Buscar orden pendiente</label>
+                <input
+                  id="pos-orden-buscar" type="search" value={buscarOrden}
+                  onChange={e => setBuscarOrden(e.target.value)}
+                  placeholder="Buscar por placa, número o cliente…"
+                  className="w-full bg-surface border border-line rounded-lg p-2 text-sm text-strong placeholder-faint"
+                />
+                <div className="max-h-52 overflow-y-auto space-y-1.5">
+                  {ordenesBusy ? (
+                    <p className="text-xs text-faint italic py-3 text-center">Buscando…</p>
+                  ) : ordenes.length === 0 ? (
+                    <p className="text-xs text-faint italic py-3 text-center">
+                      {buscarOrden ? 'Ninguna orden coincide.' : 'No hay órdenes sin cobrar.'}
+                    </p>
+                  ) : ordenes.map(o => (
+                    <button key={o.id} onClick={() => void elegirOrden(o)}
+                      className="w-full text-left p-2.5 bg-surface border border-line hover:border-brand/50 rounded-lg flex items-center justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-sm text-strong">
+                          {o.vehicle_plate || 'sin placa'}
+                          <span className="ml-1.5 font-normal text-xs text-faint">{o.order_number}</span>
+                        </span>
+                        <span className="block text-xs text-muted truncate">
+                          {o.customer_name || 'Sin cliente'} · {ESTADO_ORDEN[o.status] ?? o.status}
+                        </span>
+                      </span>
+                      <span className="font-extrabold text-sm text-brand whitespace-nowrap">
+                        {formatCents(o.total_cents, symbol)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )}
+
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <label htmlFor="pos-cust" className="text-xs font-semibold text-muted uppercase">Cliente</label>
@@ -504,31 +684,49 @@ export const PosSupabaseView: React.FC = () => {
               <p className="text-center py-8 text-xs text-faint italic">
                 Toque un servicio o producto para añadirlo
               </p>
-            ) : lines.map(l => (
-              <div key={l.key} className="p-2.5 bg-canvas rounded-xl border border-line/80 flex items-center justify-between text-xs gap-2">
+            ) : lines.map(l => {
+              // Lo que viene de la orden se cobra como se pactó al recibir el
+              // vehículo. Si se pudiera editar aquí, volvería el problema que
+              // esta pantalla resuelve: cobrar algo distinto a lo acordado.
+              const deLaOrden = (l as CartLine & { deLaOrden?: boolean }).deLaOrden === true;
+              return (
+              <div key={l.key} className={`p-2.5 rounded-xl border flex items-center justify-between text-xs gap-2 ${
+                deLaOrden ? 'bg-brand-soft/25 border-brand/30' : 'bg-canvas border-line/80'}`}>
                 <div className="space-y-0.5 min-w-0 flex-1">
                   <div className="font-bold text-strong truncate">{l.name}</div>
-                  <div className="text-xs text-muted">{formatCents(l.unitPriceCents, symbol)} c/u</div>
+                  <div className="text-xs text-muted">
+                    {formatCents(l.unitPriceCents, symbol)} c/u
+                    {deLaOrden && <span className="ml-1.5 text-brand font-bold">· de la orden</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="flex items-center bg-surface border border-line rounded-lg">
-                    <button onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="px-2 font-bold text-strong">{l.quantity}</span>
-                    <button onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
+                  {deLaOrden ? (
+                    <span className="px-2 font-bold text-strong tabular-nums">×{l.quantity}</span>
+                  ) : (
+                    <div className="flex items-center bg-surface border border-line rounded-lg">
+                      <button onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="px-2 font-bold text-strong">{l.quantity}</span>
+                      <button onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                   <span className="font-bold text-brand-hi w-20 text-right">
                     {formatCents(l.unitPriceCents * l.quantity, symbol)}
                   </span>
-                  <button onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} className="text-faint hover:text-danger p-1">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {deLaOrden ? (
+                    <span className="w-6" aria-hidden="true" />
+                  ) : (
+                    <button onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} className="text-faint hover:text-danger p-1">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="space-y-4 pt-4 border-t border-line">
@@ -576,17 +774,21 @@ export const PosSupabaseView: React.FC = () => {
 
             <div className="space-y-2">
               <span className="text-xs font-bold text-muted uppercase">Método de pago</span>
-              <div className="grid grid-cols-3 gap-2 text-xs font-bold">
+              <div className="grid grid-cols-4 gap-2 text-xs font-bold">
                 {METHODS.map(m => {
                   const Icon = m.icon;
-                  const blocked = m.id === 'efectivo' && !session;
+                  // Fiar se bloquea con su motivo escrito: un botón apagado sin
+                  // explicación deja al cajero adivinando delante del cliente.
+                  const blocked = (m.id === 'efectivo' && !session)
+                               || (m.id === 'credito' && motivoSinCredito !== null);
                   return (
                     <button
                       key={m.id}
                       onClick={() => setMethod(m.id)}
                       disabled={blocked}
                       aria-pressed={method === m.id}
-                      title={blocked ? 'Requiere caja abierta' : undefined}
+                      title={!blocked ? undefined
+                        : m.id === 'credito' ? motivoSinCredito! : 'Requiere caja abierta'}
                       className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         method === m.id
                           ? 'bg-brand text-on-accent border-brand shadow-lg shadow-brand/30'
