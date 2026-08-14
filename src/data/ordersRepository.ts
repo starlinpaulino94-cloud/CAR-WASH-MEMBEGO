@@ -205,6 +205,12 @@ export interface CreateOrderParams {
   category: VehicleCategory;
   services: { serviceId: string; name: string; quantity: number }[];
   customerName: string | null;
+  /**
+   * Ficha ya existente. Cuando viene, el servidor NO crea cliente nuevo: enlaza
+   * la orden a esa ficha y le asigna el vehículo si estaba huérfano. Es la
+   * diferencia entre un directorio con un «Juan Pérez» y uno con nueve.
+   */
+  customerId?: string | null;
   customerPhone?: string | null;
   make?: string;
   model?: string;
@@ -224,6 +230,7 @@ export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOr
       discount_cents: 0, is_membego_covered: false
     })),
     p_customer_name: params.customerName ?? undefined,
+    p_customer_id: params.customerId ?? null,
     p_customer_phone: params.customerPhone ?? null,
     p_vehicle_make: params.make ?? '',
     p_vehicle_model: params.model ?? '',

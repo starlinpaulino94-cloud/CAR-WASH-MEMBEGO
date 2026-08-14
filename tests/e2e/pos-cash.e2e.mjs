@@ -90,7 +90,7 @@ check('la previsualización del total coincide con la fórmula del servidor',
   (await page.getByRole('button', { name: /Cobrar/ }).innerText()).includes('1,770.00'),
   (await page.getByRole('button', { name: /Cobrar/ }).innerText()));
 
-await page.getByLabel('Cliente').fill('Cliente E2E');
+await page.getByLabel('Nombre en la factura').fill('Cliente E2E');
 await page.getByLabel('Placa').fill('e2e001');
 await page.getByLabel('Recibido').fill('2000');
 await page.getByText('Emitir comprobante fiscal (NCF)').click();
@@ -190,6 +190,68 @@ check('el descuadre se calculó y guardó',
   `contado 500000 − esperado ${expected} = ${sql("select difference_cents from cash_sessions where status='closed'")}`);
 check('el histórico conserva el turno cerrado (antes se sobrescribía)',
   await page.getByText(/Turnos anteriores/).isVisible().catch(() => false));
+
+// ------------------------------------------------- Cliente de mostrador
+// Una venta suelta, sin orden de por medio, a un cliente que YA está en el
+// directorio. Antes el campo «Cliente» era texto que no enlazaba con nada: la
+// factura no entraba en su historial y fiar era imposible aunque tuviera cupo.
+console.log('\n[7] POS — venta de mostrador a un cliente con ficha');
+
+const idMostrador = '99999999-aaaa-4bbb-8ccc-dddddddddddd';
+sql(`insert into public.customers (id, company_id, branch_id, name, phone)
+     values ('${idMostrador}','11111111-1111-1111-1111-111111111111',
+             '22222222-2222-2222-2222-222222222222','Cliente Mostrador','8095550001');`);
+// El cupo NO se edita con un UPDATE suelto: un guardia lo rechaza. El montaje
+// declara el contexto igual que hace set_customer_credit().
+sql(`do $$
+     begin
+       perform set_config('app.credit_ctx','ok',true);
+       update public.customers
+          set credit_enabled=true, credit_limit_cents=500000, credit_terms_days=15
+        where id='${idMostrador}';
+     end $$;`);
+
+await sidebarPos.click();
+await page.waitForTimeout(1800);
+await page.getByRole('tab', { name: 'Servicios' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+
+check('sin ficha elegida, fiar se ofrece apagado y con su motivo',
+  await page.getByRole('button', { name: 'Crédito' }).isDisabled().catch(() => false));
+
+await page.getByLabel('Buscar cliente registrado').fill('Mostrador');
+await page.waitForTimeout(1300);
+
+check('el buscador del mostrador encuentra al cliente registrado',
+  await page.getByRole('button', { name: /Cliente Mostrador/ }).first().isVisible().catch(() => false));
+
+await page.getByRole('button', { name: /Cliente Mostrador/ }).first().click();
+await page.waitForTimeout(1200);
+
+check('al elegirlo se muestra su cupo disponible, no solo su nombre',
+  await page.getByText(/Cupo disponible/).isVisible().catch(() => false));
+check('con ficha y cupo, fiar deja de estar bloqueado',
+  !(await page.getByRole('button', { name: 'Crédito' }).isDisabled().catch(() => true)));
+
+await page.getByRole('button', { name: 'Crédito' }).click();
+await page.waitForTimeout(300);
+const antesMostrador = Number(sql('select count(*) from invoices'));
+await page.getByRole('button', { name: /Cobrar/ }).click();
+await page.waitForTimeout(2500);
+
+check('la venta de mostrador se emitió',
+  Number(sql('select count(*) from invoices')) === antesMostrador + 1);
+check('la factura queda enlazada a la FICHA del cliente, no a un nombre suelto',
+  sql('select customer_id from invoices order by created_at desc limit 1') === idMostrador,
+  sql("select coalesce(customer_id::text,'(nulo)') from invoices order by created_at desc limit 1"));
+check('lo fiado abrió su cuenta por cobrar',
+  sql(`select count(*) from receivables where customer_id='${idMostrador}' and status='pendiente'`) === '1');
+check('lo fiado NO entró como efectivo en ninguna caja',
+  sql(`select count(*) from cash_movements m
+       join invoices i on i.id = m.invoice_id
+       where i.customer_id='${idMostrador}'`) === '0');
 
 await browser.close();
 

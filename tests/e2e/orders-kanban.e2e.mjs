@@ -70,7 +70,7 @@ check('no se puede registrar sin placa ni servicios',
   await page.getByRole('button', { name: /Registrar llegada$/ }).last().isDisabled().catch(() => false));
 
 await page.getByLabel('Placa *').fill('kb-100 1');
-await page.getByLabel('Cliente').fill('Cliente Kanban');
+await page.getByLabel('Cliente nuevo').fill('Cliente Kanban');
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
 await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
@@ -241,6 +241,68 @@ check('la búsqueda filtra en el servidor',
   (await page.locator('tbody tr').count()) === 1
   && await page.getByText('KB1001').first().isVisible().catch(() => false),
   `${await page.locator('tbody tr').count()} fila(s)`);
+
+// ====================================================== Cliente ya existente
+// Lo que se comprueba aquí es que la segunda visita de un cliente conocido NO
+// crea otra ficha con su mismo nombre. Antes la pantalla solo tenía un campo de
+// texto: escribir «Cliente Kanban» otra vez fabricaba un duplicado, y con él se
+// partían en dos las visitas, el crédito y el histórico de facturas.
+console.log('\n[5] Llegada — elegir un cliente ya registrado');
+
+const idCliente = sql("select id from customers where name='Cliente Kanban'");
+
+await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
+await page.waitForTimeout(1500);
+
+await page.getByLabel('Placa *').fill('kb-200 2');
+await page.getByLabel('Buscar cliente registrado').fill('Kanban');
+await page.waitForTimeout(1200);
+
+check('el buscador encuentra al cliente ya registrado',
+  await page.getByRole('button', { name: /Cliente Kanban/ }).first().isVisible().catch(() => false));
+
+await page.getByRole('button', { name: /Cliente Kanban/ }).first().click();
+await page.waitForTimeout(400);
+
+check('al elegirlo se muestra su ficha con las visitas que ya trae',
+  await page.getByText(/1 visita/).isVisible().catch(() => false));
+check('con ficha elegida ya no se pide escribir un cliente nuevo',
+  (await page.getByLabel('Cliente nuevo').count()) === 0);
+
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
+await page.waitForTimeout(2500);
+
+check('la segunda visita NO duplica la ficha del cliente',
+  sql("select count(*) from customers where name='Cliente Kanban'") === '1',
+  sql("select count(*) from customers where name='Cliente Kanban'"));
+check('la nueva orden queda enlazada a la ficha que ya existía',
+  sql("select customer_id from work_orders where vehicle_plate='KB2002'") === idCliente,
+  sql("select customer_id from work_orders where vehicle_plate='KB2002'"));
+check('el vehículo nuevo nace a nombre de ese cliente',
+  sql("select customer_id from vehicles where plate='KB2002'") === idCliente);
+
+// La placa reconoce al vehículo que ya vino y propone a su dueño.
+await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
+await page.waitForTimeout(1200);
+await page.getByLabel('Placa *').fill('KB1001');
+await page.waitForTimeout(1500);
+
+check('la placa conocida avisa de que el vehículo ya está registrado',
+  await page.getByText(/Este vehículo ya está registrado/).isVisible().catch(() => false));
+
+await page.getByRole('button', { name: 'Usar este cliente' }).click();
+await page.waitForTimeout(400);
+check('el dueño del vehículo se puede adoptar con un toque',
+  (await page.getByLabel('Buscar cliente registrado').count()) === 0
+  && await page.getByText('Cliente Kanban').first().isVisible().catch(() => false));
+
+await page.keyboard.press('Escape');
+await page.waitForTimeout(500);
+check('cerrar sin registrar no deja rastro',
+  sql("select count(*) from work_orders") === '3',
+  sql("select count(*) from work_orders"));
 
 await browser.close();
 
