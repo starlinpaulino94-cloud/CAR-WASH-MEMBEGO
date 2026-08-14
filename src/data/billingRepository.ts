@@ -557,3 +557,111 @@ export async function fetchChargeableOrders(
   if (error) throw error;
   return (data ?? []) as unknown as ChargeableOrder[];
 }
+
+// ───────────────────────────────────────────── El canje de Membego
+
+/**
+ * Consumir el beneficio en Membego y dejarlo escrito en la factura.
+ *
+ * PRIMERO SE FACTURA, DESPUÉS SE CANJEA, y el orden no es casual. Son dos
+ * sistemas sin transacción común: uno de los pasos queda primero y el otro
+ * puede fallar, así que la pregunta real es quién paga ese error.
+ *
+ *   · Canjear primero — si falla la factura, el cliente perdió un lavado y no
+ *     tiene comprobante. Perdió él, y no tiene cómo enterarse.
+ *   · Facturar primero — si falla el canje, el cliente tiene su factura con el
+ *     lavado descontado y su lavado sigue en el saldo. Perdió el negocio, sabe
+ *     cuánto, y se puede reintentar.
+ *
+ * Un fallo NO se traga: se anota en la factura como `fallido` con su motivo.
+ * Una factura cubierta cuyo canje nadie confirmó es un hecho que hay que poder
+ * ver y reintentar.
+ */
+
+export interface ResultadoCanje {
+  ok: boolean;
+  visitId: string | null;
+  /** Lavados que le quedan al cliente. `null` en planes ilimitados. */
+  usesLeft: number | null;
+  /** Por qué falló, cuando falló. */
+  motivo: string | null;
+}
+
+export async function canjearEnMembego(params: {
+  invoiceId: string;
+  membershipId: string;
+  servicio: string;
+  coveredCents: number;
+  sucursalId?: string | null;
+}): Promise<ResultadoCanje> {
+  let visitId: string | null = null;
+  let usesLeft: number | null = null;
+  let motivo: string | null = null;
+
+  try {
+    const res = await fetch('/api/membego/canjear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoiceId: params.invoiceId,
+        membershipId: params.membershipId,
+        servicio: params.servicio,
+        sucursalId: params.sucursalId ?? null
+      })
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      visitId?: string; usesLeft?: number | null; message?: string; error?: string;
+    };
+    if (res.ok && body.visitId) {
+      visitId = body.visitId;
+      usesLeft = body.usesLeft ?? null;
+    } else {
+      motivo = body.message ?? body.error ?? `Membego respondió ${res.status}`;
+    }
+  } catch {
+    motivo = 'No se pudo contactar con Membego.';
+  }
+
+  // Se anota SIEMPRE, haya salido bien o mal. Un canje fallido sin rastro es
+  // una factura que dice «cubierto» y una membresía que nunca se enteró.
+  try {
+    await requireSupabase().rpc('record_membego_redemption', {
+      p_invoice_id: params.invoiceId,
+      p_visit_id: visitId,
+      p_membership_id: params.membershipId,
+      p_covered_cents: params.coveredCents,
+      p_error: motivo
+    });
+  } catch {
+    // Anotar es lo último y lo menos grave: el canje ya ocurrió (o no) en
+    // Membego, y eso es lo que decide el saldo del cliente.
+  }
+
+  return { ok: visitId !== null, visitId, usesLeft, motivo };
+}
+
+/**
+ * Devolverle el lavado al cliente al anular la factura.
+ *
+ * Revertir dos veces devuelve un lavado, no dos: Membego responde 200 con
+ * `applied: false` si ya estaba revertida, y eso es lo correcto ante un
+ * reintento tras un timeout.
+ */
+export async function revertirEnMembego(
+  invoiceId: string, visitId: string, motivo: string
+): Promise<{ ok: boolean; mensaje: string | null }> {
+  try {
+    const res = await fetch('/api/membego/revertir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId, reason: motivo })
+    });
+    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    if (!res.ok) return { ok: false, mensaje: body.message ?? body.error ?? 'Membego rechazó la reversa.' };
+
+    await requireSupabase().rpc('record_membego_reversal', { p_invoice_id: invoiceId });
+    return { ok: true, mensaje: null };
+  } catch {
+    return { ok: false, mensaje: 'No se pudo contactar con Membego.' };
+  }
+}

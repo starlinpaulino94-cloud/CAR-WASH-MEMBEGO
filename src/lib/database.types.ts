@@ -2679,6 +2679,20 @@ export interface Database {
         Args: { p_niveles: Json };
         Returns: Database['public']['Tables']['vehicle_category_levels']['Row'][];
       };
+      record_membego_redemption: {
+        Args: {
+          p_invoice_id: string;
+          p_visit_id: string | null;
+          p_membership_id: string | null;
+          p_covered_cents?: number;
+          p_error?: string | null;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      record_membego_reversal: {
+        Args: { p_invoice_id: string };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
       create_work_order: {
         Args: {
           p_branch_id: string;
