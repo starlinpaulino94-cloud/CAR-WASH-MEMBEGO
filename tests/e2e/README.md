@@ -40,7 +40,6 @@ debe:
 | Importación | La previsualización no escribe ni una fila y aun así clasifica cada una; al aplicar, el mismo teléfono escrito de dos formas no duplica al cliente, y el cajero no importa ni llamando al API |
 | Procedencia | La base sella de dónde vino cada cliente; el filtro pregunta al servidor; y vincular a Membego un cliente propio no lo cambia de canal, ni llamando al API |
 | Tema | El modo día aclara el lienzo de verdad y el de noche lo oscurece —se mide la luminancia, no que «cambie»—; la elección sobrevive a recargar y «como el sistema» devuelve la decisión al sistema operativo |
-| Membego | La pantalla declara que no consulta a Membego; el intento sí queda persistido |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
 pantalla: lo que importa es lo que quedó escrito.
