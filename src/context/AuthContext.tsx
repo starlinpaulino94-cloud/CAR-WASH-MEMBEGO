@@ -8,7 +8,7 @@ type Company = Tables<'companies'>;
 type Branch = Tables<'branches'>;
 
 export type AuthPhase =
-  | 'demo'            // Supabase sin configurar: la aplicación funciona en local
+  | 'unconfigured'    // Sin base de datos: la aplicación NO funciona, y lo dice
   | 'loading'
   | 'signed_out'
   | 'unprovisioned'   // autenticado pero sin empresa asignada: no ve nada
@@ -29,7 +29,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [phase, setPhase] = useState<AuthPhase>(isSupabaseConfigured ? 'loading' : 'demo');
+  const [phase, setPhase] = useState<AuthPhase>(isSupabaseConfigured ? 'loading' : 'unconfigured');
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * falta filtrar por company_id desde el cliente.
    */
   const loadContext = useCallback(async (activeSession: Session | null) => {
-    if (!supabase) { setPhase('demo'); return; }
+    if (!supabase) { setPhase('unconfigured'); return; }
 
     if (!activeSession) {
       setProfile(null); setCompany(null); setBranch(null);
