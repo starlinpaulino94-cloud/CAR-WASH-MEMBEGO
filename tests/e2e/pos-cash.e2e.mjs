@@ -44,9 +44,19 @@ await sidebarPos.waitFor({ timeout: 15000 }).catch(() => {});
 check('con credenciales válidas se entra a la aplicación',
   await sidebarPos.isVisible().catch(() => false));
 check('la barra muestra la identidad REAL, no un selector de rol',
-  (await page.locator('header').innerText()).includes('Cajero E2E')
-  && await page.getByLabel('Cerrar sesión').isVisible().catch(() => false),
+  (await page.locator('header').innerText()).includes('Cajero E2E'),
   (await page.locator('header').innerText()).replace(/\n/g, ' ').slice(0, 90));
+
+// El rol y la salida siguen ahí, a un clic: la barra dejó de gritarlos en
+// todas las pantallas, pero no se perdió nada.
+await page.locator('header').getByRole('button', { name: /Cuenta de/ }).click();
+await page.waitForTimeout(400);
+check('el menú de cuenta informa del rol y deja cerrar sesión',
+  (await page.getByRole('menu').innerText()).toLowerCase().includes('cajero')
+  && await page.getByRole('menuitem', { name: /Cerrar sesión/ }).isVisible().catch(() => false),
+  (await page.getByRole('menu').innerText()).replace(/\n/g, ' '));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 // -------------------------------------------------------------------- Caja
 console.log('\n[2] Caja — apertura');

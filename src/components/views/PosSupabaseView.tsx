@@ -488,38 +488,29 @@ export const PosSupabaseView: React.FC = () => {
             {branch?.name} · Cajero: <strong className="text-body">{profile?.full_name}</strong>
           </p>
         </div>
-        <div className={`text-xs px-3 py-1.5 rounded-xl border font-semibold ${
-          session
-            ? 'bg-success/40 border-success/40 text-success'
-            : 'bg-warning/40 border-warning/40 text-warning'
-        }`}>
-          {session
-            ? `Caja abierta · ${formatCents(session.expected_cash_cents, symbol)}`
-            : 'Caja cerrada'}
+        {/* Estado de la pantalla, todo en una fila y una línea por cosa.
+            La caja aparecía dos veces —esta insignia y un párrafo debajo— y lo
+            fiscal ocupaba tres renglones para decir que no hay NCF. Un aviso
+            permanente que hay que leer entero cada vez se deja de leer a la
+            segunda semana: dice lo justo, y el detalle está donde se arregla. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {!fiscal.ready && (
+            <span role="status" title="No hay rangos NCF cargados: se emiten recibos internos."
+              className="text-xs px-3 py-1.5 rounded-xl border border-line-strong bg-surface-2/60 text-body font-semibold">
+              Recibo interno · sin NCF
+            </span>
+          )}
+          <span role="status" className={`text-xs px-3 py-1.5 rounded-xl border font-semibold ${
+            session
+              ? 'bg-success/40 border-success/40 text-success'
+              : 'bg-warning/40 border-warning/40 text-warning'
+          }`}>
+            {session
+              ? `Caja abierta · ${formatCents(session.expected_cash_cents, symbol)}`
+              : 'Caja cerrada · sin efectivo'}
+          </span>
         </div>
       </div>
-
-      {!fiscal.ready && (
-        <div role="status" className="bg-surface-2/60 border border-line-strong rounded-xl px-4 py-3 text-xs text-body flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-muted" />
-          <span>
-            <strong>Modo recibo interno.</strong> Las ventas se cobran y registran con
-            normalidad (inventario y caja incluidos), pero <strong>sin comprobante fiscal
-            (NCF)</strong>. Si algún día cargas rangos NCF autorizados por la DGII, aquí
-            aparecerá la opción de emitir el comprobante fiscal.
-          </span>
-        </div>
-      )}
-
-      {!session && (
-        <div role="status" className="bg-warning/40 border border-warning/40 rounded-xl px-4 py-3 text-xs text-warning flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />
-          <span>
-            No hay una caja abierta en esta sucursal. Puede cobrar con tarjeta o transferencia,
-            pero <strong>no en efectivo</strong> hasta abrir el turno en Control de Caja.
-          </span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Catálogo */}

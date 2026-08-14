@@ -1,13 +1,26 @@
-import React, { useState } from 'react';
-import { Building2, User, Plus, LogOut, ExternalLink, Loader2, Menu } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { User, LogOut, ExternalLink, Loader2, Menu, Settings, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { supabase } from '../../lib/supabase';
-import { ThemeToggle } from '../common/ThemeToggle';
 
 // Portal de Membego (el hub de fidelización). Respaldo si el SSO no está
 // disponible (sesión demo, config pendiente, etc.).
 const MEMBEGO_URL = 'https://membego.com';
+
+/**
+ * Barra superior.
+ *
+ * Se dejó en lo que de verdad tiene que estar siempre a la vista: quién eres,
+ * dónde estás y la salida a Membego. Lo demás se fue a su sitio —el tema, a
+ * Configuración › Apariencia; «Nueva llegada», al módulo de Operaciones, donde
+ * ya existía el mismo botón—. La sucursal aparecía dos veces, bajo el nombre de
+ * la empresa y otra vez en una etiqueta al lado: se quedó una.
+ *
+ * El criterio: una cabecera es un sitio caro. Cada cosa que vive ahí compite
+ * por la atención con las demás, todo el día, en todas las pantallas. Un ajuste
+ * que se toca una vez no paga ese alquiler.
+ */
 
 export const Navbar: React.FC = () => {
   const { phase, profile, company: realCompany, branch: realBranch, signOut } = useAuth();
@@ -53,10 +66,30 @@ export const Navbar: React.FC = () => {
   };
 
 
+  // Menú de la cuenta. El rol y la sucursal siguen estando —hacen falta para
+  // saber con qué permisos se está trabajando— pero a un clic, no gritando
+  // desde la barra en todas las pantallas.
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const fuera = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuAbierto(false);
+    };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuAbierto(false); };
+    document.addEventListener('mousedown', fuera);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('mousedown', fuera);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [menuAbierto]);
+
   return (
-    <header className="bg-surface border-b border-line sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between text-strong">
-      {/* Brand & Branch */}
-      <div className="flex items-center gap-4">
+    <header className="bg-surface border-b border-line sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between gap-3 text-strong">
+      {/* Identidad del local */}
+      <div className="flex items-center gap-2.5 min-w-0">
         {/* Hamburguesa: abre el menú (drawer) en pantallas pequeñas. */}
         <button
           onClick={() => setDrawerOpen(true)}
@@ -66,72 +99,77 @@ export const Navbar: React.FC = () => {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-lg shadow-lg shadow-brand/30 text-strong">
-            M
-          </div>
-          <div>
-            <h1 className="font-bold text-[15px] tracking-tight">
-              {realCompany?.trade_name}
-            </h1>
-            {realBranch?.name && (
-              <p className="text-xs text-muted">{realBranch.name}</p>
-            )}
-          </div>
+        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-lg shadow-lg shadow-brand/30 text-strong">
+          M
         </div>
-
-        {/* Sucursal. Con sesión real es un dato del perfil, no algo elegible:
-            la sucursal la determina la asignación del usuario, y RLS la aplica. */}
-        <div className="hidden md:flex items-center gap-1.5 bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs text-body font-medium">
-          <Building2 className="w-3.5 h-3.5 text-muted" />
-          {realBranch?.name ?? 'Sin sucursal'}
+        <div className="min-w-0">
+          <h1 className="font-bold text-[15px] tracking-tight truncate">
+            {realCompany?.trade_name}
+          </h1>
+          {realBranch?.name && (
+            <p className="text-xs text-muted truncate">{realBranch.name}</p>
+          )}
         </div>
       </div>
 
-      {/* Center Actions */}
       <div className="flex items-center gap-2">
-        <ThemeToggle />
-
-        <button
-          onClick={() => navigate('/operaciones/ordenes')}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand to-accent hover:from-brand hover:to-accent text-strong font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all transform hover:scale-[1.02]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nueva Llegada</span>
-        </button>
-
-        {/* Acceso directo a Membego. Ámbar para que resalte y se distinga de la
-            acción principal (morada). Con sesión, entra logueado vía SSO. */}
+        {/* Lo único que queda: la salida a Membego. Con sesión, entra logueado
+            vía SSO; sin ella, al portal público. */}
         <button
           onClick={() => void irAMembego()}
           disabled={yendoMembego}
           title="Entrar a Membego (tu cuenta) en una pestaña nueva"
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-warning to-warning hover:from-warning hover:to-warning disabled:opacity-70 text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-warning/30 transition-all transform hover:scale-[1.02]"
+          className="flex items-center gap-2 px-4 py-2 bg-warning hover:bg-warning disabled:opacity-70 text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-warning/30 transition-colors"
         >
           {yendoMembego ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-          <span>Ir a Membego</span>
+          <span className="hidden sm:inline">Ir a Membego</span>
         </button>
-      </div>
 
-      {/* Right Controls: Identidad */}
-      <div className="flex items-center gap-3">
-        {/* Identidad. NO hay selector de usuario: cambiar de identidad exige
+        {/* Cuenta. NO hay selector de usuario: cambiar de identidad exige
             iniciar sesión. El desplegable que hubo aquí permitía convertirse en
-            propietario con dos clics (§7.1 de la auditoría). */}
-        <div className="flex items-center gap-2 bg-canvas border border-line rounded-xl px-2.5 py-1 text-xs">
-          <User className="w-3.5 h-3.5 text-brand" />
-          <span className="text-body font-medium max-w-[150px] truncate">
-            {profile?.full_name}
-          </span>
-          <span className="text-xs text-faint uppercase">{profile?.role}</span>
+            propietario con dos clics (§7.1 de la auditoría); este solo informa
+            y deja salir. */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={() => void signOut()}
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
-            className="p-1 text-muted hover:text-danger transition-colors"
+            onClick={() => setMenuAbierto(v => !v)}
+            aria-haspopup="menu"
+            aria-expanded={menuAbierto}
+            aria-label={`Cuenta de ${profile?.full_name ?? 'usuario'}`}
+            className="flex items-center gap-1.5 bg-canvas border border-line hover:border-line-strong rounded-xl px-2.5 py-1.5 text-xs transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <User className="w-4 h-4 text-brand flex-shrink-0" />
+            <span className="text-body font-medium max-w-[130px] truncate hidden sm:inline">
+              {profile?.full_name}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-muted transition-transform ${menuAbierto ? 'rotate-180' : ''}`} />
           </button>
+
+          {menuAbierto && (
+            <div role="menu"
+              className="absolute right-0 mt-2 w-60 bg-surface border border-line rounded-xl shadow-2xl overflow-hidden">
+              <div className="px-3 py-2.5 border-b border-line">
+                <p className="font-bold text-sm text-strong truncate">{profile?.full_name}</p>
+                <p className="text-xs text-muted capitalize">
+                  {profile?.role}
+                  {realBranch?.name && <> · {realBranch.name}</>}
+                </p>
+              </div>
+              <button
+                role="menuitem"
+                onClick={() => { setMenuAbierto(false); navigate('/configuracion/apariencia'); }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-body hover:bg-surface-2 transition-colors"
+              >
+                <Settings className="w-4 h-4 text-muted" /> Apariencia y ajustes
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => void signOut()}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-danger hover:bg-danger/10 border-t border-line transition-colors"
+              >
+                <LogOut className="w-4 h-4" /> Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

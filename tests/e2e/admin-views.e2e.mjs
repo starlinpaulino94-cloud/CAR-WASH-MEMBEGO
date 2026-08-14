@@ -817,17 +817,28 @@ check('la procedencia no se reescribe ni llamando al API directamente',
 
 
 // --- [16] Modo día y modo noche.
+// El tema dejó de vivir en la barra superior: es una preferencia que se elige
+// una vez, y ahora está donde están los ajustes.
+await go(page, /^Configuración/, /^Apariencia/);
+
+check('el tema se elige desde Configuración › Apariencia',
+  await page.getByRole('radiogroup', { name: 'Tema de la interfaz' }).isVisible().catch(() => false));
+check('la barra superior ya no lleva el selector de tema',
+  (await page.locator('header').getByRole('button', { name: /Modo noche|Como el sistema/ }).count()) === 0);
+check('la barra superior conserva la salida a Membego',
+  await page.locator('header').getByRole('button', { name: /Ir a Membego/ }).isVisible().catch(() => false));
+
 const fondo = () => page.evaluate(() =>
   getComputedStyle(document.body).backgroundColor);
 
 // El navegador de ensayo arranca con preferencia de sistema CLARA, así que la
 // noche hay que pedirla: dar por supuesto el punto de partida haría que la
 // comparación de abajo pasara sin comparar nada.
-await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.getByRole('radio', { name: 'Noche' }).click();
 await page.waitForTimeout(600);
 const fondoNoche = await fondo();
 
-await page.getByRole('button', { name: 'Modo día' }).click();
+await page.getByRole('radio', { name: 'Día' }).click();
 await page.waitForTimeout(600);
 const fondoDia = await fondo();
 
@@ -853,13 +864,13 @@ check('la preferencia se recuerda al recargar',
   (await fondo()) === fondoDia, await fondo());
 
 // «Como el sistema» quita el atributo para que mande el sistema operativo.
-await page.getByRole('button', { name: 'Como el sistema' }).click();
+await page.getByRole('radio', { name: 'Como el sistema' }).click();
 await page.waitForTimeout(600);
 check('«como el sistema» devuelve la decisión al sistema operativo',
   (await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === null);
 
 // El ticket se imprime en papel: su blanco NO sigue al tema.
-await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.getByRole('radio', { name: 'Noche' }).click();
 await page.waitForTimeout(600);
 check('el modo noche vuelve a oscurecer',
   luminancia(await fondo()) < 0.2, await fondo());
