@@ -9,20 +9,63 @@ import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, Hel
  * una con sus propias variaciones y ninguna con estados de carga (§14.2).
  */
 
+/**
+ * Encabezado de una vista.
+ *
+ * El título ya no se pinta: lo dice la pestaña activa, que está justo encima,
+ * resaltada y subrayada. Escribirlo otra vez en cuerpo 24 era gastar el
+ * elemento más grande de la pantalla en repetir lo que el usuario acaba de
+ * pulsar. Lo que queda es lo que aporta: el contexto (sucursal, rango, estado)
+ * y los botones de la vista.
+ *
+ * Pero el título SIGUE en el documento, en `sr-only`. Sin un encabezado, quien
+ * navega con lector de pantalla se queda sin forma de saber en qué página está
+ * ni de saltar al contenido: la pestaña es un enlace, no un título. Lo que se
+ * quita es el tamaño, no la estructura.
+ *
+ * `prominent` lo devuelve a la vista para el caso en que el título NO repite
+ * nada —el saludo del panel de inicio, que la pestaña «Resumen» no dice—.
+ */
 export const ViewHeader: React.FC<{
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
-}> = ({ icon, title, subtitle, actions }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-4">
-    <div>
-      <h2 className="text-2xl font-bold text-strong flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
-      {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
+  /** Pinta el título en grande. Solo cuando no lo repite ninguna pestaña. */
+  prominent?: boolean;
+}> = ({ icon, title, subtitle, actions, prominent = false }) => {
+  // Sin subtítulo, sin acciones y sin título visible no hay fila que pintar:
+  // una franja vacía con su línea de abajo es peor que nada.
+  if (!prominent && !subtitle && !actions) {
+    return <h2 className="sr-only">{title}</h2>;
+  }
+
+  // La línea de separación solo se pinta cuando hay algo que separar. Sin
+  // subtítulo, la fila son unos botones sueltos: subrayarlos deja una franja
+  // vacía que parece un encabezado al que se le olvidó el texto.
+  const conSeparador = prominent || Boolean(subtitle);
+
+  return (
+    <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+      conSeparador ? 'border-b border-line pb-3' : ''
+    }`}>
+      {prominent ? (
+        <div>
+          <h2 className="text-2xl font-bold text-strong flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
+          {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
+        </div>
+      ) : (
+        <>
+          <h2 className="sr-only">{title}</h2>
+          {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+        </>
+      )}
+      {actions && (
+        <div className="flex items-center gap-2 self-start sm:self-auto sm:ml-auto">{actions}</div>
+      )}
     </div>
-    {actions && <div className="flex items-center gap-2 self-start sm:self-auto">{actions}</div>}
-  </div>
-);
+  );
+};
 
 export const ErrorState: React.FC<{ message: string; onRetry: () => void; title?: string }> = ({
   message, onRetry, title = 'No se pudieron cargar los datos'
