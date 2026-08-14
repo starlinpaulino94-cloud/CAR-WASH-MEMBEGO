@@ -30,11 +30,14 @@ interface ServiceOption {
 /**
  * Registro de llegada.
  *
- * Versión sobre Supabase del asistente de nueva llegada. Deja fuera, de
- * momento, la verificación de beneficios Membego: esa integración sigue siendo
- * un simulador en el cliente y migrarla exige resolver antes su contrato real
- * (§6.2 de la auditoría). Lo que sí hace —crear cliente, vehículo, orden y
- * líneas— ocurre en una sola transacción del servidor.
+ * Versión sobre Supabase del asistente de nueva llegada. Deja fuera el canje de
+ * beneficios Membego: las membresías y promociones ENTRAN solas por webhook y se
+ * pueden consultar, pero aplicarlas a una venta exige avisar a Membego de que se
+ * consumieron, y ese contrato no lo tenemos. Antes eso lo tapaba un simulador en
+ * el cliente; se retiró, porque fingir la respuesta del proveedor no acerca la
+ * integración, solo esconde que falta. Lo que sí hace esta pantalla —crear
+ * cliente, vehículo, orden y líneas— ocurre en una sola transacción del
+ * servidor.
  */
 export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated }) => {
   const { branch, company } = useAuth();

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Loader2, Save, BadgeCheck, Link2 } from 'lucide-react';
+import { Settings, Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
@@ -7,6 +7,7 @@ import {
   updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
+import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
 
 /**
  * Configuración de la empresa.
@@ -42,6 +43,10 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [membegoBusy, setMembegoBusy] = useState(false);
   const [membegoError, setMembegoError] = useState<string | null>(null);
   const [membegoNotice, setMembegoNotice] = useState<string | null>(null);
+  // Bitácora de sincronización. Vivía en una pantalla aparte que solo existía
+  // para alimentar un simulador; el simulador se fue y esto, que sí es real, se
+  // queda donde tiene sentido: al lado del vínculo que lo produce.
+  const [membegoLogs, setMembegoLogs] = useState<MembegoSyncLog[]>([]);
 
   useEffect(() => {
     if (!company) return;
@@ -58,6 +63,9 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     fetchMembegoLink()
       .then(link => { setMembegoLink(link); if (link) setMembegoInput(link.membegoCompanyId); })
       .catch(() => { /* no bloquea la vista */ });
+    fetchMembegoLogs(25)
+      .then(setMembegoLogs)
+      .catch(() => { /* la bitácora es accesoria: no tumba los ajustes */ });
   }, [canManageMembego]);
 
   const linkMembego = async () => {
@@ -235,6 +243,41 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               El <span className="font-mono">companyId</span> te lo da Membego. Vincula esta empresa para que
               sus clientes, membresías y promociones entren solo aquí.
             </p>
+          </div>
+
+          {/* Bitácora. Es lo que permite diagnosticar por qué un cliente de
+              Membego no apareció: registra CADA intento, no solo los que
+              salieron bien, con la hora y el actor que pone el servidor. */}
+          <div className="space-y-2 pt-2 border-t border-line">
+            <h4 className="font-bold text-strong text-xs flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-muted" /> Últimos eventos recibidos
+            </h4>
+            {membegoLogs.length === 0 ? (
+              <p className="text-xs text-faint italic py-2">
+                Todavía no ha llegado ningún evento de Membego.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                {membegoLogs.map(log => (
+                  <article key={log.id} className="p-2.5 bg-canvas rounded-lg border border-line text-xs space-y-1">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold text-brand-hi">{log.action}</span>
+                      <span className={`px-1.5 py-0.5 rounded font-bold ${
+                        log.status === 'success'
+                          ? 'bg-success/20 text-success'
+                          : 'bg-danger/20 text-danger'
+                      }`}>
+                        {log.status}
+                      </span>
+                    </div>
+                    {log.error_message && <p className="text-danger/90">{log.error_message}</p>}
+                    <div className="text-faint">
+                      {new Date(log.occurred_at).toLocaleString('es-DO')}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}

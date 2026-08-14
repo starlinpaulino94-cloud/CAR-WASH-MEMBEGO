@@ -1,7 +1,7 @@
 /**
  * Ensayo de extremo a extremo de las vistas restantes: panel, clientes,
  * vehículos, servicios, productos, equipo, gastos, bahías, reportes, ajustes y
- * el hub de Membego.
+ * los ajustes de Membego.
  *
  * Requiere `tests/e2e/reset.sh`, el proxy en el 3002 y la aplicación en el 4174.
  */
@@ -142,9 +142,9 @@ await go(page, /^Personal/);
 check('el cajero solo ve sus propias comisiones',
   await page.getByText(/solo permite ver sus propias comisiones/).isVisible().catch(() => false));
 
-// El hub de Membego se retiró del menú para la operación real (sigue siendo un
-// simulador). La persistencia de membego_sync_logs se cubre en las pruebas SQL
-// (40_admin_tests.sql), no por la interfaz.
+// El banco de pruebas de Membego se retiró junto con su simulador. Lo real que
+// tenía —la bitácora de sincronización— vive ahora en Configuración › Membego, y
+// su persistencia se cubre en las pruebas SQL (40_admin_tests.sql).
 
 await ctx.close();
 
