@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { DollarSign, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -107,7 +107,6 @@ export const ExpensesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<DollarSign className="w-5 h-5 text-brand" />}
         title="Gastos operativos"
         subtitle={session
           ? `Caja abierta · ${formatCents(session.expected_cash_cents, symbol)} en gaveta`

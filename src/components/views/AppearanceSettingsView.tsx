@@ -1,5 +1,5 @@
 import React from 'react';
-import { Palette, Sun, Moon, Monitor, Check } from 'lucide-react';
+import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import { useTheme, ThemeChoice } from '../../context/ThemeContext';
 import { ViewHeader } from '../common/DataViewShell';
 
@@ -49,7 +49,6 @@ export const AppearanceSettingsView: React.FC = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Palette className="w-5 h-5 text-brand" />}
         title="Apariencia"
         subtitle="Tema de la pantalla. Se guarda en este equipo, no para toda la empresa."
       />

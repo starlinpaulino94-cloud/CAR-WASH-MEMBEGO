@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, ShieldCheck, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
@@ -63,7 +63,7 @@ export const ReportsSupabaseView: React.FC = () => {
   if (!canSee) {
     return (
       <div className="p-6 max-w-2xl mx-auto space-y-4">
-        <ViewHeader icon={<BarChart3 className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Reportes y auditoría" />
         <ReadOnlyNotice>
           Su rol no permite consultar la bitácora de auditoría. La restricción la aplica la
@@ -78,7 +78,6 @@ export const ReportsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<BarChart3 className="w-5 h-5 text-brand" />}
         title="Reportes y auditoría"
         subtitle={`${branch?.name} · registro de solo inserción`}
         actions={<FilterChips options={RANGES} value={range} onChange={setRange} />}

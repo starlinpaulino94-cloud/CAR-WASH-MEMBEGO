@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LogIn, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { LogoLockup } from '../common/Logo';
 
 /**
  * Puerta de acceso.
@@ -41,12 +42,12 @@ export const LoginView: React.FC = () => {
   return (
     <div className="min-h-screen bg-canvas text-strong flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand to-accent flex items-center justify-center font-black text-2xl shadow-lg shadow-brand/30 mx-auto">
-            M
-          </div>
-          <h1 className="text-xl font-bold text-strong">Membego Car Wash</h1>
-          <p className="text-xs text-muted">Acceso al sistema operacional</p>
+        {/* La marca completa, con lema. Es el único sitio de la aplicación donde
+            la marca ES el contenido: aquí todavía no hay nada que hacer más que
+            reconocer dónde se está entrando. En el resto basta el símbolo. */}
+        <div className="space-y-3">
+          <LogoLockup />
+          <h1 className="sr-only">MembeGo Car Wash · acceso al sistema</h1>
         </div>
 
         <form

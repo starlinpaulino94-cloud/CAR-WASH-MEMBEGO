@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, Pencil, AlertTriangle, Plus } from 'lucide-react';
+import { Pencil, AlertTriangle, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -123,7 +123,6 @@ export const ProductsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Package className="w-5 h-5 text-brand" />}
         title="Productos e insumos"
         subtitle="Existencias, costo y precio de venta"
         actions={

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { TrendingUp, Download, Loader2 } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
@@ -132,7 +132,7 @@ export const SalesReportSupabaseView: React.FC = () => {
   if (phase !== 'ready' || !allowed) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<TrendingUp className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Ventas" subtitle="Reporte comercial del periodo" />
         <ReadOnlyNotice>
           {phase !== 'ready'
@@ -148,7 +148,6 @@ export const SalesReportSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<TrendingUp className="w-5 h-5 text-brand" />}
         title="Ventas"
         subtitle="Qué se vendió, quién lo vendió y cómo se cobró"
         actions={report ? (

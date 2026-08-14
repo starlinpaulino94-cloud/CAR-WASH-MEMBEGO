@@ -144,7 +144,7 @@ export const EquipmentSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Wrench className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Equipos" subtitle="Activos y su mantenimiento" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -159,7 +159,6 @@ export const EquipmentSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Wrench className="w-5 h-5 text-brand" />}
         title="Equipos"
         subtitle="Serie, garantía, próxima revisión y costo acumulado de mantenimiento"
         actions={canManage ? (

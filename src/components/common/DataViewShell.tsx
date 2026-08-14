@@ -23,43 +23,28 @@ import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, Hel
  * ni de saltar al contenido: la pestaña es un enlace, no un título. Lo que se
  * quita es el tamaño, no la estructura.
  *
- * `prominent` lo devuelve a la vista para el caso en que el título NO repite
- * nada —el saludo del panel de inicio, que la pestaña «Resumen» no dice—.
+ * Ya no queda ninguna excepción: el saludo del panel de inicio era la última y
+ * también se fue. Sin título visible, el icono que lo acompañaba tampoco tiene
+ * a qué acompañar, así que se retiró de la firma.
  */
 export const ViewHeader: React.FC<{
-  icon: React.ReactNode;
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
-  /** Pinta el título en grande. Solo cuando no lo repite ninguna pestaña. */
-  prominent?: boolean;
-}> = ({ icon, title, subtitle, actions, prominent = false }) => {
-  // Sin subtítulo, sin acciones y sin título visible no hay fila que pintar:
-  // una franja vacía con su línea de abajo es peor que nada.
-  if (!prominent && !subtitle && !actions) {
-    return <h2 className="sr-only">{title}</h2>;
-  }
+}> = ({ title, subtitle, actions }) => {
+  // Sin subtítulo y sin acciones no hay fila que pintar: una franja vacía con
+  // su línea de abajo es peor que nada.
+  if (!subtitle && !actions) return <h2 className="sr-only">{title}</h2>;
 
   // La línea de separación solo se pinta cuando hay algo que separar. Sin
   // subtítulo, la fila son unos botones sueltos: subrayarlos deja una franja
   // vacía que parece un encabezado al que se le olvidó el texto.
-  const conSeparador = prominent || Boolean(subtitle);
-
   return (
     <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-      conSeparador ? 'border-b border-line pb-3' : ''
+      subtitle ? 'border-b border-line pb-3' : ''
     }`}>
-      {prominent ? (
-        <div>
-          <h2 className="text-2xl font-bold text-strong flex items-center gap-2.5 tracking-tight">{icon} {title}</h2>
-          {subtitle && <p className="text-sm text-muted mt-0.5">{subtitle}</p>}
-        </div>
-      ) : (
-        <>
-          <h2 className="sr-only">{title}</h2>
-          {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
-        </>
-      )}
+      <h2 className="sr-only">{title}</h2>
+      {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
       {actions && (
         <div className="flex items-center gap-2 self-start sm:self-auto sm:ml-auto">{actions}</div>
       )}

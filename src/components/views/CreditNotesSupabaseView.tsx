@@ -122,7 +122,7 @@ export const CreditNotesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileMinus className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Notas de crédito" subtitle="Corregir un renglón sin tumbar la factura" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -137,7 +137,6 @@ export const CreditNotesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<FileMinus className="w-5 h-5 text-brand" />}
         title="Notas de crédito"
         subtitle="Acredita renglones concretos; la factura solo se anula si se acredita entera"
         actions={canManage ? (

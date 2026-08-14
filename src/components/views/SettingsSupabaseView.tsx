@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
+import { Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
@@ -126,7 +126,6 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Settings className="w-5 h-5 text-brand" />}
         title={header.title}
         subtitle={header.subtitle}
       />

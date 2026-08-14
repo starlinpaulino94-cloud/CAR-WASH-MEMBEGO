@@ -101,7 +101,7 @@ export const AlertsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Bell className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Avisos" subtitle="Al cliente y al negocio" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -120,7 +120,6 @@ export const AlertsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Bell className="w-5 h-5 text-brand" />}
         title="Avisos"
         subtitle="Lo que hay que decirle a alguien: al cliente o a usted mismo"
         actions={canRefresh ? (

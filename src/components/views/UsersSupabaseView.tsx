@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, KeyRound } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can, outranks } from '../../lib/auth';
 import {
@@ -103,7 +103,7 @@ export const UsersSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Usuarios y roles" subtitle="Quién entra y qué puede hacer" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -131,7 +131,6 @@ export const UsersSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShieldCheck className="w-5 h-5 text-brand" />}
         title="Usuarios y roles"
         subtitle="Quién entra y qué puede hacer. El alta de personal vive en Personal › Empleados"
       />

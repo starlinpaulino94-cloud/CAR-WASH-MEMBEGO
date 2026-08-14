@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 16 72 62" fill="none">
+  <!--
+    Símbolo de MembeGo Car Wash para el favicon y para cuando se comparte el
+    enlace. Es la versión SIMPLE —solo la M y el carro— porque una pestaña de
+    navegador mide 16 píxeles: el agua y los brillos ahí no se leen, solo
+    ensucian el contorno.
+
+    Misma geometría que `simple` en src/components/common/Logo.tsx. Si se
+    cambia una, hay que cambiar la otra.
+  -->
+  <defs>
+    <linearGradient id="mg" x1="20" y1="18" x2="82" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="45%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#14C79A"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M24 56V24l26 21 26-21v32" stroke="url(#mg)" stroke-width="11"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M31 73v-3.2c0-1.5.5-2.9 1.5-4l5-5.6c1.3-1.5 3.2-2.4 5.2-2.4h14.6c2 0 3.9.9 5.2 2.4l5 5.6c1 1.1 1.5 2.5 1.5 4V73"
+        stroke="url(#mg)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

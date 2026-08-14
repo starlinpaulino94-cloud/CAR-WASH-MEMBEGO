@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Fingerprint, LogIn, LogOut } from 'lucide-react';
+import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { RANGES, RangeId, rangeDates } from '../../lib/reportRanges';
 import {
@@ -86,7 +86,7 @@ export const AttendanceSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Fingerprint className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Asistencia" subtitle="Entrada, salida y tardanzas" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -105,7 +105,6 @@ export const AttendanceSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Fingerprint className="w-5 h-5 text-brand" />}
         title="Asistencia"
         subtitle="Lo que de verdad pasó; Horarios dice lo que estaba planificado"
       />

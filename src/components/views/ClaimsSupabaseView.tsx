@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { MessageSquareWarning, Plus, Loader2, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
+import { Plus, Loader2, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -151,7 +151,7 @@ export const ClaimsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<MessageSquareWarning className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Reclamos" subtitle="Incidentes y su resolución" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -165,7 +165,6 @@ export const ClaimsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<MessageSquareWarning className="w-5 h-5 text-brand" />}
         title="Reclamos"
         subtitle="Qué reclamó el cliente, cómo se resolvió y cuánto costó"
         actions={canOpen ? (

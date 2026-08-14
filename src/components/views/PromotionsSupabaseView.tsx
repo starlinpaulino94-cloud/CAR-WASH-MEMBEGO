@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Tag, Plus, ShieldAlert } from 'lucide-react';
+import { Plus, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
 import { fetchServicesWithPrices, ServiceWithPrices } from '../../data/adminRepository';
@@ -181,7 +181,7 @@ export const PromotionsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Tag className="w-5 h-5 text-brand" />}
+        <ViewHeader
           title="Descuentos" subtitle="Promociones con reglas, no rebajas a dedo" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -199,7 +199,6 @@ export const PromotionsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Tag className="w-5 h-5 text-brand" />}
         title="Descuentos"
         subtitle="Promociones con reglas, no rebajas a dedo"
         actions={
