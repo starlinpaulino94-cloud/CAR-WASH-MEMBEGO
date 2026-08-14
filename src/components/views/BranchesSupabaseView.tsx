@@ -7,7 +7,7 @@ import {
 } from '../../data/branchRepository';
 import { fetchStaff, Profile } from '../../data/payrollRepository';
 import {
-  ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, SkeletonRows, EmptyRow
+  ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, SkeletonRows, EmptyRow, HelpNote
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 
@@ -222,16 +222,14 @@ export const BranchesSupabaseView: React.FC = () => {
             <Users className="w-4 h-4 text-brand" />
             <h2 className="text-base font-bold text-strong">Quién ve qué</h2>
           </header>
-          <p className="text-xs text-faint">
-            Con alcance «todas», la separación no existe para esa persona: ve la caja
-            y las órdenes de todos los locales. Al limitar a una sucursal, deja de ver
-            —y de poder crear— nada fuera de ella. El catálogo y el directorio de
-            clientes siguen siendo de la empresa: se buscan desde cualquier mostrador.
-          </p>
-          <p className="text-xs text-faint">
-            Nadie puede cambiar su propio alcance, ni el propietario. Es siempre una
-            decisión sobre otra persona.
-          </p>
+          <HelpNote summary="Qué cambia según el alcance">
+            Con «todas», la separación no existe para esa persona: ve la caja y las
+            órdenes de todos los locales. Al limitar a una sucursal, deja de ver —y de
+            poder crear— nada fuera de ella. El catálogo y el directorio de clientes
+            siguen siendo de la empresa: se buscan desde cualquier mostrador. Nadie
+            puede cambiar su propio alcance, ni el propietario: es siempre una decisión
+            sobre otra persona.
+          </HelpNote>
           <ul className="divide-y divide-line/60">
             {staff.map(p => (
               <li key={p.id} className="py-2.5 flex items-center justify-between gap-3">

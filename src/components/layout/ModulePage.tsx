@@ -14,7 +14,15 @@ import { DEFAULT_PATH, pathFor, visibleItems } from '../../lib/navigation';
  * navegación secundaria, sin duplicar encabezados.
  */
 
-const Breadcrumb: React.FC = () => {
+/**
+ * Ruta de navegación.
+ *
+ * El último escalón —el submódulo— solo se escribe cuando NO hay pestañas.
+ * Cuando las hay, la pestaña activa está justo debajo, subrayada y en negrita:
+ * repetirla en la miga era decir lo mismo dos veces con dos centímetros de
+ * separación, y en módulos como Clientes salía «Clientes › Clientes».
+ */
+const Breadcrumb: React.FC<{ conPestañas: boolean }> = ({ conPestañas }) => {
   const { mod, sub, navigate } = useNavigation();
   return (
     <nav aria-label="Ruta de navegación" className="flex items-center gap-1.5 text-sm min-w-0">
@@ -27,22 +35,28 @@ const Breadcrumb: React.FC = () => {
         <Home className="w-4 h-4" />
       </a>
       <ChevronRight className="w-4 h-4 text-faint shrink-0" />
-      <a
-        href={`/${mod.pathId}`}
-        onClick={e => { e.preventDefault(); navigate(`/${mod.pathId}`); }}
-        className="text-muted hover:text-strong font-medium truncate"
-      >
-        {mod.label}
-      </a>
-      <ChevronRight className="w-4 h-4 text-faint shrink-0" />
-      <span className="text-strong font-semibold truncate" aria-current="page">{sub.label}</span>
+      {conPestañas ? (
+        <span className="text-strong font-semibold truncate">{mod.label}</span>
+      ) : (
+        <>
+          <a
+            href={`/${mod.pathId}`}
+            onClick={e => { e.preventDefault(); navigate(`/${mod.pathId}`); }}
+            className="text-muted hover:text-strong font-medium truncate"
+          >
+            {mod.label}
+          </a>
+          <ChevronRight className="w-4 h-4 text-faint shrink-0" />
+          <span className="text-strong font-semibold truncate" aria-current="page">{sub.label}</span>
+        </>
+      )}
     </nav>
   );
 };
 
 const SubModuleTabs: React.FC = () => {
   const { mod, sub, navigate } = useNavigation();
-  const { profile, phase } = useAuth();
+  const { profile } = useAuth();
   const { count: liveQueueCount } = useQueueCount();
 
   const queueCount = liveQueueCount;
@@ -116,14 +130,18 @@ export const ComingSoon: React.FC = () => {
 };
 
 export const ModulePage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { sub } = useNavigation();
+  const { mod, sub } = useNavigation();
+  const { profile } = useAuth();
+  const conPestañas = visibleItems(profile, mod).length > 1;
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex-shrink-0 bg-canvas/95 backdrop-blur border-b border-line px-6 pt-4">
-        <Breadcrumb />
-        <div className="mt-2">
-          <SubModuleTabs />
-        </div>
+      <div className="flex-shrink-0 bg-canvas/95 backdrop-blur border-b border-line px-6 pt-3">
+        <Breadcrumb conPestañas={conPestañas} />
+        {conPestañas && (
+          <div className="mt-1.5">
+            <SubModuleTabs />
+          </div>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto min-h-0">
         {sub.pronto ? <ComingSoon /> : children}

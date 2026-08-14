@@ -8,8 +8,7 @@ import {
   Customer, CustomerMembego, CustomerOrigin, CustomerOriginSummary
 } from '../../data/adminRepository';
 import {
-  ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert,
-  FilterChips
+  ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert, FilterChips, HelpNote
 } from '../common/DataViewShell';
 import { MembegoCustomerModal } from '../modals/MembegoCustomerModal';
 import { ExportButton } from '../common/ExportButton';
@@ -105,7 +104,10 @@ export const CustomersSupabaseView: React.FC = () => {
       <ViewHeader
         icon={<Users className="w-5 h-5 text-brand" />}
         title="Directorio de clientes"
-        subtitle="Separados por procedencia: los que trajo el car wash y los que llegaron por Membego"
+        // Sin subtítulo a propósito: decía «separados por procedencia, los del
+        // car wash y los de Membego» justo encima de las dos tarjetas que ya
+        // dicen «Del car wash» y «De Membego» con sus cifras. Rotular lo que
+        // se ve dos centímetros más abajo no informa, estorba.
         actions={
           <>
             <ExportButton {...customersExport()} />
@@ -149,12 +151,12 @@ export const CustomersSupabaseView: React.FC = () => {
         })}
       </div>
 
-      <p className="text-xs text-faint -mt-2">
-        La procedencia es de dónde vino el cliente y no cambia nunca. Si uno
-        propio se hace miembro de Membego después, sigue contando como del car
-        wash y se le ve el distintivo de Membego en su columna: una cosa es
-        quién lo trajo y otra qué tiene hoy.
-      </p>
+      <HelpNote summary="Cómo se fija la procedencia">
+        Es de dónde vino el cliente y no cambia nunca. Si uno propio se hace
+        miembro de Membego después, sigue contando como del car wash y se le ve
+        el distintivo de Membego en su columna: una cosa es quién lo trajo y
+        otra qué tiene hoy.
+      </HelpNote>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">

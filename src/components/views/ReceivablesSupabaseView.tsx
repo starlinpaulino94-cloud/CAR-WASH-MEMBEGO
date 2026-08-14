@@ -11,8 +11,7 @@ import {
   ReceivableRow, Customer, Aging, PaymentMethod
 } from '../../data/creditRepository';
 import {
-  ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
-  InlineAlert, ReadOnlyNotice, FilterChips, StatCard
+  ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert, ReadOnlyNotice, FilterChips, StatCard, HelpNote
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { ExportButton } from '../common/ExportButton';
@@ -330,10 +329,10 @@ export const ReceivablesSupabaseView: React.FC = () => {
               Autorizar crédito
             </button>
           </header>
-          <p className="text-xs text-faint">
-            El cupo solo se cambia aquí: ningún otro camino puede tocarlo. Un cliente
-            con facturas vencidas queda bloqueado hasta que se ponga al día.
-          </p>
+          <HelpNote summary="Cómo funciona el cupo">
+            Solo se cambia aquí: ningún otro camino puede tocarlo. Un cliente con
+            facturas vencidas queda bloqueado hasta que se ponga al día.
+          </HelpNote>
           {creditCustomers.length === 0 ? (
             <p className="text-xs text-muted">
               Todavía no hay clientes autorizados a comprar a crédito.

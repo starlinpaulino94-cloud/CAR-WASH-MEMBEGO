@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**220 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
+**221 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
 `orders-kanban`, `admin-views` y `flujo-completo`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
@@ -43,6 +43,7 @@ debe:
 | Procedencia | La base sella de dónde vino cada cliente; el filtro pregunta al servidor; y vincular a Membego un cliente propio no lo cambia de canal, ni llamando al API |
 | Tema | Se elige en Configuración › Apariencia, no desde la barra superior; el modo día aclara el lienzo de verdad y el de noche lo oscurece —se mide la luminancia, no que «cambie»—; la elección sobrevive a recargar y «como el sistema» devuelve la decisión al sistema operativo |
 | Barra superior | Solo lleva el local, «Ir a Membego» y la cuenta; el rol y la salida siguen a un clic, en el menú de cuenta |
+| Ruta de navegación | Con pestañas, la miga no repite el submódulo que la pestaña activa ya nombra dos centímetros más abajo |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
 pantalla: lo que importa es lo que quedó escrito.

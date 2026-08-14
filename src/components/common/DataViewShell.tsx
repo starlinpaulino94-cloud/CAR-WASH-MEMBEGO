@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, HelpCircle } from 'lucide-react';
 
 /**
  * Piezas compartidas de los listados.
@@ -162,4 +162,29 @@ export const ReadOnlyNotice: React.FC<{ children: React.ReactNode }> = ({ childr
   <div role="status" className="bg-warning/40 border border-warning/40 rounded-xl px-4 py-3 text-sm text-warning">
     {children}
   </div>
+);
+
+/**
+ * Explicación plegada.
+ *
+ * Varias listas llevaban al pie un párrafo que explicaba una regla del negocio
+ * —cómo se fija la procedencia, qué descuenta el margen, por dónde se cambia un
+ * cupo—. Son ciertos y hacen falta la primera vez; a partir de la segunda son
+ * ruido permanente que el ojo aprende a saltarse, y de paso enseña a saltarse
+ * también los avisos que sí importan.
+ *
+ * Plegado se ve un renglón; desplegado, el texto entero. No se borra nada: se
+ * deja de cobrar el sitio todos los días por algo que se lee una vez.
+ */
+export const HelpNote: React.FC<{ summary: string; children: React.ReactNode }> = ({
+  summary, children
+}) => (
+  <details className="group">
+    <summary className="cursor-pointer list-none inline-flex items-center gap-1.5 text-xs text-muted hover:text-strong transition-colors">
+      <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+      <span className="underline decoration-dotted underline-offset-2">{summary}</span>
+      <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+    </summary>
+    <p className="mt-2 text-xs text-faint max-w-2xl leading-relaxed">{children}</p>
+  </details>
 );

@@ -828,6 +828,16 @@ check('la barra superior ya no lleva el selector de tema',
 check('la barra superior conserva la salida a Membego',
   await page.locator('header').getByRole('button', { name: /Ir a Membego/ }).isVisible().catch(() => false));
 
+// La miga ya no repite lo que dice la pestaña activa dos centímetros más abajo.
+const miga = await page.getByRole('navigation', { name: 'Ruta de navegación' }).innerText();
+check('la miga no repite el submódulo cuando hay pestañas',
+  !miga.includes('Apariencia') && miga.includes('Configuración'),
+  miga.replace(/\n/g, ' '));
+
+// (El caso sin pestañas —cuando los permisos dejan un solo submódulo visible—
+//  sí escribe el submódulo en la miga; no se ensaya aquí porque con este
+//  usuario todos los módulos tienen más de uno.)
+
 const fondo = () => page.evaluate(() =>
   getComputedStyle(document.body).backgroundColor);
 
