@@ -97,7 +97,7 @@ await page.waitForTimeout(400);
 // El servicio del catálogo que se le va a hacer.
 const chipServicio = dlg.getByRole('button', { name: /Lavado/ }).first();
 if (await chipServicio.count()) await chipServicio.click();
-const campoCliente = dlg.getByLabel(/Cliente|Nombre/i).first();
+const campoCliente = dlg.getByLabel('Cliente nuevo').first();
 if (await campoCliente.count()) await campoCliente.fill('Cliente Del Flujo');
 await page.waitForTimeout(300);
 await dlg.getByRole('button', { name: /Registrar|Guardar|Crear/ }).last().click();

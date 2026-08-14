@@ -196,6 +196,103 @@ export async function fetchServicesForCategory(category: VehicleCategory) {
   });
 }
 
+// ------------------------------------------------- Reconocer al que ya vino
+
+/**
+ * Ficha resumida de cliente, con lo justo para reconocerlo en el mostrador.
+ *
+ * No se trae la fila entera: la recepción solo necesita saber a quién está
+ * mirando —nombre, teléfono, de dónde viene, cuántas veces ha venido y si tiene
+ * crédito—. Traer columnas que no se pintan es tráfico y es exponer datos del
+ * cliente sin motivo.
+ */
+export interface CustomerMatch {
+  id: string;
+  name: string;
+  phone: string | null;
+  origin: Enums['customer_origin'];
+  membego_status: 'active' | 'inactive' | 'none';
+  total_visits: number;
+  credit_enabled: boolean;
+}
+
+const CAMPOS_CLIENTE = 'id, name, phone, origin, membego_status, total_visits, credit_enabled';
+
+/**
+ * Busca clientes ya registrados por nombre o teléfono.
+ *
+ * Se exigen dos caracteres porque con uno el resultado es «media empresa» y no
+ * ayuda a nadie. El orden es por última visita: quien vino ayer es mucho más
+ * probable que sea el que está delante del mostrador que uno de hace dos años.
+ * RLS acota a la empresa; aquí no hace falta filtrar por `company_id`.
+ */
+export async function searchCustomers(term: string, limit = 8): Promise<CustomerMatch[]> {
+  const t = term.trim();
+  if (t.length < 2) return [];
+  const escaped = t.replace(/[%,()]/g, '');
+
+  const { data, error } = await requireSupabase()
+    .from('customers')
+    .select(CAMPOS_CLIENTE)
+    .or(`name.ilike.%${escaped}%,phone.ilike.%${escaped}%`)
+    .order('last_visit_at', { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as CustomerMatch[];
+}
+
+export interface VehicleMatch {
+  id: string;
+  plate: string;
+  make: string;
+  model: string;
+  color: string;
+  category: VehicleCategory;
+  /** Dueño registrado, si el vehículo ya tiene uno. */
+  customer: CustomerMatch | null;
+}
+
+/** La placa se guarda normalizada; hay que buscar con la misma forma. */
+export const normalizePlate = (plate: string) =>
+  plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/**
+ * Busca el vehículo por placa, con su dueño si lo tiene.
+ *
+ * La placa es única por empresa, así que un acierto es el mismo carro físico
+ * que ya vino antes. Se hacen dos consultas en vez de un `embed`: hay dos
+ * claves foráneas hacia `customers` desde `vehicles` y pedirle a PostgREST que
+ * adivine cuál es la del enlace es frágil.
+ */
+export async function lookupVehicleByPlate(plate: string): Promise<VehicleMatch | null> {
+  const p = normalizePlate(plate);
+  if (p.length < 4) return null;
+
+  const supabase = requireSupabase();
+  const { data: v, error } = await supabase
+    .from('vehicles')
+    .select('id, plate, make, model, color, category, customer_id')
+    .eq('plate', p)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!v) return null;
+
+  let customer: CustomerMatch | null = null;
+  if (v.customer_id) {
+    const { data: c, error: e2 } = await supabase
+      .from('customers').select(CAMPOS_CLIENTE).eq('id', v.customer_id).maybeSingle();
+    if (e2) throw e2;
+    customer = (c as CustomerMatch | null) ?? null;
+  }
+
+  return {
+    id: v.id, plate: v.plate, make: v.make, model: v.model, color: v.color,
+    category: v.category as VehicleCategory, customer
+  };
+}
+
 // --------------------------------------------------------------- Mutaciones
 
 export interface CreateOrderParams {
@@ -205,6 +302,12 @@ export interface CreateOrderParams {
   category: VehicleCategory;
   services: { serviceId: string; name: string; quantity: number }[];
   customerName: string | null;
+  /**
+   * Ficha ya existente. Cuando viene, el servidor NO crea cliente nuevo: enlaza
+   * la orden a esa ficha y le asigna el vehículo si estaba huérfano. Es la
+   * diferencia entre un directorio con un «Juan Pérez» y uno con nueve.
+   */
+  customerId?: string | null;
   customerPhone?: string | null;
   make?: string;
   model?: string;
@@ -224,6 +327,7 @@ export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOr
       discount_cents: 0, is_membego_covered: false
     })),
     p_customer_name: params.customerName ?? undefined,
+    p_customer_id: params.customerId ?? null,
     p_customer_phone: params.customerPhone ?? null,
     p_vehicle_make: params.make ?? '',
     p_vehicle_model: params.model ?? '',
