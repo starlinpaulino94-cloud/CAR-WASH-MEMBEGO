@@ -3,9 +3,11 @@ import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History } 
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import {
-  createWorkOrder, fetchServicesForCategory, lookupVehicleByPlate, normalizePlate,
-  searchCustomers, CustomerMatch, VehicleCategory, VehicleMatch, WorkOrder
+  createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
+import {
+  lookupVehicleByPlate, normalizePlate, searchCustomers, CustomerMatch, VehicleMatch
+} from '../../data/customersRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
   { id: 'sedan', label: 'Sedán' },

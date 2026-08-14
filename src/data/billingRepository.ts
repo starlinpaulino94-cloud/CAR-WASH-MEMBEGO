@@ -199,6 +199,12 @@ export async function registerCashMovement(params: {
 // -------------------------------------------------------- Beneficios Membego
 
 export interface MembegoBenefitSummary {
+  /**
+   * La ficha, no solo su nombre. Sin el identificador el hallazgo se quedaba en
+   * un cartel informativo: la factura salía con el nombre escrito y sin enlace,
+   * así que ni contaba como visita suya ni se le podía fiar.
+   */
+  customerId: string;
   customerName: string;
   tier: string | null;
   activeMemberships: number;
@@ -232,6 +238,7 @@ export async function lookupMembegoByPhone(phone: string): Promise<MembegoBenefi
   if (p.error) throw p.error;
 
   return {
+    customerId: cust.id,
     customerName: cust.name,
     tier: cust.membego_tier,
     activeMemberships: m.count ?? 0,

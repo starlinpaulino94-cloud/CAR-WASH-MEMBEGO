@@ -3,7 +3,7 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**208 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
+**216 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
 `orders-kanban`, `admin-views` y `flujo-completo`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
@@ -22,6 +22,7 @@ debe:
 | Diálogos | `role="dialog"`, cierre con Escape y foco atrapado |
 | Órdenes | Registro de llegada con placa normalizada por el servidor; filtros y búsqueda en la base |
 | Cliente que vuelve | La segunda visita se enlaza a la ficha que ya existía y **no** la duplica; la placa conocida reconoce el vehículo y propone a su dueño |
+| Cliente en la caja | Una venta de mostrador, sin orden de por medio, queda enlazada a la **ficha** del cliente; con cupo autorizado se puede fiar, y lo fiado abre cuenta por cobrar sin pasar por la gaveta |
 | Bahías | Iniciar lavado exige elegir bahía; la ocupada desaparece de las opciones y se libera al salir |
 | Estados | Solo se ofrecen transiciones válidas, y la base rechaza un salto inválido aunque se llame al API |
 | Comisiones | Se generan al entregar, con la tasa del operario asignado |

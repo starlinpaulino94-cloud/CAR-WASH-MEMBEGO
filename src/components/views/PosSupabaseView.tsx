@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Building,
-  Landmark, ClipboardList, X as XIcon,
+  Landmark, ClipboardList, X as XIcon, Search, UserCheck,
   CheckCircle2, Loader2, AlertCircle, RefreshCw, Receipt, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,7 @@ import {
   FiscalStatus, MembegoBenefitSummary
 } from '../../data/billingRepository';
 import { fetchCreditStatus, CreditStatus } from '../../data/creditRepository';
+import { fetchCustomerById, searchCustomers, CustomerMatch } from '../../data/customersRepository';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
   { id: 'sedan', label: 'Sedán' },
@@ -87,6 +88,15 @@ export const PosSupabaseView: React.FC = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [credito, setCredito] = useState<CreditStatus | null>(null);
 
+  // --- Cliente ya registrado, para la venta de mostrador
+  // Antes la ficha solo podía llegar por una orden. En una venta suelta el campo
+  // «Cliente» era texto que no enlazaba con nada: la factura no entraba en su
+  // historial y fiar era imposible aunque tuviera cupo autorizado.
+  const [cliente, setCliente] = useState<CustomerMatch | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [resultados, setResultados] = useState<CustomerMatch[]>([]);
+  const [buscando, setBuscando] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
@@ -97,6 +107,48 @@ export const PosSupabaseView: React.FC = () => {
   const [membegoBusy, setMembegoBusy] = useState(false);
   const [membegoSearched, setMembegoSearched] = useState(false);
 
+  /**
+   * Trae la ficha al cobro.
+   *
+   * Lo que importa no es el nombre —eso ya se escribía— sino el enlace: con él
+   * la factura entra en el historial del cliente, cuenta como visita suya y,
+   * si tiene cupo autorizado, se le puede fiar. El cupo se consulta aquí para
+   * poder explicar por qué el botón de crédito está o no disponible.
+   */
+  const elegirCliente = useCallback(async (c: CustomerMatch) => {
+    setCliente(c);
+    setCustomerId(c.id);
+    setCustomerName(c.name);
+    setBusqueda('');
+    setResultados([]);
+    setCredito(null);
+    try { setCredito(await fetchCreditStatus(c.id)); } catch { setCredito(null); }
+  }, []);
+
+  const soltarCliente = useCallback(() => {
+    setCliente(null);
+    setCustomerId(null);
+    setCredito(null);
+    setCustomerName('');
+    if (method === 'credito') setMethod('efectivo');
+  }, [method]);
+
+  // Búsqueda con espera, para no consultar por cada letra tecleada.
+  useEffect(() => {
+    if (cliente || orden || busqueda.trim().length < 2) {
+      setResultados([]); setBuscando(false); return;
+    }
+    let active = true;
+    setBuscando(true);
+    const t = setTimeout(() => {
+      searchCustomers(busqueda)
+        .then(rows => { if (active) setResultados(rows); })
+        .catch(() => { if (active) setResultados([]); })
+        .finally(() => { if (active) setBuscando(false); });
+    }, 300);
+    return () => { active = false; clearTimeout(t); };
+  }, [busqueda, cliente, orden]);
+
   const checkMembego = async () => {
     if (!membegoPhone.trim() || membegoBusy) return;
     setMembegoBusy(true);
@@ -104,7 +156,15 @@ export const PosSupabaseView: React.FC = () => {
     try {
       const s = await lookupMembegoByPhone(membegoPhone);
       setMembegoSummary(s);
-      if (s) setCustomerName(s.customerName);
+      // Encontrarlo y quedarse solo con el nombre era desperdiciar el hallazgo:
+      // se adopta la ficha entera, igual que si se hubiera elegido a mano.
+      if (s && !orden) {
+        const ficha = await fetchCustomerById(s.customerId);
+        if (ficha) await elegirCliente(ficha);
+        else setCustomerName(s.customerName);
+      } else if (s) {
+        setCustomerName(s.customerName);
+      }
     } catch {
       setMembegoSummary(null);
     } finally {
@@ -185,6 +245,11 @@ export const PosSupabaseView: React.FC = () => {
     ensureRequestId();
     setOrden(o);
     setCategory(o.vehicle_category);
+    // Manda la orden: el cliente es el que recibió el vehículo, no el que
+    // estuviera elegido en el mostrador. Dos fuentes para el mismo dato acaban
+    // discrepando, y la que vale es la que firmó la llegada.
+    setCliente(null);
+    setBusqueda('');
     setCustomerId(o.customer_id);
     setCustomerName(o.customer_name ?? '');
     setVehiclePlate(o.vehicle_plate ?? '');
@@ -209,6 +274,7 @@ export const PosSupabaseView: React.FC = () => {
 
   const soltarOrden = () => {
     setOrden(null);
+    setCliente(null);
     setCustomerId(null);
     setCredito(null);
     setLines([]);
@@ -309,7 +375,7 @@ export const PosSupabaseView: React.FC = () => {
   // va a fallar, y explicar por qué.
   const creditoDisponible = credito?.available_cents ?? 0;
   const motivoSinCredito =
-    !customerId                 ? 'Elija una orden con cliente para poder fiar'
+    !customerId                 ? 'Elija el cliente (o una orden con cliente) para poder fiar'
     : !credito?.credit_enabled  ? 'Este cliente no tiene crédito autorizado'
     : credito.blocked           ? 'Tiene facturas vencidas: el crédito está cortado'
     : creditoDisponible < preview.total
@@ -354,6 +420,7 @@ export const PosSupabaseView: React.FC = () => {
       setLastInvoice(invoice);
       // La orden acaba de dejar de estar pendiente: fuera del panel.
       setOrden(null); setCustomerId(null); setCredito(null);
+      setCliente(null); setBusqueda(''); setResultados([]);
       void cargarOrdenes();
       // La venta terminó: a partir de aquí, la siguiente es otra operación.
       requestIdRef.current = null;
@@ -626,14 +693,93 @@ export const PosSupabaseView: React.FC = () => {
             </details>
           )}
 
+          {/* ------------------------------------------------- Cliente
+              Sin ficha, la venta se cobra igual pero no entra en el historial
+              de nadie y no se puede fiar. El buscador es lo que convierte un
+              nombre escrito en un cliente de verdad. La orden, cuando la hay,
+              ya trae el suyo: entonces esto no se ofrece. */}
+          {cliente ? (
+            <div className="bg-brand-soft/40 border border-brand/40 rounded-xl p-3 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-bold text-strong text-sm flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-brand-hi flex-shrink-0" />
+                  <span className="truncate">{cliente.name}</span>
+                </div>
+                <div className="text-xs text-muted">
+                  {cliente.phone || 'Sin teléfono'} · {cliente.total_visits}{' '}
+                  {cliente.total_visits === 1 ? 'visita' : 'visitas'}
+                  {cliente.origin === 'membego' && <> · de Membego</>}
+                </div>
+                {credito?.credit_enabled && (
+                  <div className={`text-xs font-bold mt-0.5 ${credito.blocked ? 'text-warning' : 'text-success'}`}>
+                    {credito.blocked
+                      ? 'Crédito cortado: tiene facturas vencidas'
+                      : `Cupo disponible ${formatCents(creditoDisponible, symbol)}`}
+                  </div>
+                )}
+              </div>
+              <button onClick={soltarCliente} aria-label="Quitar el cliente y cobrar sin ficha"
+                className="p-1 text-muted hover:text-strong flex-shrink-0">
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+          ) : !orden && (
+            <div className="space-y-1.5">
+              <label htmlFor="pos-cliente-buscar" className="sr-only">Buscar cliente registrado</label>
+              <div className="relative">
+                <Search className="w-4 h-4 text-faint absolute left-2.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+                <input
+                  id="pos-cliente-buscar" type="search" value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar cliente registrado por nombre o teléfono…"
+                  autoComplete="off"
+                  className="w-full bg-canvas border border-line rounded-lg pl-8 pr-2 py-2 text-xs text-strong placeholder-faint"
+                />
+              </div>
+              <div aria-live="polite" className="space-y-1.5 max-h-44 overflow-y-auto">
+                {buscando && (
+                  <p className="text-xs text-faint italic py-1">Buscando…</p>
+                )}
+                {!buscando && busqueda.trim().length >= 2 && resultados.length === 0 && (
+                  <p className="text-xs text-faint italic py-1">
+                    Ningún cliente coincide. Puede cobrar poniendo solo el nombre.
+                  </p>
+                )}
+                {resultados.map(c => (
+                  <button key={c.id} onClick={() => void elegirCliente(c)}
+                    className="w-full text-left p-2 bg-surface border border-line hover:border-brand/50 rounded-lg flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block font-bold text-sm text-strong truncate">{c.name}</span>
+                      <span className="block text-xs text-muted truncate">
+                        {c.phone || 'Sin teléfono'} · {c.total_visits}{' '}
+                        {c.total_visits === 1 ? 'visita' : 'visitas'}
+                      </span>
+                    </span>
+                    {c.credit_enabled && (
+                      <span className="px-1.5 py-0.5 rounded bg-info/15 border border-info/40 text-info text-xs font-bold whitespace-nowrap">
+                        Crédito
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label htmlFor="pos-cust" className="text-xs font-semibold text-muted uppercase">Cliente</label>
+              {/* Con un buscador de clientes justo encima, un campo llamado
+                  «Cliente» no se distingue de él. Y este es literalmente lo que
+                  se imprime en el comprobante. */}
+              <label htmlFor="pos-cust" className="text-xs font-semibold text-muted uppercase">
+                Nombre en la factura
+              </label>
               <input
                 id="pos-cust" type="text" value={customerName}
                 onChange={e => setCustomerName(e.target.value)}
+                disabled={cliente !== null}
                 placeholder="Consumidor Final"
-                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong placeholder-faint"
+                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong placeholder-faint disabled:opacity-60"
               />
             </div>
             <div>
