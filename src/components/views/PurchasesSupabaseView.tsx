@@ -147,7 +147,7 @@ export const PurchasesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShoppingCart className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<ShoppingCart className="w-5 h-5 text-brand" />}
           title="Compras" subtitle="Compras a proveedores y cuentas por pagar" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -161,12 +161,12 @@ export const PurchasesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShoppingCart className="w-5 h-5 text-indigo-400" />}
+        icon={<ShoppingCart className="w-5 h-5 text-brand" />}
         title="Compras"
         subtitle="Cada compra entra el inventario; el crédito queda como cuenta por pagar"
         actions={canManage ? (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva compra
           </button>
         ) : undefined}
@@ -182,12 +182,12 @@ export const PurchasesSupabaseView: React.FC = () => {
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} />
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Compras a proveedores</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">FECHA</th>
                 <th scope="col" className="p-3 font-semibold">PROVEEDOR</th>
                 <th scope="col" className="p-3 font-semibold text-right">TOTAL</th>
@@ -197,7 +197,7 @@ export const PurchasesSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={canManage ? 7 : 6} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 7 : 6}>
@@ -209,34 +209,34 @@ export const PurchasesSupabaseView: React.FC = () => {
                   const saldo = p.total_cents - p.paid_cents;
                   const overdue = saldo > 0 && p.due_date !== null && p.due_date < today;
                   return (
-                    <tr key={p.id} className="hover:bg-slate-800/40">
-                      <td className="p-3 text-slate-400 whitespace-nowrap">
+                    <tr key={p.id} className="hover:bg-surface-2/40">
+                      <td className="p-3 text-muted whitespace-nowrap">
                         {new Date(p.purchase_date + 'T00:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })}
                       </td>
                       <td className="p-3">
-                        <div className="font-bold text-white">{p.suppliers?.name ?? '—'}</div>
-                        {p.invoice_ref && <div className="text-xs text-slate-500">{p.invoice_ref}</div>}
+                        <div className="font-bold text-strong">{p.suppliers?.name ?? '—'}</div>
+                        {p.invoice_ref && <div className="text-xs text-faint">{p.invoice_ref}</div>}
                       </td>
-                      <td className="p-3 text-right font-bold text-white whitespace-nowrap">
+                      <td className="p-3 text-right font-bold text-strong whitespace-nowrap">
                         {formatCents(p.total_cents, symbol)}
                       </td>
                       <td className={`p-3 text-right font-extrabold whitespace-nowrap ${
-                        saldo > 0 ? 'text-amber-300' : 'text-emerald-400'
+                        saldo > 0 ? 'text-warning' : 'text-success'
                       }`}>
                         {formatCents(saldo, symbol)}
                       </td>
-                      <td className="p-3 text-slate-400 whitespace-nowrap">
+                      <td className="p-3 text-muted whitespace-nowrap">
                         {p.due_date
                           ? new Date(p.due_date + 'T00:00:00').toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })
                           : '—'}
                       </td>
                       <td className="p-3">
                         {saldo === 0 ? (
-                          <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Pagada</span>
+                          <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Pagada</span>
                         ) : overdue ? (
-                          <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs">Vencida</span>
+                          <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Vencida</span>
                         ) : (
-                          <span className="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-xs">Por pagar</span>
+                          <span className="bg-warning/20 text-warning font-bold px-2 py-0.5 rounded text-xs">Por pagar</span>
                         )}
                       </td>
                       {canManage && (
@@ -244,7 +244,7 @@ export const PurchasesSupabaseView: React.FC = () => {
                           {saldo > 0 && (
                             <button
                               onClick={() => { setPaying(p); setPayAmount(''); setPayRef(''); setError(null); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                               <HandCoins className="w-3.5 h-3.5" /> Abonar
                             </button>
                           )}
@@ -286,7 +286,7 @@ export const PurchasesSupabaseView: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <span className="text-sm font-semibold text-slate-400 uppercase">Renglones</span>
+            <span className="text-sm font-semibold text-muted uppercase">Renglones</span>
             {items.map((it, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <select aria-label={`Producto del renglón ${i + 1}`} className={`${textInputClass} flex-1`}
@@ -302,21 +302,21 @@ export const PurchasesSupabaseView: React.FC = () => {
                   onChange={e => setItem(i, { cost: e.target.value })} />
                 <button type="button" aria-label={`Quitar renglón ${i + 1}`}
                   onClick={() => setItems(list => list.length > 1 ? list.filter((_, idx) => idx !== i) : list)}
-                  className="p-2 text-slate-500 hover:text-rose-400">
+                  className="p-2 text-faint hover:text-danger">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
             <button type="button"
               onClick={() => setItems(list => [...list, { productId: '', qty: '1', cost: '' }])}
-              className="text-xs font-bold text-indigo-400 hover:text-indigo-300">
+              className="text-xs font-bold text-brand hover:text-brand-hi">
               + Añadir renglón
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3 items-end">
-            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-              <input type="checkbox" checked={isCredit} className="accent-indigo-600"
+            <label className="flex items-center gap-2 text-sm text-body cursor-pointer">
+              <input type="checkbox" checked={isCredit} className="accent-brand"
                 onChange={e => setIsCredit(e.target.checked)} />
               A crédito (cuenta por pagar)
             </label>
@@ -347,9 +347,9 @@ export const PurchasesSupabaseView: React.FC = () => {
           onClose={() => setPaying(null)}
           onDismissError={() => setError(null)}
         >
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Saldo pendiente:{' '}
-            <strong className="text-amber-300 tabular-nums">
+            <strong className="text-warning tabular-nums">
               {formatCents(paying.total_cents - paying.paid_cents, symbol)}
             </strong>
             {paying.due_date && <> · vence el {new Date(paying.due_date + 'T00:00:00').toLocaleDateString('es-DO')}</>}

@@ -3,8 +3,8 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**157 comprobaciones** en cuatro ensayos (`pos-cash`, `invoices`,
-`orders-kanban` y `admin-views`).
+**199 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
+`orders-kanban`, `admin-views` y `flujo-completo`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 
@@ -38,6 +38,8 @@ debe:
 | Flotillas | La tarifa pactada gana al catálogo sin descuentos a mano; el vehículo entra a la flotilla y la orden queda sellada con ella |
 | Crédito | El cupo solo se autoriza por su RPC; lo fiado abre cuenta por cobrar y **no entra a la caja**; el abono se guarda en centavos con su forma de pago |
 | Importación | La previsualización no escribe ni una fila y aun así clasifica cada una; al aplicar, el mismo teléfono escrito de dos formas no duplica al cliente, y el cajero no importa ni llamando al API |
+| Procedencia | La base sella de dónde vino cada cliente; el filtro pregunta al servidor; y vincular a Membego un cliente propio no lo cambia de canal, ni llamando al API |
+| Tema | El modo día aclara el lienzo de verdad y el de noche lo oscurece —se mide la luminancia, no que «cambie»—; la elección sobrevive a recargar y «como el sistema» devuelve la decisión al sistema operativo |
 | Membego | La pantalla declara que no consulta a Membego; el intento sí queda persistido |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
@@ -76,3 +78,21 @@ node tests/e2e/admin-views.e2e.mjs   # ídem
 firmados en `/auth/v1/token` y reenvío de `/rest/v1/**` a PostgREST. No es un
 sustituto de Supabase ni forma parte de la aplicación; existe para poder
 verificar sin depender de la red.
+
+## El recorrido completo — `flujo-completo.e2e.mjs`
+
+Los otros cuatro ensayos prueban módulos. Este prueba el **negocio**: hace el
+viaje entero por la interfaz real, en orden —llega el cliente, se registra la
+placa, se asigna bahía y operario, se lava, control de calidad, aviso al
+cliente, cobro, entrega, reimpresión— y después de cada paso pregunta a
+PostgreSQL qué quedó escrito.
+
+Existe porque un sistema puede tener todas sus piezas funcionando y aun así no
+servir: basta con que dos de ellas no se hablen.
+
+**30 de 30 pasan.** Cuando se escribió, cinco fallaban, y todas por lo mismo:
+el punto de venta no sabía nada de las órdenes de trabajo. `create_invoice`
+aceptaba `p_work_order_id` desde la 0008 y desde la 0028 lo usaba para decidir
+si la orden quedaba pagada, pendiente o parcial — pero la aplicación nunca se lo
+pasaba. Ahora Ventas › Punto de venta trae la orden al cobro, y con ella el
+comprobante queda atado al lavado y a la ficha del cliente.

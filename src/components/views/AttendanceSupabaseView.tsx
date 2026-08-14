@@ -86,7 +86,7 @@ export const AttendanceSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Fingerprint className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Fingerprint className="w-5 h-5 text-brand" />}
           title="Asistencia" subtitle="Entrada, salida y tardanzas" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -105,7 +105,7 @@ export const AttendanceSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Fingerprint className="w-5 h-5 text-indigo-400" />}
+        icon={<Fingerprint className="w-5 h-5 text-brand" />}
         title="Asistencia"
         subtitle="Lo que de verdad pasó; Horarios dice lo que estaba planificado"
       />
@@ -115,10 +115,10 @@ export const AttendanceSupabaseView: React.FC = () => {
 
       {/* Marcaje propio: es lo primero que busca quien entra a esta pantalla. */}
       <section aria-label="Mi jornada"
-        className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+        className="bg-surface/80 border border-line rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold text-white">Mi jornada</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-base font-bold text-strong">Mi jornada</h2>
+          <p className="text-xs text-faint">
             {open
               ? `Abierta desde las ${hhmm(open.checked_in_at)}${open.late_minutes > 0 ? ` · ${open.late_minutes} min de retraso` : ''}`
               : 'Sin jornada abierta.'}
@@ -126,12 +126,12 @@ export const AttendanceSupabaseView: React.FC = () => {
         </div>
         {open ? (
           <button onClick={() => void marcar(false)} disabled={busy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 bg-warning hover:bg-warning text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
             <LogOut className="w-4 h-4" /> Marcar salida
           </button>
         ) : (
           <button onClick={() => void marcar(true)} disabled={busy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
             <LogIn className="w-4 h-4" /> Marcar entrada
           </button>
         )}
@@ -144,7 +144,7 @@ export const AttendanceSupabaseView: React.FC = () => {
         <StatCard label="Horas trabajadas" value={duracion(totalMin)}
           hint="Base del pago por hora" />
         <StatCard label="Llegadas tarde" value={String(tarde)}
-          tone={tarde > 0 ? 'text-amber-400' : undefined}
+          tone={tarde > 0 ? 'text-warning' : undefined}
           hint="Medidas contra el turno" />
       </div>
 
@@ -152,12 +152,12 @@ export const AttendanceSupabaseView: React.FC = () => {
         <ReadOnlyNotice>Su rol solo permite ver sus propios marcajes.</ReadOnlyNotice>
       )}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Marcajes del periodo</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">EMPLEADO</th>
                 <th scope="col" className="p-3 font-semibold">DÍA</th>
                 <th scope="col" className="p-3 font-semibold">ENTRADA</th>
@@ -166,27 +166,27 @@ export const AttendanceSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold text-right">RETRASO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={6} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={6}>No hay marcajes en este periodo.</EmptyRow>
                 ) : rows.map(r => (
-                  <tr key={r.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-bold text-white">{r.full_name}</td>
-                    <td className="p-3 text-slate-400 tabular-nums">{fecha(r.checked_in_at)}</td>
-                    <td className="p-3 text-slate-300 tabular-nums">{hhmm(r.checked_in_at)}</td>
-                    <td className="p-3 text-slate-300 tabular-nums">
+                  <tr key={r.id} className="hover:bg-surface-2/40">
+                    <td className="p-3 font-bold text-strong">{r.full_name}</td>
+                    <td className="p-3 text-muted tabular-nums">{fecha(r.checked_in_at)}</td>
+                    <td className="p-3 text-body tabular-nums">{hhmm(r.checked_in_at)}</td>
+                    <td className="p-3 text-body tabular-nums">
                       {r.checked_out_at
                         ? hhmm(r.checked_out_at)
-                        : <span className="text-emerald-400 font-bold">en curso</span>}
+                        : <span className="text-success font-bold">en curso</span>}
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">
+                    <td className="p-3 text-right text-body tabular-nums">
                       {duracion(r.worked_minutes)}
                     </td>
                     <td className="p-3 text-right tabular-nums">
                       {r.late_minutes > 0
-                        ? <span className="text-amber-400 font-bold">{r.late_minutes} min</span>
-                        : <span className="text-slate-500">—</span>}
+                        ? <span className="text-warning font-bold">{r.late_minutes} min</span>
+                        : <span className="text-faint">—</span>}
                     </td>
                   </tr>
                 ))}

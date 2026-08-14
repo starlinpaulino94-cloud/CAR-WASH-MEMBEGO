@@ -139,15 +139,15 @@ export const PosView: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex items-center justify-between border-b border-line pb-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-indigo-400" /> Punto de Venta Tactil (POS)
+          <h2 className="text-xl font-bold text-strong flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-brand" /> Punto de Venta Tactil (POS)
           </h2>
-          <p className="text-xs text-slate-400">Facturación rápida de servicios, paquetes y productos en caja</p>
+          <p className="text-xs text-muted">Facturación rápida de servicios, paquetes y productos en caja</p>
         </div>
-        <div className="text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-slate-300">
-          Cajero: <strong className="text-white">{currentUser.name}</strong>
+        <div className="text-xs bg-surface border border-line px-3 py-1.5 rounded-xl text-body">
+          Cajero: <strong className="text-strong">{currentUser.name}</strong>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export const PosView: React.FC = () => {
         <div className="lg:col-span-7 space-y-5">
           {/* Category Bar */}
           <div className="space-y-2">
-            <label className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+            <label className="text-xs font-extrabold text-muted uppercase tracking-wider">
               1. Seleccionar Categoría de Vehículo
             </label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -174,8 +174,8 @@ export const PosView: React.FC = () => {
                   onClick={() => setCategory(cat.id as VehicleCategory)}
                   className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                     category === cat.id
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                      : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
+                      ? 'bg-brand text-on-accent shadow-lg shadow-brand/30'
+                      : 'bg-surface text-muted border border-line hover:border-line-strong'
                   }`}
                 >
                   {cat.label}
@@ -185,11 +185,11 @@ export const PosView: React.FC = () => {
           </div>
 
           {/* Type Toggle: Services vs Products */}
-          <div className="flex border-b border-slate-800 gap-4 text-xs font-bold">
+          <div className="flex border-b border-line gap-4 text-xs font-bold">
             <button
               onClick={() => setActiveTabType('services')}
               className={`pb-2 border-b-2 transition-colors ${
-                activeTabType === 'services' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-500'
+                activeTabType === 'services' ? 'border-brand text-brand' : 'border-transparent text-faint'
               }`}
             >
               Catálogo de Servicios
@@ -197,7 +197,7 @@ export const PosView: React.FC = () => {
             <button
               onClick={() => setActiveTabType('products')}
               className={`pb-2 border-b-2 transition-colors ${
-                activeTabType === 'products' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-500'
+                activeTabType === 'products' ? 'border-brand text-brand' : 'border-transparent text-faint'
               }`}
             >
               Productos e Insumos
@@ -213,13 +213,13 @@ export const PosView: React.FC = () => {
                   <div
                     key={s.id}
                     onClick={() => handleAddServiceToCart(s)}
-                    className="p-3.5 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl cursor-pointer transition-all space-y-1.5"
+                    className="p-3.5 bg-surface border border-line hover:border-brand/50 rounded-xl cursor-pointer transition-all space-y-1.5"
                   >
-                    <div className="flex justify-between font-bold text-xs text-white">
+                    <div className="flex justify-between font-bold text-xs text-strong">
                       <span>{s.name}</span>
-                      <span className="text-indigo-400 font-extrabold">{company.currencySymbol} {price.toLocaleString()}</span>
+                      <span className="text-brand font-extrabold">{company.currencySymbol} {price.toLocaleString()}</span>
                     </div>
-                    <p className="text-xs text-slate-400 line-clamp-2">{s.description}</p>
+                    <p className="text-xs text-muted line-clamp-2">{s.description}</p>
                   </div>
                 );
               })
@@ -228,13 +228,13 @@ export const PosView: React.FC = () => {
                 <div
                   key={p.id}
                   onClick={() => handleAddProductToCart(p)}
-                  className="p-3.5 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-xl cursor-pointer transition-all space-y-1.5"
+                  className="p-3.5 bg-surface border border-line hover:border-brand/50 rounded-xl cursor-pointer transition-all space-y-1.5"
                 >
-                  <div className="flex justify-between font-bold text-xs text-white">
+                  <div className="flex justify-between font-bold text-xs text-strong">
                     <span>{p.name}</span>
-                    <span className="text-indigo-400 font-extrabold">{company.currencySymbol} {p.price.toLocaleString()}</span>
+                    <span className="text-brand font-extrabold">{company.currencySymbol} {p.price.toLocaleString()}</span>
                   </div>
-                  <div className="text-xs text-slate-400">Stock disponible: {p.stock} {p.unit}</div>
+                  <div className="text-xs text-muted">Stock disponible: {p.stock} {p.unit}</div>
                 </div>
               ))
             )}
@@ -242,11 +242,11 @@ export const PosView: React.FC = () => {
         </div>
 
         {/* Right Checkout & Cart Area */}
-        <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-surface/90 border border-line rounded-2xl p-5 space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-sm">Resumen de Venta / Carrito</h3>
-              <span className="text-xs bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded font-bold">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-bold text-strong text-sm">Resumen de Venta / Carrito</h3>
+              <span className="text-xs bg-brand-soft text-brand-hi px-2 py-0.5 rounded font-bold">
                 {cartItems.length} ítems
               </span>
             </div>
@@ -254,21 +254,21 @@ export const PosView: React.FC = () => {
             {/* Customer Inputs */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase">Cliente</label>
+                <label className="text-xs font-semibold text-muted uppercase">Cliente</label>
                 <input
                   type="text"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                  className="w-full bg-canvas border border-line rounded-lg p-2 text-strong"
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-400 uppercase">Placa</label>
+                <label className="text-xs font-semibold text-muted uppercase">Placa</label>
                 <input
                   type="text"
                   value={vehiclePlate}
                   onChange={e => setVehiclePlate(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white uppercase font-bold"
+                  className="w-full bg-canvas border border-line rounded-lg p-2 text-strong uppercase font-bold"
                 />
               </div>
             </div>
@@ -276,22 +276,22 @@ export const PosView: React.FC = () => {
             {/* Cart Items List */}
             <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {cartItems.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-500 italic">El carrito está vacío</div>
+                <div className="text-center py-8 text-xs text-faint italic">El carrito está vacío</div>
               ) : (
                 cartItems.map(item => (
-                  <div key={item.id} className="p-2.5 bg-slate-950 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
+                  <div key={item.id} className="p-2.5 bg-canvas rounded-xl border border-line/80 flex items-center justify-between text-xs">
                     <div className="space-y-0.5 max-w-[170px]">
-                      <div className="font-bold text-white truncate">{item.name}</div>
-                      <div className="text-xs text-slate-400">{company.currencySymbol} {item.unitPrice.toLocaleString()} c/u</div>
+                      <div className="font-bold text-strong truncate">{item.name}</div>
+                      <div className="text-xs text-muted">{company.currencySymbol} {item.unitPrice.toLocaleString()} c/u</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg">
-                        <button onClick={() => updateItemQty(item.id, -1)} className="p-1 text-slate-400 hover:text-white"><Minus className="w-3 h-3" /></button>
-                        <span className="px-2 font-bold text-white text-xs">{item.quantity}</span>
-                        <button onClick={() => updateItemQty(item.id, 1)} className="p-1 text-slate-400 hover:text-white"><Plus className="w-3 h-3" /></button>
+                      <div className="flex items-center bg-surface border border-line rounded-lg">
+                        <button onClick={() => updateItemQty(item.id, -1)} className="p-1 text-muted hover:text-strong"><Minus className="w-3 h-3" /></button>
+                        <span className="px-2 font-bold text-strong text-xs">{item.quantity}</span>
+                        <button onClick={() => updateItemQty(item.id, 1)} className="p-1 text-muted hover:text-strong"><Plus className="w-3 h-3" /></button>
                       </div>
-                      <span className="font-bold text-indigo-300 w-16 text-right">{company.currencySymbol} {item.total.toLocaleString()}</span>
-                      <button onClick={() => removeItem(item.id)} className="text-slate-500 hover:text-rose-400 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <span className="font-bold text-brand-hi w-16 text-right">{company.currencySymbol} {item.total.toLocaleString()}</span>
+                      <button onClick={() => removeItem(item.id)} className="text-faint hover:text-danger p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 ))
@@ -300,20 +300,20 @@ export const PosView: React.FC = () => {
           </div>
 
           {/* Payment & Totals Footer */}
-          <div className="space-y-4 pt-4 border-t border-slate-800">
+          <div className="space-y-4 pt-4 border-t border-line">
             {/* Totals */}
             <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-400"><span>Subtotal:</span><span>{company.currencySymbol} {subtotal.toLocaleString()}</span></div>
-              <div className="flex justify-between text-slate-400"><span>ITBIS ({company.taxRate}%):</span><span>{company.currencySymbol} {tax.toLocaleString()}</span></div>
-              <div className="flex justify-between font-black text-base text-white border-t border-slate-800 pt-1.5">
+              <div className="flex justify-between text-muted"><span>Subtotal:</span><span>{company.currencySymbol} {subtotal.toLocaleString()}</span></div>
+              <div className="flex justify-between text-muted"><span>ITBIS ({company.taxRate}%):</span><span>{company.currencySymbol} {tax.toLocaleString()}</span></div>
+              <div className="flex justify-between font-black text-base text-strong border-t border-line pt-1.5">
                 <span>TOTAL A PAGAR:</span>
-                <span className="text-indigo-400">{company.currencySymbol} {total.toLocaleString()}</span>
+                <span className="text-brand">{company.currencySymbol} {total.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Payment Method Selection */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase">Método de Pago</label>
+              <label className="text-xs font-bold text-muted uppercase">Método de Pago</label>
               <div className="grid grid-cols-3 gap-2 text-xs font-bold">
                 {[
                   { id: 'efectivo', label: 'Efectivo', icon: Banknote },
@@ -327,8 +327,8 @@ export const PosView: React.FC = () => {
                       onClick={() => setPaymentMethod(m.id as PaymentMethodType)}
                       className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${
                         paymentMethod === m.id
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/30'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                          ? 'bg-brand text-on-accent border-brand shadow-lg shadow-brand/30'
+                          : 'bg-canvas text-muted border-line hover:border-line-strong'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />
@@ -340,14 +340,14 @@ export const PosView: React.FC = () => {
 
               {paymentMethod === 'efectivo' && (
                 <div className="flex items-center justify-between gap-2 pt-1 text-xs">
-                  <span className="text-slate-400">Recibido:</span>
+                  <span className="text-muted">Recibido:</span>
                   <input
                     type="number"
                     value={cashTendered}
                     onChange={e => setCashTendered(Number(e.target.value))}
-                    className="w-24 bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-right font-bold text-white"
+                    className="w-24 bg-canvas border border-line rounded-lg p-1.5 text-right font-bold text-strong"
                   />
-                  <span className="text-slate-400 font-bold">Cambio: <strong className="text-emerald-400">{company.currencySymbol} {change.toLocaleString()}</strong></span>
+                  <span className="text-muted font-bold">Cambio: <strong className="text-success">{company.currencySymbol} {change.toLocaleString()}</strong></span>
                 </div>
               )}
             </div>
@@ -356,7 +356,7 @@ export const PosView: React.FC = () => {
             <button
               onClick={handleCheckout}
               disabled={cartItems.length === 0}
-              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-black text-sm rounded-xl shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-success hover:bg-success disabled:bg-surface-2 text-on-accent font-black text-sm rounded-xl shadow-xl shadow-success/30 transition-all flex items-center justify-center gap-2"
             >
               <CheckCircle2 className="w-5 h-5" /> Cobrar e Imprimir Factura
             </button>

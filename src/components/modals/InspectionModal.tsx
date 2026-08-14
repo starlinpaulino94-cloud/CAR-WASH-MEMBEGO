@@ -20,9 +20,9 @@ const KINDS: { id: DamageKind; label: string }[] = [
 ];
 
 const SEVERITIES: { id: DamageSeverity; label: string; tone: string }[] = [
-  { id: 'leve', label: 'Leve', tone: 'bg-amber-500/20 text-amber-300' },
-  { id: 'moderado', label: 'Moderado', tone: 'bg-orange-500/20 text-orange-300' },
-  { id: 'grave', label: 'Grave', tone: 'bg-rose-500/20 text-rose-300' }
+  { id: 'leve', label: 'Leve', tone: 'bg-warning/20 text-warning' },
+  { id: 'moderado', label: 'Moderado', tone: 'bg-warning/20 text-warning' },
+  { id: 'grave', label: 'Grave', tone: 'bg-danger/20 text-danger' }
 ];
 
 const ZONES = [
@@ -93,10 +93,10 @@ const SignaturePad: React.FC<{ onChange: (dataUrl: string | null) => void }> = (
         ref={ref} width={560} height={160}
         onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerLeave={end}
         aria-label="Firma del cliente"
-        className="w-full h-32 bg-white rounded-xl border-2 border-dashed border-slate-600 touch-none cursor-crosshair"
+        className="w-full h-32 bg-white rounded-xl border-2 border-dashed border-line-strong touch-none cursor-crosshair"
       />
       <button type="button" onClick={clear}
-        className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1">
+        className="text-xs font-bold text-muted hover:text-strong flex items-center gap-1">
         <Eraser className="w-3.5 h-3.5" /> Borrar firma
       </button>
     </div>
@@ -265,13 +265,13 @@ export const InspectionModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onMouseDown={e => { if (e.target === e.currentTarget && !busy) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={`Inspección de ${plate}`}
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
-          <h2 className="font-bold text-white text-sm flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-sky-400" />
-            Inspección — {plate} <span className="text-slate-500 font-normal">· {orderNumber}</span>
+        className="w-full max-w-2xl bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 className="font-bold text-strong text-sm flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-info" />
+            Inspección — {plate} <span className="text-faint font-normal">· {orderNumber}</span>
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-slate-400 hover:text-white">
+          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -283,25 +283,25 @@ export const InspectionModal: React.FC<{
             return (
               <button key={s} onClick={() => setStage(s)}
                 className={`px-4 py-2 text-sm font-bold border-b-2 flex items-center gap-1.5 ${
-                  stage === s ? 'border-sky-500 text-white' : 'border-transparent text-slate-400 hover:text-white'
+                  stage === s ? 'border-info text-strong' : 'border-transparent text-muted hover:text-strong'
                 }`}>
                 {s === 'recepcion' ? 'Recepción' : 'Entrega'}
-                {done && <Lock className="w-3 h-3 text-emerald-400" />}
+                {done && <Lock className="w-3 h-3 text-success" />}
               </button>
             );
           })}
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto border-t border-slate-800">
+        <div className="p-5 space-y-4 overflow-y-auto border-t border-line">
           {error && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
           {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
 
           {loading ? (
-            <div className="h-40 bg-slate-800/60 rounded-xl animate-pulse" />
+            <div className="h-40 bg-surface-2/60 rounded-xl animate-pulse" />
           ) : (
             <>
               {frozen && (
-                <div className="flex items-start gap-2 bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3 text-sm text-emerald-200">
+                <div className="flex items-start gap-2 bg-success/40 border border-success/40 rounded-xl p-3 text-sm text-success">
                   <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Firmada por <strong>{current?.signed_by}</strong> el{' '}
@@ -341,24 +341,24 @@ export const InspectionModal: React.FC<{
 
               {!frozen && (
                 <button onClick={() => void saveFields()} disabled={busy}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+                  className="px-4 py-2 bg-surface-2 hover:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center gap-2">
                   {busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar datos
                 </button>
               )}
 
               {/* -------- Daños -------- */}
-              <div className="border-t border-slate-800 pt-4 space-y-3">
-                <h3 className="font-bold text-white text-sm">
+              <div className="border-t border-line pt-4 space-y-3">
+                <h3 className="font-bold text-strong text-sm">
                   Daños registrados
                   {current && current.damages.length > 0 && (
-                    <span className="ml-2 text-xs font-normal text-slate-400">
+                    <span className="ml-2 text-xs font-normal text-muted">
                       ({current.damages.length})
                     </span>
                   )}
                 </h3>
 
                 {!current || current.damages.length === 0 ? (
-                  <p className="text-sm text-slate-500 italic bg-slate-950/50 rounded-xl p-3 text-center">
+                  <p className="text-sm text-faint italic bg-canvas/50 rounded-xl p-3 text-center">
                     Sin daños marcados. Si el vehículo llega con rayones o abolladuras, márquelos
                     antes de firmar: es lo que protege ante un reclamo.
                   </p>
@@ -367,10 +367,10 @@ export const InspectionModal: React.FC<{
                     {current.damages.map(d => {
                       const sev = SEVERITIES.find(s => s.id === d.severity)!;
                       return (
-                        <li key={d.id} className="flex items-start gap-2 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+                        <li key={d.id} className="flex items-start gap-2 bg-canvas/60 border border-line rounded-xl p-3">
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-white text-sm">{d.zone}</div>
-                            <div className="text-xs text-slate-400">
+                            <div className="font-bold text-strong text-sm">{d.zone}</div>
+                            <div className="text-xs text-muted">
                               {KINDS.find(k => k.id === d.kind)?.label}
                               {d.note && ` · ${d.note}`}
                             </div>
@@ -378,7 +378,7 @@ export const InspectionModal: React.FC<{
                           <span className={`px-2 py-0.5 rounded text-xs font-bold ${sev.tone}`}>{sev.label}</span>
                           {!frozen && (
                             <button onClick={() => void dropDamage(d.id)} aria-label={`Quitar daño en ${d.zone}`}
-                              className="p-1 text-slate-500 hover:text-rose-400">
+                              className="p-1 text-faint hover:text-danger">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           )}
@@ -389,7 +389,7 @@ export const InspectionModal: React.FC<{
                 )}
 
                 {!frozen && (
-                  <div className="space-y-2 bg-slate-950/40 rounded-xl p-3">
+                  <div className="space-y-2 bg-canvas/40 rounded-xl p-3">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <select aria-label="Zona del daño" className={textInputClass}
                         value={zone} onChange={e => setZone(e.target.value)}>
@@ -408,7 +408,7 @@ export const InspectionModal: React.FC<{
                       value={damageNote} onChange={e => setDamageNote(e.target.value)}
                       placeholder="Detalle (opcional): tamaño, ubicación exacta…" />
                     <button onClick={() => void submitDamage()} disabled={busy}
-                      className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl">
+                      className="px-4 py-2 bg-info hover:bg-info disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl">
                       Agregar daño
                     </button>
                   </div>
@@ -417,11 +417,11 @@ export const InspectionModal: React.FC<{
 
               {/* -------- Firma -------- */}
               {!frozen ? (
-                <div className="border-t border-slate-800 pt-4 space-y-3">
-                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                    <PenLine className="w-4 h-4 text-sky-400" /> Firma del cliente
+                <div className="border-t border-line pt-4 space-y-3">
+                  <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+                    <PenLine className="w-4 h-4 text-info" /> Firma del cliente
                   </h3>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted">
                     El cliente confirma que el vehículo se recibe en el estado descrito arriba.
                     Al firmar, la inspección queda cerrada y no se podrá editar.
                   </p>
@@ -431,16 +431,16 @@ export const InspectionModal: React.FC<{
                       onChange={e => setSignedBy(e.target.value)} placeholder="Nombre y apellido" />
                   </Field>
                   <button onClick={() => void sign()} disabled={busy || !signature || !signedBy.trim()}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+                    className="px-4 py-2.5 bg-success hover:bg-success disabled:bg-surface-3 disabled:text-faint text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />}
                     Firmar y cerrar inspección
                   </button>
                 </div>
               ) : current?.signature && (
-                <div className="border-t border-slate-800 pt-4 space-y-2">
-                  <h3 className="font-bold text-white text-sm">Firma</h3>
+                <div className="border-t border-line pt-4 space-y-2">
+                  <h3 className="font-bold text-strong text-sm">Firma</h3>
                   <img src={current.signature} alt={`Firma de ${current.signed_by}`}
-                    className="w-full max-w-sm bg-white rounded-xl border border-slate-700" />
+                    className="w-full max-w-sm bg-white rounded-xl border border-line-strong" />
                 </div>
               )}
             </>

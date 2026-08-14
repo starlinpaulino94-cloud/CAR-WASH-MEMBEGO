@@ -764,6 +764,106 @@ check('un cajero no importa, aunque se salte la pantalla',
     } catch { return true; }
   })());
 
+
+// El diálogo de importar sigue abierto tras aplicar: se cierra antes de seguir,
+// o su capa tapa los clics de todo lo que venga después.
+await page.getByRole('dialog').getByRole('button', { name: 'Cerrar', exact: true }).last().click();
+await page.waitForTimeout(600);
+
+// --- [15] Procedencia: de dónde vino el cliente, y que no se pueda reescribir.
+sql(`insert into public.customers (company_id, branch_id, name, phone, membego_customer_id)
+     values ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222',
+             'Vino De Membego','809-700-0001','MG-E2E-1');`);
+
+await go(page, /^Clientes/, /^Clientes/);
+await page.waitForTimeout(1500);
+
+check('la base sella la procedencia de quien llega por Membego',
+  sql("select origin::text from customers where name='Vino De Membego'") === 'membego');
+check('y el que registró el car wash queda como propio',
+  sql("select origin::text from customers where name='Ramona Ventura'") === 'carwash');
+
+// El filtro pregunta al servidor: el contador tiene que ser el de la base.
+await page.getByRole('button', { name: 'De Membego', exact: true }).click();
+await page.waitForTimeout(1800);
+
+const deMembego = Number(sql("select count(*) from customers where origin='membego'"));
+check('el filtro «De Membego» trae exactamente los de Membego',
+  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 1
+  && (await page.getByRole('cell', { name: 'Ramona Ventura' }).count()) === 0,
+  `en la base hay ${deMembego}`);
+
+await page.getByRole('button', { name: 'Del car wash', exact: true }).click();
+await page.waitForTimeout(1800);
+check('y «Del car wash» deja fuera a los de Membego',
+  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 0);
+
+// Vincular después a Membego NO cambia de dónde vino: es lo que hace fiable la
+// atribución de ventas entre los dos canales.
+sql(`update public.customers set membego_customer_id='MG-E2E-TARDIO'
+      where name='Ramona Ventura';`);
+check('vincular a Membego un cliente propio no lo transfiere de canal',
+  sql("select origin::text from customers where name='Ramona Ventura'") === 'carwash');
+
+check('la procedencia no se reescribe ni llamando al API directamente',
+  (() => {
+    try {
+      sql(`select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+           set role authenticated;
+           update public.customers set origin='membego' where name='Ramona Ventura';`);
+      return false;
+    } catch { return true; }
+  })());
+
+
+// --- [16] Modo día y modo noche.
+const fondo = () => page.evaluate(() =>
+  getComputedStyle(document.body).backgroundColor);
+
+// El navegador de ensayo arranca con preferencia de sistema CLARA, así que la
+// noche hay que pedirla: dar por supuesto el punto de partida haría que la
+// comparación de abajo pasara sin comparar nada.
+await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.waitForTimeout(600);
+const fondoNoche = await fondo();
+
+await page.getByRole('button', { name: 'Modo día' }).click();
+await page.waitForTimeout(600);
+const fondoDia = await fondo();
+
+check('el modo día cambia el lienzo de verdad',
+  fondoDia !== fondoNoche, `${fondoNoche} → ${fondoDia}`);
+
+// El de día tiene que ser CLARO y el de noche OSCURO: que cambie no basta.
+const luminancia = (rgb) => {
+  const [r, g, b] = rgb.match(/\d+/g).map(Number);
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+};
+check('de día el fondo es claro y de noche oscuro',
+  luminancia(fondoDia) > 0.8 && luminancia(fondoNoche) < 0.2,
+  `día ${luminancia(fondoDia).toFixed(2)} · noche ${luminancia(fondoNoche).toFixed(2)}`);
+
+check('el atributo del tema queda puesto en la raíz',
+  (await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === 'light');
+
+// La elección sobrevive a recargar: si no, el cajero la repite cada mañana.
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+check('la preferencia se recuerda al recargar',
+  (await fondo()) === fondoDia, await fondo());
+
+// «Como el sistema» quita el atributo para que mande el sistema operativo.
+await page.getByRole('button', { name: 'Como el sistema' }).click();
+await page.waitForTimeout(600);
+check('«como el sistema» devuelve la decisión al sistema operativo',
+  (await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === null);
+
+// El ticket se imprime en papel: su blanco NO sigue al tema.
+await page.getByRole('button', { name: 'Modo noche' }).click();
+await page.waitForTimeout(600);
+check('el modo noche vuelve a oscurecer',
+  luminancia(await fondo()) < 0.2, await fondo());
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

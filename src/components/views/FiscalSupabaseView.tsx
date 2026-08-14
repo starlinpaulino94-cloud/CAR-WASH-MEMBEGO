@@ -115,7 +115,7 @@ export const FiscalSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-brand" />}
           title="Fiscal" subtitle="Rangos NCF autorizados por la DGII" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -125,7 +125,7 @@ export const FiscalSupabaseView: React.FC = () => {
   if (!canView) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<FileCheck2 className="w-5 h-5 text-brand" />}
           title="Fiscal" subtitle="Rangos NCF autorizados por la DGII" />
         <ReadOnlyNotice>
           Los rangos NCF son un recurso fiscal controlado: solo los ve la propiedad,
@@ -148,12 +148,12 @@ export const FiscalSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<FileCheck2 className="w-5 h-5 text-indigo-400" />}
+        icon={<FileCheck2 className="w-5 h-5 text-brand" />}
         title="Fiscal"
         subtitle="Rangos NCF: sin uno vigente se emite recibo interno, no comprobante fiscal"
         actions={canManage ? (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Cargar rango
           </button>
         ) : undefined}
@@ -166,11 +166,11 @@ export const FiscalSupabaseView: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Facturación fiscal"
           value={status?.ready ? 'Activa' : 'Sin rangos'}
-          tone={status?.ready ? 'text-emerald-400' : 'text-amber-400'}
+          tone={status?.ready ? 'text-success' : 'text-warning'}
           hint={status?.ready ? `Tipos: ${status.types.join(', ')}` : 'Se emite recibo interno'} />
         <StatCard label="Rangos cargados" value={String(rows.length)} />
         <StatCard label="Por agotarse" value={String(enRiesgo.length)}
-          tone={enRiesgo.length > 0 ? 'text-amber-400' : undefined}
+          tone={enRiesgo.length > 0 ? 'text-warning' : undefined}
           hint="Quedan 50 o menos" />
       </div>
 
@@ -184,12 +184,12 @@ export const FiscalSupabaseView: React.FC = () => {
         </InlineAlert>
       )}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Rangos NCF</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">TIPO</th>
                 <th scope="col" className="p-3 font-semibold">RANGO</th>
                 <th scope="col" className="p-3 font-semibold text-right">USADOS</th>
@@ -199,46 +199,46 @@ export const FiscalSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={canManage ? 7 : 6} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 7 : 6}>
                     Sin rangos cargados: el cobro emite recibo interno, no comprobante fiscal.
                   </EmptyRow>
                 ) : rows.map(s => (
-                  <tr key={s.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-bold text-white">{s.ncf_type}</td>
-                    <td className="p-3 text-slate-400 tabular-nums">
+                  <tr key={s.id} className="hover:bg-surface-2/40">
+                    <td className="p-3 font-bold text-strong">{s.ncf_type}</td>
+                    <td className="p-3 text-muted tabular-nums">
                       {s.series}{String(s.range_start).padStart(8, '0')} — {s.series}{String(s.range_end).padStart(8, '0')}
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">
+                    <td className="p-3 text-right text-body tabular-nums">
                       {s.next_value - s.range_start}
                     </td>
                     <td className={`p-3 text-right font-bold tabular-nums ${
-                      restante(s) === 0 ? 'text-rose-400'
-                        : restante(s) <= 50 ? 'text-amber-400' : 'text-slate-300'}`}>
+                      restante(s) === 0 ? 'text-danger'
+                        : restante(s) <= 50 ? 'text-warning' : 'text-body'}`}>
                       {restante(s)}
                     </td>
-                    <td className={`p-3 tabular-nums ${vencido(s) ? 'text-rose-400' : 'text-slate-400'}`}>
+                    <td className={`p-3 tabular-nums ${vencido(s) ? 'text-danger' : 'text-muted'}`}>
                       {s.authorized_until}
                     </td>
                     <td className="p-3">
                       {!s.is_active
-                        ? <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Inactivo</span>
+                        ? <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactivo</span>
                         : vencido(s)
-                          ? <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs">Vencido</span>
+                          ? <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Vencido</span>
                           : agotado(s)
-                            ? <span className="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-xs">Agotado</span>
-                            : <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Vigente</span>}
+                            ? <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Agotado</span>
+                            : <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Vigente</span>}
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
                         <button onClick={() => openEdit(s)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           Editar
                         </button>
                         <button onClick={() => void toggleActive(s)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           {s.is_active ? 'Desactivar' : 'Activar'}
                         </button>
                       </td>
@@ -286,7 +286,7 @@ export const FiscalSupabaseView: React.FC = () => {
             <input id="ncf-until" type="date" className={textInputClass} value={form.authorizedUntil}
               onChange={e => setForm(f => ({ ...f, authorizedUntil: e.target.value }))} />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             {modal === 'create'
               ? 'El correlativo empieza en el inicio del rango y avanza solo con cada comprobante emitido.'
               : 'El correlativo ya consumido no se toca: moverlo hacia atrás repetiría NCF ya emitidos.'}

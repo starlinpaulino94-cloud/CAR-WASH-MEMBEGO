@@ -479,3 +479,74 @@ function translatePostgresError(message: string): string {
   }
   return message;
 }
+
+// ==========================================================================
+// Cobrar una orden de trabajo
+// ==========================================================================
+/**
+ * El vehículo se recibe en Operaciones y se cobra en Ventas, y hasta aquí esas
+ * dos pantallas no se hablaban: el cajero tecleaba la venta otra vez. Eso tiene
+ * tres consecuencias que se pagan juntas —puede cobrarse un importe distinto al
+ * de la orden, la orden se queda «pendiente» para siempre, y nada ata el lavado
+ * con su comprobante—.
+ *
+ * `create_invoice` acepta `p_work_order_id` desde la 0008 y desde la 0028 lo usa
+ * para decidir si la orden queda pagada, pendiente o parcial. Lo único que
+ * faltaba era que alguien se lo pasara.
+ */
+
+export interface ChargeableOrderLine {
+  item_type: 'service' | 'product';
+  service_id: string | null;
+  product_id: string | null;
+  name: string;
+  quantity: number;
+  unit_price_cents: number;
+  discount_cents: number;
+  is_membego_covered: boolean;
+}
+
+export interface ChargeableOrder {
+  id: string;
+  order_number: string;
+  vehicle_plate: string | null;
+  vehicle_category: VehicleCategory;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  status: string;
+  total_cents: number;
+  created_at: string;
+  work_order_items: ChargeableOrderLine[];
+}
+
+/**
+ * Órdenes de esta sucursal que ya se pueden cobrar y todavía no se han cobrado.
+ *
+ * Se excluyen las canceladas y las que ya tienen pago: cobrar dos veces el mismo
+ * lavado es justo el error que esta pantalla existe para evitar. El filtro va al
+ * servidor —RLS decide qué sucursales ve quien pregunta—.
+ */
+export async function fetchChargeableOrders(
+  branchId: string, search = ''
+): Promise<ChargeableOrder[]> {
+  let q = requireSupabase()
+    .from('work_orders')
+    .select('id,order_number,vehicle_plate,vehicle_category,customer_id,customer_name,' +
+            'customer_phone,status,total_cents,created_at,' +
+            'work_order_items(item_type,service_id,product_id,name,quantity,' +
+            'unit_price_cents,discount_cents,is_membego_covered)')
+    .eq('branch_id', branchId)
+    .eq('payment_status', 'pendiente')
+    .not('status', 'in', '(cancelado)')
+    .order('created_at', { ascending: false })
+    .limit(40);
+
+  if (search.trim()) {
+    const t = search.trim().replace(/[%,()]/g, '');
+    q = q.or(`vehicle_plate.ilike.%${t}%,order_number.ilike.%${t}%,customer_name.ilike.%${t}%`);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as ChargeableOrder[];
+}

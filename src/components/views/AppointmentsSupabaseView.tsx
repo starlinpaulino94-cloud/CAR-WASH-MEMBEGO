@@ -15,12 +15,12 @@ import {
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 
 const STATUS_TONE: Record<string, string> = {
-  pendiente: 'bg-slate-700/60 text-slate-300',
-  confirmada: 'bg-sky-500/20 text-sky-300',
-  en_curso: 'bg-indigo-500/20 text-indigo-300',
-  convertida: 'bg-emerald-500/20 text-emerald-400',
-  cancelada: 'bg-rose-500/20 text-rose-400',
-  ausente: 'bg-amber-500/20 text-amber-300'
+  pendiente: 'bg-surface-3/60 text-body',
+  confirmada: 'bg-info/20 text-info',
+  en_curso: 'bg-brand/20 text-brand-hi',
+  convertida: 'bg-success/20 text-success',
+  cancelada: 'bg-danger/20 text-danger',
+  ausente: 'bg-warning/20 text-warning'
 };
 const STATUS_LABEL: Record<string, string> = {
   pendiente: 'Pendiente', confirmada: 'Confirmada', en_curso: 'En curso',
@@ -174,7 +174,7 @@ export const AppointmentsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<CalendarDays className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<CalendarDays className="w-5 h-5 text-brand" />}
           title="Agenda" subtitle="Citas y reservaciones" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -192,12 +192,12 @@ export const AppointmentsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <ViewHeader
-        icon={<CalendarDays className="w-5 h-5 text-indigo-400" />}
+        icon={<CalendarDays className="w-5 h-5 text-brand" />}
         title="Agenda"
         subtitle="Reservas del día · la capacidad la marcan las bahías"
         actions={canBook ? (
           <button onClick={() => { setBookDay(day); setError(null); setShowBook(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva cita
           </button>
         ) : undefined}
@@ -208,20 +208,20 @@ export const AppointmentsSupabaseView: React.FC = () => {
       {error && !showBook && !cancelling && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
       {/* Navegación del día */}
-      <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl p-3">
+      <div className="flex items-center justify-between bg-surface border border-line rounded-2xl p-3">
         <button onClick={() => shiftDay(-1)} aria-label="Día anterior"
-          className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div className="text-center">
-          <div className="font-bold text-white capitalize">{dayLabel}</div>
+          <div className="font-bold text-strong capitalize">{dayLabel}</div>
           <button onClick={() => setDay(isoDay(new Date()))}
-            className="text-xs text-indigo-400 hover:text-indigo-300 font-bold">
+            className="text-xs text-brand hover:text-brand-hi font-bold">
             Ir a hoy
           </button>
         </div>
         <button onClick={() => shiftDay(1)} aria-label="Día siguiente"
-          className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
@@ -229,13 +229,13 @@ export const AppointmentsSupabaseView: React.FC = () => {
       {loading ? (
         <div className="space-y-2" aria-busy="true">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />
+            <div key={i} className="h-20 bg-surface border border-line rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center">
-          <Clock className="w-10 h-10 text-slate-700 mx-auto mb-3" />
-          <p className="text-slate-500 italic">Sin citas para este día.</p>
+        <div className="bg-surface border border-line rounded-2xl p-10 text-center">
+          <Clock className="w-10 h-10 text-faint mx-auto mb-3" />
+          <p className="text-faint italic">Sin citas para este día.</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -244,25 +244,25 @@ export const AppointmentsSupabaseView: React.FC = () => {
             const done = ['convertida', 'cancelada', 'ausente'].includes(a.status);
             return (
               <li key={a.id}
-                className={`bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
+                className={`bg-surface border border-line rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
                   done ? 'opacity-60' : ''
                 }`}>
                 <div className="flex-shrink-0 text-center w-16">
-                  <div className="text-lg font-black text-white tabular-nums">
+                  <div className="text-lg font-black text-strong tabular-nums">
                     {start.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })}
                   </div>
-                  <div className="text-xs text-slate-500">{a.duration_minutes} min</div>
+                  <div className="text-xs text-faint">{a.duration_minutes} min</div>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-white">{a.customer_name}</div>
-                  <div className="text-sm text-slate-400">
+                  <div className="font-bold text-strong">{a.customer_name}</div>
+                  <div className="text-sm text-muted">
                     {a.service_name || 'Sin servicio'}
                     {a.vehicle_plate && ` · ${a.vehicle_plate}`}
                     {a.customer_phone && ` · ${a.customer_phone}`}
                   </div>
                   {a.cancel_reason && (
-                    <div className="text-xs text-rose-300 mt-0.5">Motivo: {a.cancel_reason}</div>
+                    <div className="text-xs text-danger mt-0.5">Motivo: {a.cancel_reason}</div>
                   )}
                 </div>
 
@@ -274,22 +274,22 @@ export const AppointmentsSupabaseView: React.FC = () => {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {a.status === 'pendiente' && (
                       <button onClick={() => void mark(a, 'confirmada')}
-                        className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 inline-flex items-center gap-1">
+                        className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-info inline-flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Confirmar
                       </button>
                     )}
                     <button onClick={() => void toOrder(a)} disabled={busy || !a.vehicle_plate}
                       title={a.vehicle_plate ? 'Crear la orden de servicio' : 'La cita necesita placa'}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white inline-flex items-center gap-1">
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent inline-flex items-center gap-1">
                       <CarFront className="w-3.5 h-3.5" /> Llegó
                     </button>
                     <button onClick={() => void mark(a, 'ausente')}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300">
+                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-warning">
                       No asistió
                     </button>
                     <button onClick={() => { setCancelling(a); setCancelReason(''); setError(null); }}
                       aria-label={`Cancelar cita de ${a.customer_name}`}
-                      className="p-1.5 text-slate-500 hover:text-rose-400">
+                      className="p-1.5 text-faint hover:text-danger">
                       <XCircle className="w-4 h-4" />
                     </button>
                   </div>
@@ -359,8 +359,8 @@ export const AppointmentsSupabaseView: React.FC = () => {
           {availability && (
             <div className={`rounded-xl p-3 text-sm border ${
               availability.free > 0
-                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
-                : 'bg-rose-950/30 border-rose-500/40 text-rose-200'
+                ? 'bg-success/30 border-success/40 text-success'
+                : 'bg-danger/30 border-danger/40 text-danger'
             }`}>
               {availability.free > 0
                 ? <>Hay <strong>{availability.free}</strong> de {availability.capacity} bahías libres en esa franja.</>

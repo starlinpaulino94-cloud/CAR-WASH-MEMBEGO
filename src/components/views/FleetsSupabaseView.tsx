@@ -269,7 +269,7 @@ export const FleetsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Building2 className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Building2 className="w-5 h-5 text-brand" />}
           title="Flotillas" subtitle="Cuentas corporativas y tarifas de contrato" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -285,12 +285,12 @@ export const FleetsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Building2 className="w-5 h-5 text-indigo-400" />}
+        icon={<Building2 className="w-5 h-5 text-brand" />}
         title="Flotillas"
         subtitle="Una empresa con varios vehículos no es varios clientes sueltos"
         actions={canManage ? (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva flotilla
           </button>
         ) : undefined}
@@ -309,12 +309,12 @@ export const FleetsSupabaseView: React.FC = () => {
       <SearchBox id="fleet-search" label="Buscar flotilla" value={q.searchInput}
         onChange={q.setSearchInput} placeholder="Buscar por nombre o código…" />
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Flotillas</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">FLOTILLA</th>
                 <th scope="col" className="p-3 font-semibold">FACTURA A</th>
                 <th scope="col" className="p-3 font-semibold text-right">VEHÍCULOS</th>
@@ -322,39 +322,39 @@ export const FleetsSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={cols} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={cols}>
                     {q.searchInput ? 'Ninguna flotilla coincide.' : 'Todavía no hay flotillas registradas.'}
                   </EmptyRow>
                 ) : q.rows.map(f => (
-                  <tr key={f.id} className="hover:bg-slate-800/40">
+                  <tr key={f.id} className="hover:bg-surface-2/40">
                     <td className="p-3">
                       <button onClick={() => setDetail(f)}
-                        className="font-bold text-white hover:text-indigo-300 text-left">
+                        className="font-bold text-strong hover:text-brand-hi text-left">
                         {f.name}
                       </button>
-                      {f.code && <div className="text-xs text-slate-500">{f.code}</div>}
+                      {f.code && <div className="text-xs text-faint">{f.code}</div>}
                     </td>
-                    <td className="p-3 text-slate-400">
+                    <td className="p-3 text-muted">
                       <div>{f.customer_name}</div>
-                      {f.po_reference && <div className="text-xs text-slate-500">OC {f.po_reference}</div>}
+                      {f.po_reference && <div className="text-xs text-faint">OC {f.po_reference}</div>}
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">{f.vehicle_count}</td>
+                    <td className="p-3 text-right text-body tabular-nums">{f.vehicle_count}</td>
                     <td className="p-3">
                       {f.is_active
-                        ? <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-xs">Activa</span>
-                        : <span className="bg-slate-700/50 text-slate-400 font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
+                        ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
+                        : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
                         <button onClick={() => openEdit(f)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           Editar
                         </button>
                         <button onClick={() => void toggleActive(f)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           {f.is_active ? 'Desactivar' : 'Activar'}
                         </button>
                       </td>
@@ -371,17 +371,17 @@ export const FleetsSupabaseView: React.FC = () => {
       {/* ------------------------------------------------------- Detalle */}
       {detail && (
         <section aria-label={`Detalle de ${detail.name}`}
-          className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-5">
+          className="bg-surface/80 border border-line rounded-2xl p-5 space-y-5">
           <header className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-white">{detail.name}</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-xl font-bold text-strong">{detail.name}</h2>
+              <p className="text-xs text-faint">
                 Factura a {detail.customer_name}
                 {detail.po_reference && ` · orden de compra ${detail.po_reference}`}
               </p>
             </div>
             <button onClick={() => setDetail(null)} aria-label="Cerrar detalle"
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+              className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
               <X className="w-4 h-4" />
             </button>
           </header>
@@ -393,17 +393,17 @@ export const FleetsSupabaseView: React.FC = () => {
               <StatCard label="Servicios del periodo" value={String(statement.totals.services)} />
               <StatCard label="Consumo" value={formatCents(statement.totals.total_cents, symbol)} />
               <StatCard label="Sin facturar" value={formatCents(statement.totals.unbilled_cents, symbol)}
-                tone={statement.totals.unbilled_cents > 0 ? 'text-amber-400' : undefined}
+                tone={statement.totals.unbilled_cents > 0 ? 'text-warning' : undefined}
                 hint="Entregado y aún no cobrado" />
               <StatCard label="Saldo por cobrar" value={formatCents(statement.balance_cents, symbol)}
-                tone={statement.balance_cents > 0 ? 'text-orange-400' : undefined}
+                tone={statement.balance_cents > 0 ? 'text-warning' : undefined}
                 hint="Lo que debe hoy" />
             </div>
           )}
 
           {canManage && statement && statement.totals.unbilled_cents > 0 && (
             <button onClick={() => void consolidate()} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
               <FileText className="w-4 h-4" />
               Facturar el periodo — {formatCents(statement.totals.unbilled_cents, symbol)} a crédito
             </button>
@@ -413,31 +413,31 @@ export const FleetsSupabaseView: React.FC = () => {
             {/* Vehículos */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-1.5 text-sm font-bold text-white">
-                  <Car className="w-4 h-4 text-indigo-400" /> Vehículos ({vehicles.length})
+                <h3 className="flex items-center gap-1.5 text-sm font-bold text-strong">
+                  <Car className="w-4 h-4 text-brand" /> Vehículos ({vehicles.length})
                 </h3>
                 {canAssign && (
                   <button onClick={() => { setShowAddVehicle(true); setPlateTerm(''); }}
-                    className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                     Añadir
                   </button>
                 )}
               </div>
               {vehicles.length === 0 ? (
-                <p className="text-xs text-slate-400">Sin vehículos: la flotilla no cobra tarifa pactada todavía.</p>
+                <p className="text-xs text-muted">Sin vehículos: la flotilla no cobra tarifa pactada todavía.</p>
               ) : (
-                <ul className="divide-y divide-slate-800/60">
+                <ul className="divide-y divide-line/60">
                   {vehicles.map(v => (
                     <li key={v.id} className="py-2 flex items-center justify-between gap-2">
                       <div>
-                        <div className="font-bold text-white text-sm">{v.plate}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-bold text-strong text-sm">{v.plate}</div>
+                        <div className="text-xs text-faint">
                           {[v.make, v.model].filter(Boolean).join(' ') || 'sin datos'} · {v.category}
                         </div>
                       </div>
                       {canAssign && (
                         <button onClick={() => void removeVehicle(v)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400">
+                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
                           Sacar
                         </button>
                       )}
@@ -450,40 +450,40 @@ export const FleetsSupabaseView: React.FC = () => {
             {/* Tarifas */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-1.5 text-sm font-bold text-white">
-                  <Tags className="w-4 h-4 text-indigo-400" /> Tarifas pactadas ({rates.length})
+                <h3 className="flex items-center gap-1.5 text-sm font-bold text-strong">
+                  <Tags className="w-4 h-4 text-brand" /> Tarifas pactadas ({rates.length})
                 </h3>
                 {canManage && (
                   <button onClick={() => openRate()}
-                    className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                    className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                     Pactar
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-faint">
                 Una tarifa por categoría gana sobre la de todo el parque. Los servicios
                 sin tarifa siguen cobrándose del catálogo.
               </p>
               {rates.length === 0 ? (
-                <p className="text-xs text-slate-400">Sin tarifas: se cobra el precio de mostrador.</p>
+                <p className="text-xs text-muted">Sin tarifas: se cobra el precio de mostrador.</p>
               ) : (
-                <ul className="divide-y divide-slate-800/60">
+                <ul className="divide-y divide-line/60">
                   {rates.map(r => (
                     <li key={r.id} className="py-2 flex items-center justify-between gap-2">
                       <div>
-                        <div className="font-bold text-white text-sm">{serviceName(r.service_id)}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-bold text-strong text-sm">{serviceName(r.service_id)}</div>
+                        <div className="text-xs text-faint">
                           {r.vehicle_category ?? 'todo el parque'} · {formatCents(r.price_cents, symbol)}
                         </div>
                       </div>
                       {canManage && (
                         <div className="whitespace-nowrap">
                           <button onClick={() => openRate(r)}
-                            className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                            className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                             Cambiar
                           </button>
                           <button onClick={() => void removeRate(r)}
-                            className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400">
+                            className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
                             Retirar
                           </button>
                         </div>
@@ -500,18 +500,18 @@ export const FleetsSupabaseView: React.FC = () => {
               <table className="w-full text-left text-xs">
                 <caption className="sr-only">Consumo por vehículo</caption>
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400">
+                  <tr className="border-b border-line text-muted">
                     <th scope="col" className="p-2 font-semibold">PLACA</th>
                     <th scope="col" className="p-2 font-semibold text-right">SERVICIOS</th>
                     <th scope="col" className="p-2 font-semibold text-right">CONSUMO</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line/60">
                   {statement.by_vehicle.map(v => (
                     <tr key={v.plate}>
-                      <td className="p-2 font-bold text-white">{v.plate}</td>
-                      <td className="p-2 text-right text-slate-300 tabular-nums">{v.services}</td>
-                      <td className="p-2 text-right text-slate-300 tabular-nums">
+                      <td className="p-2 font-bold text-strong">{v.plate}</td>
+                      <td className="p-2 text-right text-body tabular-nums">{v.services}</td>
+                      <td className="p-2 text-right text-body tabular-nums">
                         {formatCents(v.total_cents, symbol)}
                       </td>
                     </tr>
@@ -546,19 +546,19 @@ export const FleetsSupabaseView: React.FC = () => {
               placeholder="Buscar cliente…" />
           </Field>
           {!form.customerId && customers.length > 0 && (
-            <ul className="max-h-40 overflow-y-auto divide-y divide-slate-800/60 -mt-2">
+            <ul className="max-h-40 overflow-y-auto divide-y divide-line/60 -mt-2">
               {customers.map(c => (
                 <li key={c.id}>
                   <button type="button"
                     onClick={() => { setForm(f => ({ ...f, customerId: c.id })); setCustomerTerm(c.name); }}
-                    className="w-full text-left py-2 px-2 hover:bg-slate-800/60 rounded-lg text-sm text-white">
+                    className="w-full text-left py-2 px-2 hover:bg-surface-2/60 rounded-lg text-sm text-strong">
                     {c.name}
                   </button>
                 </li>
               ))}
             </ul>
           )}
-          <p className="text-xs text-slate-500 -mt-2">
+          <p className="text-xs text-faint -mt-2">
             Es quien recibe la factura consolidada. Necesita crédito autorizado en
             Clientes › Por cobrar.
           </p>
@@ -605,19 +605,19 @@ export const FleetsSupabaseView: React.FC = () => {
             <input id="fleet-plate" className={textInputClass} value={plateTerm} autoFocus
               onChange={e => setPlateTerm(e.target.value)} placeholder="ABC123" />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Solo aparecen vehículos que no pertenecen ya a otra flotilla.
           </p>
           {freeVehicles.length === 0 ? (
-            <p className="text-xs text-slate-400">Ningún vehículo libre coincide.</p>
+            <p className="text-xs text-muted">Ningún vehículo libre coincide.</p>
           ) : (
-            <ul className="max-h-64 overflow-y-auto divide-y divide-slate-800/60">
+            <ul className="max-h-64 overflow-y-auto divide-y divide-line/60">
               {freeVehicles.map(v => (
                 <li key={v.id}>
                   <button type="button" onClick={() => void addVehicle(v)}
-                    className="w-full text-left py-2.5 px-2 hover:bg-slate-800/60 rounded-lg">
-                    <div className="font-bold text-white text-sm">{v.plate}</div>
-                    <div className="text-xs text-slate-500">
+                    className="w-full text-left py-2.5 px-2 hover:bg-surface-2/60 rounded-lg">
+                    <div className="font-bold text-strong text-sm">{v.plate}</div>
+                    <div className="text-xs text-faint">
                       {[v.make, v.model].filter(Boolean).join(' ') || 'sin datos'} · {v.category}
                     </div>
                   </button>
@@ -655,7 +655,7 @@ export const FleetsSupabaseView: React.FC = () => {
             <input id="rate-price" className={textInputClass} value={ratePrice}
               inputMode="decimal" onChange={e => setRatePrice(e.target.value)} />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Este precio sustituye al del catálogo para los vehículos de la flotilla.
             Las órdenes ya emitidas conservan el importe con el que se cerraron.
           </p>

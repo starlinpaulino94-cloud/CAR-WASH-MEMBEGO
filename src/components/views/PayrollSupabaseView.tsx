@@ -27,9 +27,9 @@ const METODOS: { id: PaymentMethod; label: string }[] = [
 ];
 
 const ESTADO: Record<string, { label: string; clase: string }> = {
-  borrador: { label: 'Borrador', clase: 'bg-slate-700/50 text-slate-300' },
-  aprobada: { label: 'Aprobada', clase: 'bg-amber-500/20 text-amber-400' },
-  pagada:   { label: 'Pagada',   clase: 'bg-emerald-500/20 text-emerald-400' }
+  borrador: { label: 'Borrador', clase: 'bg-surface-3/50 text-body' },
+  aprobada: { label: 'Aprobada', clase: 'bg-warning/20 text-warning' },
+  pagada:   { label: 'Pagada',   clase: 'bg-success/20 text-success' }
 };
 
 const hoyIso = () => new Date().toISOString().slice(0, 10);
@@ -263,7 +263,7 @@ export const PayrollSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Wallet className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Wallet className="w-5 h-5 text-brand" />}
           title="Nómina" subtitle="Sueldos, comisiones y adelantos" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -273,7 +273,7 @@ export const PayrollSupabaseView: React.FC = () => {
   if (!canManage) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Wallet className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Wallet className="w-5 h-5 text-brand" />}
           title="Nómina" subtitle="Sueldos, comisiones y adelantos" />
         <ReadOnlyNotice>
           La nómina completa solo la ve quien la firma: propiedad, administración o contabilidad.
@@ -291,17 +291,17 @@ export const PayrollSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Wallet className="w-5 h-5 text-indigo-400" />}
+        icon={<Wallet className="w-5 h-5 text-brand" />}
         title="Nómina"
         subtitle="Sueldo, horas, comisiones y adelantos en un solo neto"
         actions={
           <div className="flex gap-2">
             <button onClick={() => setShowAdvance(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl">
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 text-body font-bold text-xs rounded-xl">
               <HandCoins className="w-4 h-4" /> Dar adelanto
             </button>
             <button onClick={() => setShowOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+              className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
               <Plus className="w-4 h-4" /> Abrir nómina
             </button>
           </div>
@@ -322,12 +322,12 @@ export const PayrollSupabaseView: React.FC = () => {
       )}
 
       {/* ------------------------------------------------------ Periodos */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Nóminas</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">PERIODO</th>
                 <th scope="col" className="p-3 font-semibold text-right">BRUTO</th>
                 <th scope="col" className="p-3 font-semibold text-right">DEDUCCIONES</th>
@@ -335,26 +335,26 @@ export const PayrollSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold">ESTADO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={5} />
                 : periods.length === 0 ? (
                   <EmptyRow cols={5}>Todavía no se ha calculado ninguna nómina.</EmptyRow>
                 ) : periods.map(p => (
                   <tr key={p.id}
-                    className={`hover:bg-slate-800/40 ${selected?.id === p.id ? 'bg-slate-800/60' : ''}`}>
+                    className={`hover:bg-surface-2/40 ${selected?.id === p.id ? 'bg-surface-2/60' : ''}`}>
                     <td className="p-3">
                       <button onClick={() => setSelected(p)}
-                        className="font-bold text-white hover:text-indigo-300 tabular-nums">
+                        className="font-bold text-strong hover:text-brand-hi tabular-nums">
                         {p.period_from} — {p.period_to}
                       </button>
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">
+                    <td className="p-3 text-right text-body tabular-nums">
                       {formatCents(p.gross_cents, symbol)}
                     </td>
-                    <td className="p-3 text-right text-slate-400 tabular-nums">
+                    <td className="p-3 text-right text-muted tabular-nums">
                       −{formatCents(p.deductions_cents, symbol)}
                     </td>
-                    <td className="p-3 text-right font-bold text-white tabular-nums">
+                    <td className="p-3 text-right font-bold text-strong tabular-nums">
                       {formatCents(p.net_cents, symbol)}
                     </td>
                     <td className="p-3">
@@ -372,19 +372,19 @@ export const PayrollSupabaseView: React.FC = () => {
       {/* -------------------------------------------------- Detalle */}
       {selected && (
         <section aria-label="Detalle de la nómina"
-          className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+          className="bg-surface/80 border border-line rounded-2xl p-5 space-y-4">
           <header className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-white tabular-nums">
+              <h2 className="text-xl font-bold text-strong tabular-nums">
                 {selected.period_from} — {selected.period_to}
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-faint">
                 {ESTADO[selected.status].label}
                 {selected.paid_at && ` · pagada el ${new Date(selected.paid_at).toLocaleDateString('es-DO')}`}
               </p>
             </div>
             <button onClick={() => setSelected(null)} aria-label="Cerrar detalle"
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+              className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
               <X className="w-4 h-4" />
             </button>
           </header>
@@ -392,25 +392,25 @@ export const PayrollSupabaseView: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <StatCard label="Bruto" value={formatCents(selected.gross_cents, symbol)} />
             <StatCard label="Deducciones" value={formatCents(selected.deductions_cents, symbol)}
-              tone="text-amber-400" hint="Adelantos y descuentos" />
+              tone="text-warning" hint="Adelantos y descuentos" />
             <StatCard label="Neto a entregar" value={formatCents(selected.net_cents, symbol)} />
           </div>
 
           {canApprove && selected.status === 'borrador' && (
             <div className="flex flex-wrap gap-2">
               <button onClick={() => void aprobar()} disabled={busy}
-                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+                className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
                 <CheckCircle2 className="w-4 h-4" /> Aprobar nómina
               </button>
               <button onClick={() => void descartar()} disabled={busy}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl disabled:opacity-50">
+                className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 text-body font-bold text-xs rounded-xl disabled:opacity-50">
                 <Trash2 className="w-4 h-4" /> Descartar borrador
               </button>
             </div>
           )}
           {canApprove && selected.status === 'aprobada' && (
             <button onClick={() => setShowPay(true)} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
               <Wallet className="w-4 h-4" /> Pagar {formatCents(selected.net_cents, symbol)}
             </button>
           )}
@@ -419,7 +419,7 @@ export const PayrollSupabaseView: React.FC = () => {
             <table className="w-full text-left text-xs">
               <caption className="sr-only">Partidas de la nómina</caption>
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400">
+                <tr className="border-b border-line text-muted">
                   <th scope="col" className="p-2 font-semibold">EMPLEADO</th>
                   <th scope="col" className="p-2 font-semibold text-right">BASE</th>
                   <th scope="col" className="p-2 font-semibold text-right">HORAS</th>
@@ -431,35 +431,35 @@ export const PayrollSupabaseView: React.FC = () => {
                   {editable && <th scope="col" className="p-2 font-semibold" />}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-line/60">
                 {items.map(it => (
-                  <tr key={it.id} className="hover:bg-slate-800/40">
-                    <td className="p-2 font-bold text-white">{it.full_name}</td>
-                    <td className="p-2 text-right text-slate-300 tabular-nums">
+                  <tr key={it.id} className="hover:bg-surface-2/40">
+                    <td className="p-2 font-bold text-strong">{it.full_name}</td>
+                    <td className="p-2 text-right text-body tabular-nums">
                       {formatCents(it.base_cents, symbol)}
                     </td>
-                    <td className="p-2 text-right text-slate-400 tabular-nums">
+                    <td className="p-2 text-right text-muted tabular-nums">
                       {it.payroll_type === 'por_hora' ? horas(it.worked_minutes) : '—'}
                     </td>
-                    <td className="p-2 text-right text-slate-300 tabular-nums">
+                    <td className="p-2 text-right text-body tabular-nums">
                       {formatCents(it.commissions_cents, symbol)}
                     </td>
-                    <td className="p-2 text-right text-emerald-400 tabular-nums">
+                    <td className="p-2 text-right text-success tabular-nums">
                       {it.bonus_cents > 0 ? formatCents(it.bonus_cents, symbol) : '—'}
                     </td>
-                    <td className="p-2 text-right text-amber-400 tabular-nums">
+                    <td className="p-2 text-right text-warning tabular-nums">
                       {it.advances_cents > 0 ? `−${formatCents(it.advances_cents, symbol)}` : '—'}
                     </td>
-                    <td className="p-2 text-right text-amber-400 tabular-nums">
+                    <td className="p-2 text-right text-warning tabular-nums">
                       {it.deductions_cents > 0 ? `−${formatCents(it.deductions_cents, symbol)}` : '—'}
                     </td>
-                    <td className="p-2 text-right font-bold text-white tabular-nums">
+                    <td className="p-2 text-right font-bold text-strong tabular-nums">
                       {formatCents(it.net_cents, symbol)}
                     </td>
                     {editable && (
                       <td className="p-2 text-right">
                         <button onClick={() => openAdjust(it)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                           Ajustar
                         </button>
                       </td>
@@ -474,25 +474,25 @@ export const PayrollSupabaseView: React.FC = () => {
 
       {/* -------------------------------------------------- Sueldos */}
       <section aria-label="Sueldos del equipo"
-        className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h2 className="text-base font-bold text-white">Sueldos del equipo</h2>
-        <p className="text-xs text-slate-500">
+        className="bg-surface/80 border border-line rounded-2xl p-5 space-y-3">
+        <h2 className="text-base font-bold text-strong">Sueldos del equipo</h2>
+        <p className="text-xs text-faint">
           El sueldo solo se cambia aquí: un UPDATE directo sobre la ficha lo rechaza
           la base. Es lo que impide que alguien se suba su propia comisión.
         </p>
-        <ul className="divide-y divide-slate-800/60">
+        <ul className="divide-y divide-line/60">
           {staff.map(p => (
             <li key={p.id} className="py-2.5 flex items-center justify-between gap-3">
               <div>
-                <div className="font-bold text-white text-sm">{p.full_name}</div>
-                <div className="text-xs text-slate-500">
+                <div className="font-bold text-strong text-sm">{p.full_name}</div>
+                <div className="text-xs text-faint">
                   {TIPOS.find(t => t.id === p.payroll_type)?.label}
                   {p.payroll_type === 'mensual' && ` · ${formatCents(p.base_salary_cents, symbol)} al mes`}
                   {p.payroll_type === 'por_hora' && ` · ${formatCents(p.hourly_rate_cents, symbol)} la hora`}
                 </div>
               </div>
               <button onClick={() => openPay(p)}
-                className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200">
+                className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                 Fijar sueldo
               </button>
             </li>
@@ -519,7 +519,7 @@ export const PayrollSupabaseView: React.FC = () => {
             <input id="nom-hasta" type="date" className={textInputClass} value={hasta}
               onChange={e => setHasta(e.target.value)} />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             El sueldo mensual se prorratea sobre 30 días; el pago por hora sale de
             los minutos realmente marcados. Las comisiones y los adelantos que
             entren aquí quedan amarrados a esta nómina.
@@ -552,7 +552,7 @@ export const PayrollSupabaseView: React.FC = () => {
             <input id="adv-reason" className={textInputClass} value={advReason}
               onChange={e => setAdvReason(e.target.value)} placeholder="Adelanto de quincena…" />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Sale de la caja abierta y se descuenta en la próxima nómina.
           </p>
         </FormModal>
@@ -586,7 +586,7 @@ export const PayrollSupabaseView: React.FC = () => {
                 inputMode="decimal" onChange={e => setPayHour(e.target.value)} />
             </Field>
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             La comisión por servicio se configura en el catálogo y en la ficha del
             empleado; esto fija la parte fija de su pago.
           </p>
@@ -611,7 +611,7 @@ export const PayrollSupabaseView: React.FC = () => {
             <input id="adj-deduc" className={textInputClass} value={deduc}
               inputMode="decimal" onChange={e => setDeduc(e.target.value)} />
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             Solo se ajusta mientras la nómina está en borrador. Una vez aprobada,
             los números quedan congelados.
           </p>
@@ -634,7 +634,7 @@ export const PayrollSupabaseView: React.FC = () => {
               {METODOS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
             </select>
           </Field>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-faint">
             En efectivo se registra una salida de caja por empleado, para que el
             arqueo se pueda explicar sobre el recibo que firmó cada quien. Al pagar,
             las comisiones recogidas quedan saldadas.

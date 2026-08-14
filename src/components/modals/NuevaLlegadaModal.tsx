@@ -219,45 +219,45 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 backdrop-blur-md p-4 overflow-y-auto">
+      <div className="bg-surface border border-line w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-indigo-900/50 to-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-brand-soft/50 to-surface px-6 py-4 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600/30 text-indigo-400 rounded-xl border border-indigo-500/30">
+            <div className="p-2 bg-brand/30 text-brand rounded-xl border border-brand/30">
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-strong flex items-center gap-2">
                 Nueva Llegada de Vehículo
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-muted">
                 Identificación rápida, verificación Membego y creación de orden
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors"
+            className="text-muted hover:text-strong p-2 rounded-xl hover:bg-surface-2 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-between bg-slate-950 px-8 py-3 border-b border-slate-800 text-xs font-semibold">
-          <div className={`flex items-center gap-2 ${step === 'identify' ? 'text-indigo-400' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'identify' ? 'bg-indigo-600 text-white' : 'bg-slate-800'}`}>1</span>
+        <div className="flex items-center justify-between bg-canvas px-8 py-3 border-b border-line text-xs font-semibold">
+          <div className={`flex items-center gap-2 ${step === 'identify' ? 'text-brand' : 'text-faint'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'identify' ? 'bg-brand text-on-accent' : 'bg-surface-2'}`}>1</span>
             Identificación
           </div>
-          <ArrowRight className="w-3.5 h-3.5 text-slate-700" />
-          <div className={`flex items-center gap-2 ${step === 'vehicle' ? 'text-indigo-400' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'vehicle' ? 'bg-indigo-600 text-white' : 'bg-slate-800'}`}>2</span>
+          <ArrowRight className="w-3.5 h-3.5 text-faint" />
+          <div className={`flex items-center gap-2 ${step === 'vehicle' ? 'text-brand' : 'text-faint'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'vehicle' ? 'bg-brand text-on-accent' : 'bg-surface-2'}`}>2</span>
             Vehículo
           </div>
-          <ArrowRight className="w-3.5 h-3.5 text-slate-700" />
-          <div className={`flex items-center gap-2 ${step === 'services' ? 'text-indigo-400' : 'text-slate-500'}`}>
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'services' ? 'bg-indigo-600 text-white' : 'bg-slate-800'}`}>3</span>
+          <ArrowRight className="w-3.5 h-3.5 text-faint" />
+          <div className={`flex items-center gap-2 ${step === 'services' ? 'text-brand' : 'text-faint'}`}>
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center ${step === 'services' ? 'bg-brand text-on-accent' : 'bg-surface-2'}`}>3</span>
             Servicios & Beneficios
           </div>
         </div>
@@ -270,53 +270,53 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={() => handleMembegoSearch('mbg-usr-9001')}
-                  className="p-4 bg-gradient-to-br from-indigo-900/40 to-slate-800 border border-indigo-500/40 hover:border-indigo-400 rounded-xl flex items-center gap-4 text-left transition-all group"
+                  className="p-4 bg-gradient-to-br from-brand-soft/40 to-surface-2 border border-brand/40 hover:border-brand rounded-xl flex items-center gap-4 text-left transition-all group"
                 >
-                  <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+                  <div className="p-3 bg-brand text-on-accent rounded-xl shadow-lg shadow-brand/30 group-hover:scale-105 transition-transform">
                     <QrCode className="w-6 h-6" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-white flex items-center gap-2">
+                    <div className="text-sm font-bold text-strong flex items-center gap-2">
                       Escanear QR / Simular VIP
-                      <span className="text-xs bg-indigo-500/30 text-indigo-300 px-1.5 py-0.5 rounded">Membego VIP</span>
+                      <span className="text-xs bg-brand/30 text-brand-hi px-1.5 py-0.5 rounded">Membego VIP</span>
                     </div>
-                    <div className="text-xs text-slate-400">Verificar membresía y beneficios de Ramón Peña (Demo)</div>
+                    <div className="text-xs text-muted">Verificar membresía y beneficios de Ramón Peña (Demo)</div>
                   </div>
                 </button>
 
                 <button
                   onClick={handleGuestContinue}
-                  className="p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-xl flex items-center gap-4 text-left transition-all"
+                  className="p-4 bg-surface-2/80 hover:bg-surface-2 border border-line-strong rounded-xl flex items-center gap-4 text-left transition-all"
                 >
-                  <div className="p-3 bg-slate-700 text-slate-200 rounded-xl">
+                  <div className="p-3 bg-surface-3 text-body rounded-xl">
                     <UserCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-white">Cliente Visitante / Anónimo</div>
-                    <div className="text-xs text-slate-400">Continuar rápido sin registro de cuenta (Venta exprés)</div>
+                    <div className="text-sm font-bold text-strong">Cliente Visitante / Anónimo</div>
+                    <div className="text-xs text-muted">Continuar rápido sin registro de cuenta (Venta exprés)</div>
                   </div>
                 </button>
               </div>
 
               {/* Search Bar */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <label className="text-xs font-semibold text-muted uppercase tracking-wider">
                   Buscar por Teléfono, Nombre, Correo o Placa
                 </label>
                 <div className="relative flex items-center">
-                  <Search className="w-5 h-5 absolute left-3.5 text-slate-500" />
+                  <Search className="w-5 h-5 absolute left-3.5 text-faint" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleMembegoSearch()}
                     placeholder="Ej: 809-555-0101, A000101, mbg-usr-9001, etc."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-28 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl pl-11 pr-28 py-3 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand"
                   />
                   <button
                     onClick={() => handleMembegoSearch()}
                     disabled={isSearchingMembego}
-                    className="absolute right-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-xs transition-colors flex items-center gap-1.5"
+                    className="absolute right-2 px-4 py-1.5 bg-brand hover:bg-brand text-on-accent font-medium rounded-lg text-xs transition-colors flex items-center gap-1.5"
                   >
                     {isSearchingMembego ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Buscar'}
                   </button>
@@ -325,27 +325,27 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
               {/* Result Container */}
               {membegoResult && (
-                <div className={`p-4 rounded-xl border ${membegoResult.success ? 'bg-indigo-950/30 border-indigo-500/40' : 'bg-rose-950/30 border-rose-800/40'}`}>
+                <div className={`p-4 rounded-xl border ${membegoResult.success ? 'bg-brand-soft/30 border-brand/40' : 'bg-danger/30 border-danger/50/40'}`}>
                   {membegoResult.success && membegoResult.customer ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-300 font-bold flex items-center justify-center border border-indigo-500/40">
+                          <div className="w-10 h-10 rounded-full bg-brand/30 text-brand-hi font-bold flex items-center justify-center border border-brand/40">
                             {membegoResult.customer.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-bold text-white flex items-center gap-2">
+                            <div className="font-bold text-strong flex items-center gap-2">
                               {membegoResult.customer.name}
-                              <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">
+                              <span className="text-xs bg-warning/20 text-warning border border-warning/30 px-2 py-0.5 rounded-full font-semibold">
                                 {membegoResult.customer.membegoTier || 'Socio Activo'}
                               </span>
                             </div>
-                            <div className="text-xs text-slate-400">Tel: {membegoResult.customer.phone} • Membego ID: {membegoResult.customer.membegoCustomerId}</div>
+                            <div className="text-xs text-muted">Tel: {membegoResult.customer.phone} • Membego ID: {membegoResult.customer.membegoCustomerId}</div>
                           </div>
                         </div>
                         <button
                           onClick={() => setStep('vehicle')}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-600/30 transition-colors flex items-center gap-1.5"
+                          className="px-4 py-2 bg-success hover:bg-success text-on-accent text-xs font-bold rounded-lg shadow-lg shadow-success/30 transition-colors flex items-center gap-1.5"
                         >
                           Confirmar Socio <ArrowRight className="w-3.5 h-3.5" />
                         </button>
@@ -353,25 +353,25 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
                       {/* Benefits available */}
                       {membegoResult.benefits && membegoResult.benefits.length > 0 && (
-                        <div className="space-y-2 pt-2 border-t border-indigo-900/40">
-                          <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <div className="space-y-2 pt-2 border-t border-brand-soft/40">
+                          <div className="text-xs font-bold text-brand-hi flex items-center gap-1.5">
+                            <ShieldCheck className="w-4 h-4 text-success" />
                             Beneficios y Membresías Disponibles:
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {membegoResult.benefits.map(b => (
-                              <div key={b.id} className="p-2.5 bg-slate-900/80 rounded-lg border border-indigo-500/30 text-xs space-y-1">
-                                <div className="font-semibold text-white flex justify-between">
+                              <div key={b.id} className="p-2.5 bg-surface/80 rounded-lg border border-brand/30 text-xs space-y-1">
+                                <div className="font-semibold text-strong flex justify-between">
                                   <span>{b.serviceName}</span>
-                                  <span className="text-emerald-400 font-bold">{b.discountPercentage}% OFF</span>
+                                  <span className="text-success font-bold">{b.discountPercentage}% OFF</span>
                                 </div>
-                                <div className="text-xs text-slate-400">{b.membershipName} • Usos: {b.usesRemaining}/{b.usesMax}</div>
+                                <div className="text-xs text-muted">{b.membershipName} • Usos: {b.usesRemaining}/{b.usesMax}</div>
                                 <button
                                   onClick={() => {
                                     handleApplyBenefit(b);
                                     setStep('vehicle');
                                   }}
-                                  className="w-full mt-1.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-xs font-semibold border border-indigo-500/40 transition-colors"
+                                  className="w-full mt-1.5 py-1 bg-brand/30 hover:bg-brand text-brand-hi hover:text-on-accent rounded text-xs font-semibold border border-brand/40 transition-colors"
                                 >
                                   Usar este beneficio hoy
                                 </button>
@@ -382,11 +382,11 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 text-rose-300 text-xs">
-                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" />
+                    <div className="flex items-center gap-3 text-danger text-xs">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-danger" />
                       <div>
                         <div className="font-bold">{membegoResult.message}</div>
-                        <div className="text-slate-400 mt-0.5">Puede continuar registrando los datos del vehículo como cliente visitante.</div>
+                        <div className="text-muted mt-0.5">Puede continuar registrando los datos del vehículo como cliente visitante.</div>
                       </div>
                     </div>
                   )}
@@ -397,14 +397,14 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {step === 'vehicle' && (
             <div className="space-y-5">
-              <div className="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <UserCheck className="w-4 h-4 text-indigo-400" />
-                  Cliente: <strong className="text-white">{selectedCustomer ? selectedCustomer.name : 'Cliente Visitante / Anónimo'}</strong>
+              <div className="flex items-center justify-between bg-canvas p-3 rounded-xl border border-line">
+                <div className="flex items-center gap-2 text-xs text-body">
+                  <UserCheck className="w-4 h-4 text-brand" />
+                  Cliente: <strong className="text-strong">{selectedCustomer ? selectedCustomer.name : 'Cliente Visitante / Anónimo'}</strong>
                 </div>
                 <button
                   onClick={() => setStep('identify')}
-                  className="text-xs text-indigo-400 hover:underline"
+                  className="text-xs text-brand hover:underline"
                 >
                   Cambiar
                 </button>
@@ -412,22 +412,22 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Placa del Vehículo *</label>
+                  <label className="text-xs font-semibold text-muted uppercase">Placa del Vehículo *</label>
                   <input
                     type="text"
                     value={plate}
                     onChange={e => setPlate(e.target.value.toUpperCase())}
                     placeholder="Ej: A000101"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm font-bold tracking-wider text-white uppercase focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm font-bold tracking-wider text-strong uppercase focus:outline-none focus:border-brand"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Categoría / Tamaño *</label>
+                  <label className="text-xs font-semibold text-muted uppercase">Categoría / Tamaño *</label>
                   <select
                     value={category}
                     onChange={e => setCategory(e.target.value as VehicleCategory)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand"
                   >
                     <option value="sedan">Sedán (Auto Pequeño/Mediano)</option>
                     <option value="suv">SUV / Crossover (4x2 / 4x4)</option>
@@ -439,35 +439,35 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Marca</label>
+                  <label className="text-xs font-semibold text-muted uppercase">Marca</label>
                   <input
                     type="text"
                     value={make}
                     onChange={e => setMake(e.target.value)}
                     placeholder="Ej: Toyota"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Modelo</label>
+                  <label className="text-xs font-semibold text-muted uppercase">Modelo</label>
                   <input
                     type="text"
                     value={model}
                     onChange={e => setModel(e.target.value)}
                     placeholder="Ej: Land Cruiser Prado"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand"
                   />
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-400 uppercase">Color del Vehículo</label>
+                  <label className="text-xs font-semibold text-muted uppercase">Color del Vehículo</label>
                   <input
                     type="text"
                     value={color}
                     onChange={e => setColor(e.target.value)}
                     placeholder="Ej: Blanco Perlado, Negro, Gris Grafito"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand"
                   />
                 </div>
               </div>
@@ -481,7 +481,7 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     }
                     setStep('services');
                   }}
-                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-colors flex items-center gap-2"
+                  className="px-6 py-2.5 bg-brand hover:bg-brand text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-brand/30 transition-colors flex items-center gap-2"
                 >
                   Continuar a Servicios <ArrowRight className="w-4 h-4" />
                 </button>
@@ -491,17 +491,17 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           {step === 'services' && (
             <div className="space-y-5">
-              <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-950 p-3 rounded-xl border border-slate-800">
-                <div>Vehículo: <strong className="text-white">{plate}</strong> ({make} {model} - {category.toUpperCase()})</div>
+              <div className="flex items-center justify-between text-xs text-muted bg-canvas p-3 rounded-xl border border-line">
+                <div>Vehículo: <strong className="text-strong">{plate}</strong> ({make} {model} - {category.toUpperCase()})</div>
                 {appliedBenefit && (
-                  <div className="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30 flex items-center gap-1">
+                  <div className="bg-success/20 text-success font-bold px-2 py-0.5 rounded border border-success/30 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Beneficio Membego Activo
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-400 uppercase">Seleccionar Servicios para {category.toUpperCase()}</label>
+                <label className="text-xs font-semibold text-muted uppercase">Seleccionar Servicios para {category.toUpperCase()}</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {services.map(s => {
                     const price = s.priceByVehicle[category] || s.priceByVehicle.sedan;
@@ -514,24 +514,24 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
                         onClick={() => toggleServiceSelection(s)}
                         className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                           isSelected
-                            ? 'bg-indigo-950/50 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-700'
+                            ? 'bg-brand-soft/50 border-brand text-strong shadow-lg shadow-brand/20'
+                            : 'bg-canvas/60 border-line text-body hover:border-line-strong'
                         }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="font-bold text-sm flex items-center gap-2">
                             {s.name}
-                            {s.isPopular && <span className="text-xs bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Popular</span>}
+                            {s.isPopular && <span className="text-xs bg-warning/20 text-warning px-1.5 py-0.5 rounded">Popular</span>}
                           </div>
                           <div className="text-right">
                             {isCovered ? (
-                              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">INCLUIDO $0</span>
+                              <span className="text-xs font-bold text-success bg-success/20 px-2 py-0.5 rounded">INCLUIDO $0</span>
                             ) : (
-                              <span className="text-sm font-bold text-indigo-300">RD$ {price.toLocaleString()}</span>
+                              <span className="text-sm font-bold text-brand-hi">RD$ {price.toLocaleString()}</span>
                             )}
                           </div>
                         </div>
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{s.description}</p>
+                        <p className="text-xs text-muted mt-1 line-clamp-2">{s.description}</p>
                       </div>
                     );
                   })}
@@ -539,26 +539,26 @@ export const NuevaLlegadaModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-400 uppercase">Notas U Observaciones del Lavado</label>
+                <label className="text-xs font-semibold text-muted uppercase">Notas U Observaciones del Lavado</label>
                 <textarea
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
                   placeholder="Ej: Cuidado con la pintura reciente en la puerta izquierda, aromatizante vainilla..."
                   rows={2}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-canvas border border-line rounded-xl p-3 text-xs text-strong focus:outline-none focus:border-brand"
                 />
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-slate-800">
+              <div className="flex justify-between items-center pt-4 border-t border-line">
                 <button
                   onClick={() => setStep('vehicle')}
-                  className="px-4 py-2 text-slate-400 hover:text-white text-xs font-semibold"
+                  className="px-4 py-2 text-muted hover:text-strong text-xs font-semibold"
                 >
                   Atrás
                 </button>
                 <button
                   onClick={handleCreateOrder}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-xl shadow-emerald-600/30 transition-all flex items-center gap-2"
+                  className="px-6 py-3 bg-success hover:bg-success text-on-accent font-bold rounded-xl text-xs shadow-xl shadow-success/30 transition-all flex items-center gap-2"
                 >
                   <PlusCircle className="w-4 h-4" /> Crear Orden de Lavado
                 </button>

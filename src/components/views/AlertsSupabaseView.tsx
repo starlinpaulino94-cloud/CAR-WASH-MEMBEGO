@@ -29,10 +29,10 @@ const KIND_META: Record<NotificationKind, { icon: React.ReactNode; label: string
 };
 
 const STATUS_META: Record<NotificationStatus, { label: string; clase: string }> = {
-  pendiente:  { label: 'Pendiente',  clase: 'bg-amber-500/20 text-amber-400' },
-  enviado:    { label: 'Enviado',    clase: 'bg-emerald-500/20 text-emerald-400' },
-  descartado: { label: 'Descartado', clase: 'bg-slate-700/50 text-slate-400' },
-  fallido:    { label: 'Falló',      clase: 'bg-rose-500/20 text-rose-400' }
+  pendiente:  { label: 'Pendiente',  clase: 'bg-warning/20 text-warning' },
+  enviado:    { label: 'Enviado',    clase: 'bg-success/20 text-success' },
+  descartado: { label: 'Descartado', clase: 'bg-surface-3/50 text-muted' },
+  fallido:    { label: 'Falló',      clase: 'bg-danger/20 text-danger' }
 };
 
 const cuando = (iso: string) =>
@@ -101,7 +101,7 @@ export const AlertsSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Bell className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Bell className="w-5 h-5 text-brand" />}
           title="Avisos" subtitle="Al cliente y al negocio" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -120,12 +120,12 @@ export const AlertsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Bell className="w-5 h-5 text-indigo-400" />}
+        icon={<Bell className="w-5 h-5 text-brand" />}
         title="Avisos"
         subtitle="Lo que hay que decirle a alguien: al cliente o a usted mismo"
         actions={canRefresh ? (
           <button onClick={() => void barrer()} disabled={busy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} /> Buscar avisos
           </button>
         ) : undefined}
@@ -136,7 +136,7 @@ export const AlertsSupabaseView: React.FC = () => {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Pendientes" value={String(pendientes.length)}
-          tone={pendientes.length > 0 ? 'text-amber-400' : undefined} />
+          tone={pendientes.length > 0 ? 'text-warning' : undefined} />
         <StatCard label="Al cliente" value={String(alCliente)}
           hint="Vehículo listo, recordatorios" />
         <StatCard label="Del negocio" value={String(alNegocio)}
@@ -147,12 +147,12 @@ export const AlertsSupabaseView: React.FC = () => {
 
       {loading ? (
         <div className="space-y-2">
-          {[0, 1, 2].map(i => <div key={i} className="h-20 bg-slate-800/50 rounded-2xl animate-pulse" />)}
+          {[0, 1, 2].map(i => <div key={i} className="h-20 bg-surface-2/50 rounded-2xl animate-pulse" />)}
         </div>
       ) : rows.length === 0 ? (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 text-center">
-          <Bell className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">
+        <div className="bg-surface/80 border border-line rounded-2xl p-8 text-center">
+          <Bell className="w-8 h-8 text-faint mx-auto mb-2" />
+          <p className="text-sm text-muted">
             {filter === 'pendiente'
               ? 'Nada pendiente. Pulse «Buscar avisos» para revisar inventario, cobros y equipos.'
               : 'Todavía no hay avisos.'}
@@ -165,19 +165,19 @@ export const AlertsSupabaseView: React.FC = () => {
             const esCliente = n.audience === 'cliente';
             return (
               <li key={n.id}
-                className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-start gap-3">
-                <span className={`p-2 rounded-xl ${esCliente ? 'bg-indigo-500/15 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
+                className="bg-surface/80 border border-line rounded-2xl p-4 flex flex-wrap items-start gap-3">
+                <span className={`p-2 rounded-xl ${esCliente ? 'bg-brand/15 text-brand' : 'bg-surface-2 text-muted'}`}>
                   {meta.icon}
                 </span>
                 <div className="flex-1 min-w-[14rem]">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold text-white text-sm">{n.title}</h2>
+                    <h2 className="font-bold text-strong text-sm">{n.title}</h2>
                     <span className={`font-bold px-2 py-0.5 rounded text-xs ${STATUS_META[n.status].clase}`}>
                       {STATUS_META[n.status].label}
                     </span>
-                    <span className="text-xs text-slate-500">{meta.label} · {cuando(n.created_at)}</span>
+                    <span className="text-xs text-faint">{meta.label} · {cuando(n.created_at)}</span>
                   </div>
-                  <p className="text-sm text-slate-400 mt-0.5">{n.body}</p>
+                  <p className="text-sm text-muted mt-0.5">{n.body}</p>
                 </div>
 
                 {n.status === 'pendiente' && (
@@ -185,18 +185,18 @@ export const AlertsSupabaseView: React.FC = () => {
                     {n.recipient_phone && (
                       <a href={whatsappLink(n.recipient_phone, n.body)}
                         target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg">
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-lg">
                         <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                       </a>
                     )}
                     <button onClick={() => void resolver(n, 'enviado')}
                       aria-label={`Marcar como enviado: ${n.title}`}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400">
+                      className="p-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-success">
                       <Check className="w-4 h-4" />
                     </button>
                     <button onClick={() => void resolver(n, 'descartado')}
                       aria-label={`Descartar: ${n.title}`}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400">
+                      className="p-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -207,7 +207,7 @@ export const AlertsSupabaseView: React.FC = () => {
         </ul>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-faint">
         Los avisos al cliente se envían desde el WhatsApp de este dispositivo: el
         botón abre el chat con el texto ya escrito. Después, márquelo como enviado
         para que salga de lo pendiente.

@@ -81,14 +81,14 @@ export const QcReviewModal: React.FC<{
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onMouseDown={e => { if (e.target === e.currentTarget && !busy) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={`Control de calidad de ${plate}`}
-        className="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3.5">
-          <h2 className="font-bold text-white text-sm flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-purple-400" />
+        className="w-full max-w-lg bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 className="font-bold text-strong text-sm flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-accent" />
             Control de calidad — {plate}
-            <span className="text-slate-500 font-normal">· {orderNumber}</span>
+            <span className="text-faint font-normal">· {orderNumber}</span>
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-slate-400 hover:text-white">
+          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -97,12 +97,12 @@ export const QcReviewModal: React.FC<{
           {error && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
           {history.length > 0 && (
-            <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 space-y-1.5">
-              <div className="flex items-center gap-1.5 text-sm font-bold text-amber-200">
+            <div className="bg-warning/30 border border-warning/40 rounded-xl p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-sm font-bold text-warning">
                 <RotateCcw className="w-4 h-4" /> Reproceso · intento {history.length + 1}
               </div>
               {history.filter(h => h.result === 'rechazado').map(h => (
-                <p key={h.id} className="text-xs text-amber-200/80">
+                <p key={h.id} className="text-xs text-warning/80">
                   Intento {h.attempt}: {h.reject_reason}
                 </p>
               ))}
@@ -110,29 +110,29 @@ export const QcReviewModal: React.FC<{
           )}
 
           {loading ? (
-            <div className="h-32 bg-slate-800/60 rounded-xl animate-pulse" />
+            <div className="h-32 bg-surface-2/60 rounded-xl animate-pulse" />
           ) : items.length === 0 ? (
-            <p className="text-sm text-slate-500 italic bg-slate-950/50 rounded-xl p-4 text-center">
+            <p className="text-sm text-faint italic bg-canvas/50 rounded-xl p-4 text-center">
               No hay puntos de revisión configurados. Puede aprobar o rechazar igualmente;
               defina el checklist en Operaciones → Calidad para dejar constancia de qué se revisa.
             </p>
           ) : (
             <div className="space-y-1.5">
-              <span className="text-sm font-semibold text-slate-400 uppercase">Puntos a revisar</span>
+              <span className="text-sm font-semibold text-muted uppercase">Puntos a revisar</span>
               {items.map(i => (
                 <label key={i.id}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                     checks[i.id]
-                      ? 'bg-slate-950/60 border-slate-800 text-slate-200'
-                      : 'bg-rose-950/30 border-rose-500/40 text-rose-200'
+                      ? 'bg-canvas/60 border-line text-body'
+                      : 'bg-danger/30 border-danger/40 text-danger'
                   }`}>
-                  <input type="checkbox" checked={Boolean(checks[i.id])} className="accent-emerald-500 w-4 h-4"
+                  <input type="checkbox" checked={Boolean(checks[i.id])} className="accent-success w-4 h-4"
                     onChange={e => setChecks(c => ({ ...c, [i.id]: e.target.checked }))} />
                   <span className="text-sm font-medium">{i.label}</span>
                 </label>
               ))}
               {failed.length > 0 && (
-                <p className="text-xs text-rose-300 pt-1">
+                <p className="text-xs text-danger pt-1">
                   {failed.length} {failed.length === 1 ? 'punto no pasó' : 'puntos no pasaron'} la revisión.
                 </p>
               )}
@@ -161,14 +161,14 @@ export const QcReviewModal: React.FC<{
           </Field>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-3.5">
+        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
           <button onClick={() => void send('rechazado')} disabled={busy}
-            className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+            className="px-4 py-2.5 bg-danger hover:bg-danger disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
             Rechazar y reprocesar
           </button>
           <button onClick={() => void send('aprobado')} disabled={busy}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center gap-2">
+            className="px-4 py-2.5 bg-success hover:bg-success disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
             Aprobar
           </button>

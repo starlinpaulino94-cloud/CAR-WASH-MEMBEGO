@@ -21,10 +21,10 @@ const emptyForm = {
 };
 
 const STATUS_TONE: Record<string, string> = {
-  operativo: 'bg-emerald-500/20 text-emerald-400',
-  mantenimiento: 'bg-amber-500/20 text-amber-300',
-  fuera_servicio: 'bg-rose-500/20 text-rose-400',
-  retirado: 'bg-slate-700/50 text-slate-400'
+  operativo: 'bg-success/20 text-success',
+  mantenimiento: 'bg-warning/20 text-warning',
+  fuera_servicio: 'bg-danger/20 text-danger',
+  retirado: 'bg-surface-3/50 text-muted'
 };
 const STATUS_LABEL: Record<string, string> = {
   operativo: 'Operativo', mantenimiento: 'En mantenimiento',
@@ -144,7 +144,7 @@ export const EquipmentSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<Wrench className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<Wrench className="w-5 h-5 text-brand" />}
           title="Equipos" subtitle="Activos y su mantenimiento" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -159,12 +159,12 @@ export const EquipmentSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Wrench className="w-5 h-5 text-indigo-400" />}
+        icon={<Wrench className="w-5 h-5 text-brand" />}
         title="Equipos"
         subtitle="Serie, garantía, próxima revisión y costo acumulado de mantenimiento"
         actions={canManage ? (
           <button onClick={() => { setForm(emptyForm); setError(null); setShowCreate(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nuevo equipo
           </button>
         ) : undefined}
@@ -177,12 +177,12 @@ export const EquipmentSupabaseView: React.FC = () => {
       <SearchBox id="eq-search" label="Buscar equipo" value={q.searchInput}
         onChange={q.setSearchInput} placeholder="Buscar por nombre, código, marca o serie…" />
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Equipos</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">EQUIPO</th>
                 <th scope="col" className="p-3 font-semibold">SERIE</th>
                 <th scope="col" className="p-3 font-semibold">PRÓXIMA REVISIÓN</th>
@@ -191,7 +191,7 @@ export const EquipmentSupabaseView: React.FC = () => {
                 {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {q.loading ? <SkeletonRows cols={canManage ? 6 : 5} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 6 : 5}>
@@ -200,26 +200,26 @@ export const EquipmentSupabaseView: React.FC = () => {
                 ) : q.rows.map(e => {
                   const due = e.next_service_at !== null && e.next_service_at <= today;
                   return (
-                    <tr key={e.id} className="hover:bg-slate-800/40">
+                    <tr key={e.id} className="hover:bg-surface-2/40">
                       <td className="p-3">
-                        <div className="font-bold text-white">{e.name}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-bold text-strong">{e.name}</div>
+                        <div className="text-xs text-faint">
                           {e.code}{e.brand && ` · ${e.brand}`}{e.model && ` ${e.model}`}
                         </div>
                       </td>
-                      <td className="p-3 text-slate-400">{e.serial_number ?? '—'}</td>
+                      <td className="p-3 text-muted">{e.serial_number ?? '—'}</td>
                       <td className="p-3 whitespace-nowrap">
                         {e.next_service_at ? (
-                          <span className={due ? 'text-amber-300 font-bold' : 'text-slate-400'}>
+                          <span className={due ? 'text-warning font-bold' : 'text-muted'}>
                             {due && <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />}
                             {new Date(e.next_service_at + 'T00:00:00').toLocaleDateString('es-DO')}
                           </span>
-                        ) : <span className="text-slate-600">—</span>}
+                        ) : <span className="text-faint">—</span>}
                       </td>
-                      <td className="p-3 text-right text-slate-300 tabular-nums whitespace-nowrap">
+                      <td className="p-3 text-right text-body tabular-nums whitespace-nowrap">
                         {formatCents(e.maintenance_cents, symbol)}
                         {e.downtime_minutes > 0 && (
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-faint">
                             {Math.round(e.downtime_minutes / 60)} h fuera
                           </div>
                         )}
@@ -232,7 +232,7 @@ export const EquipmentSupabaseView: React.FC = () => {
                       {canManage && (
                         <td className="p-3 text-right">
                           <button onClick={() => void openPanel(e)}
-                            className="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 inline-flex items-center gap-1">
+                            className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body inline-flex items-center gap-1">
                             <Wrench className="w-3.5 h-3.5" />
                             {e.status === 'mantenimiento' ? 'Cerrar' : 'Intervenir'}
                           </button>
@@ -261,7 +261,7 @@ export const EquipmentSupabaseView: React.FC = () => {
         >
           {open ? (
             <>
-              <div className="bg-amber-950/30 border border-amber-500/40 rounded-xl p-3 text-sm text-amber-200">
+              <div className="bg-warning/30 border border-warning/40 rounded-xl p-3 text-sm text-warning">
                 <strong>{open.kind === 'preventivo' ? 'Preventivo' : 'Correctivo'}</strong> abierto el{' '}
                 {new Date(open.started_at).toLocaleString('es-DO')}: {open.description}
               </div>
@@ -278,9 +278,9 @@ export const EquipmentSupabaseView: React.FC = () => {
                   onChange={e => setResolution(e.target.value)} placeholder="Qué se hizo y cómo quedó" />
               </Field>
               {target.service_every_days && (
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-muted">
                   Al cerrar, la próxima revisión se reprograma para dentro de{' '}
-                  <strong className="text-white">{target.service_every_days} días</strong>.
+                  <strong className="text-strong">{target.service_every_days} días</strong>.
                 </p>
               )}
             </>
@@ -303,19 +303,19 @@ export const EquipmentSupabaseView: React.FC = () => {
           )}
 
           {history.length > 0 && (
-            <div className="border-t border-slate-800 pt-3 space-y-2">
-              <span className="text-sm font-semibold text-slate-400 uppercase flex items-center gap-1.5">
+            <div className="border-t border-line pt-3 space-y-2">
+              <span className="text-sm font-semibold text-muted uppercase flex items-center gap-1.5">
                 <History className="w-4 h-4" /> Historial
               </span>
               <ul className="space-y-1.5 max-h-40 overflow-y-auto">
                 {history.map(h => (
-                  <li key={h.id} className="text-xs bg-slate-950/60 rounded-lg p-2.5 flex items-start gap-2">
+                  <li key={h.id} className="text-xs bg-canvas/60 rounded-lg p-2.5 flex items-start gap-2">
                     {h.status === 'completada'
-                      ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                      : <Loader2 className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />}
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-success mt-0.5 flex-shrink-0" />
+                      : <Loader2 className="w-3.5 h-3.5 text-warning mt-0.5 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
-                      <div className="text-slate-300">{h.description}</div>
-                      <div className="text-slate-500">
+                      <div className="text-body">{h.description}</div>
+                      <div className="text-faint">
                         {new Date(h.started_at).toLocaleDateString('es-DO')}
                         {h.cost_cents > 0 && ` · ${formatCents(h.cost_cents, symbol)}`}
                       </div>

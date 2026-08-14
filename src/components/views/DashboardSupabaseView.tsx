@@ -64,7 +64,7 @@ export const DashboardSupabaseView: React.FC = () => {
   const skeleton = (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-busy="true">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-24 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />
+        <div key={i} className="h-24 bg-surface border border-line rounded-2xl animate-pulse" />
       ))}
     </div>
   );
@@ -72,7 +72,7 @@ export const DashboardSupabaseView: React.FC = () => {
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <ViewHeader
-        icon={<LayoutDashboard className="w-5 h-5 text-indigo-400" />}
+        icon={<LayoutDashboard className="w-5 h-5 text-brand" />}
         title={`Hola, ${profile?.full_name?.split(' ')[0] ?? ''}`}
         subtitle={`${branch?.name} · ${RANGES.find(r => r.id === range)?.label.toLowerCase()}`}
         actions={
@@ -82,15 +82,15 @@ export const DashboardSupabaseView: React.FC = () => {
                 <button key={r.id} onClick={() => setRange(r.id)} aria-pressed={range === r.id}
                   className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
                     range === r.id
-                      ? 'bg-indigo-600 text-white border-indigo-500'
-                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700'
+                      ? 'bg-brand text-on-accent border-brand'
+                      : 'bg-surface text-muted border-line hover:border-line-strong'
                   }`}>
                   {r.label}
                 </button>
               ))}
             </div>
             <button onClick={() => void load()} disabled={loading} aria-label="Actualizar indicadores"
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl disabled:opacity-50">
+              className="px-3 py-2 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body rounded-xl disabled:opacity-50">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </>
@@ -99,23 +99,23 @@ export const DashboardSupabaseView: React.FC = () => {
 
       {/* Estado del taller AHORA: no depende del rango elegido. */}
       <section aria-label="Estado del taller" className="space-y-2">
-        <h3 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+        <h3 className="text-xs font-extrabold text-faint uppercase tracking-wider">
           En el taller ahora
         </h3>
         {loading && !metrics ? skeleton : metrics && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="En cola" value={String(metrics.in_queue)} tone="text-amber-400"
+            <StatCard label="En cola" value={String(metrics.in_queue)} tone="text-warning"
               hint="Llegadas sin iniciar" />
-            <StatCard label="En proceso" value={String(metrics.in_process)} tone="text-indigo-400"
+            <StatCard label="En proceso" value={String(metrics.in_process)} tone="text-brand"
               hint="Lavado y control de calidad" />
-            <StatCard label="Listos para entrega" value={String(metrics.ready)} tone="text-emerald-400"
+            <StatCard label="Listos para entrega" value={String(metrics.ready)} tone="text-success"
               hint="Esperando al cliente" />
           </div>
         )}
       </section>
 
       <section aria-label="Resultados del periodo" className="space-y-2">
-        <h3 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
+        <h3 className="text-xs font-extrabold text-faint uppercase tracking-wider">
           {RANGES.find(r => r.id === range)?.label}
         </h3>
         {loading && !metrics ? skeleton : metrics && (
@@ -123,18 +123,18 @@ export const DashboardSupabaseView: React.FC = () => {
             <StatCard label="Vehículos recibidos" value={String(metrics.arrived)}
               hint={`${metrics.delivered} entregados`} />
             <StatCard label="Facturado" value={formatCents(metrics.sales_cents, symbol)}
-              tone="text-emerald-400" hint={`${metrics.invoice_count} comprobantes`} />
+              tone="text-success" hint={`${metrics.invoice_count} comprobantes`} />
             <StatCard label="Ticket promedio" value={formatCents(metrics.avg_ticket_cents, symbol)}
-              tone="text-indigo-400" />
+              tone="text-brand" />
             <StatCard label="Anulado" value={formatCents(metrics.annulled_cents, symbol)}
-              tone={metrics.annulled_cents > 0 ? 'text-rose-400' : 'text-slate-500'}
+              tone={metrics.annulled_cents > 0 ? 'text-danger' : 'text-faint'}
               hint={metrics.membego_orders > 0 ? `${metrics.membego_orders} con beneficio Membego` : undefined} />
           </div>
         )}
       </section>
 
-      <section aria-label="Accesos rápidos" className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h3 className="font-bold text-white text-sm">Ir a</h3>
+      <section aria-label="Accesos rápidos" className="bg-surface/80 border border-line rounded-2xl p-5 space-y-3">
+        <h3 className="font-bold text-strong text-sm">Ir a</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { tab: 'kanban', label: 'Tablero de operación', icon: Car },
@@ -142,15 +142,15 @@ export const DashboardSupabaseView: React.FC = () => {
             { tab: 'cash', label: 'Control de caja', icon: CheckCircle2 }
           ].map(({ tab, label, icon: Icon }) => (
             <button key={tab} onClick={() => navigate(tab)}
-              className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center justify-between transition-all">
-              <span className="flex items-center gap-2.5"><Icon className="w-4 h-4 text-indigo-400" />{label}</span>
+              className="p-3 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold rounded-xl text-xs flex items-center justify-between transition-all">
+              <span className="flex items-center gap-2.5"><Icon className="w-4 h-4 text-brand" />{label}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ))}
         </div>
       </section>
 
-      <p className="text-xs text-slate-600 flex items-center gap-1.5">
+      <p className="text-xs text-faint flex items-center gap-1.5">
         <Clock className="w-3 h-3" />
         Los importes del periodo excluyen comprobantes anulados y notas de crédito.
         {loading && <Loader2 className="w-3 h-3 animate-spin ml-1" />}

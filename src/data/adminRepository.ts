@@ -40,19 +40,56 @@ function friendlyDuplicate(error: unknown, kind: string, field: string): Error {
 
 // --------------------------------------------------------------- Clientes
 
+export type CustomerOrigin = Enums['customer_origin'];
+
+/**
+ * Página del directorio, con filtro opcional por procedencia.
+ *
+ * El filtro va al servidor, no a un `.filter()` sobre lo ya traído: filtrar en
+ * memoria daría un contador y una paginación mentirosos —«3 de 25» sobre una
+ * página que ya venía recortada—. Con RLS, además, el servidor es el único que
+ * sabe cuántas filas hay de verdad.
+ */
 export async function fetchCustomerPage(
-  page: number, pageSize: number, search: string
+  page: number, pageSize: number, search: string, origin?: CustomerOrigin
 ): Promise<PagedResult<Customer>> {
   let query = requireSupabase().from('customers').select('*', { count: 'exact' });
   if (search.trim()) {
     const t = escape(search.trim());
     query = query.or(`name.ilike.%${t}%,phone.ilike.%${t}%,email.ilike.%${t}%,tax_id.ilike.%${t}%`);
   }
+  if (origin) query = query.eq('origin', origin);
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
   if (error) throw error;
   return { rows: data ?? [], total: count ?? 0 };
+}
+
+/** Una entrada del resumen por procedencia. */
+export interface OriginStats {
+  clientes: number;
+  nuevos: number;
+  visitas: number;
+  consumo_historico_cents: number;
+  facturas: number;
+  facturado_cents: number;
+}
+
+export interface CustomerOriginSummary {
+  desde: string;
+  hasta: string;
+  por_origen: Record<CustomerOrigin, OriginStats>;
+}
+
+export async function fetchCustomerOriginSummary(
+  from?: string, to?: string
+): Promise<CustomerOriginSummary> {
+  const { data, error } = await requireSupabase().rpc('customer_origin_summary', {
+    p_from: from ?? null, p_to: to ?? null
+  });
+  if (error) throw error;
+  return data as unknown as CustomerOriginSummary;
 }
 
 export type Membership = Tables<'memberships'>;

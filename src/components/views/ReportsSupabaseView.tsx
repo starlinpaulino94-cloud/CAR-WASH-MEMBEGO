@@ -63,7 +63,7 @@ export const ReportsSupabaseView: React.FC = () => {
   if (!canSee) {
     return (
       <div className="p-6 max-w-2xl mx-auto space-y-4">
-        <ViewHeader icon={<BarChart3 className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<BarChart3 className="w-5 h-5 text-brand" />}
           title="Reportes y auditoría" />
         <ReadOnlyNotice>
           Su rol no permite consultar la bitácora de auditoría. La restricción la aplica la
@@ -78,68 +78,68 @@ export const ReportsSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<BarChart3 className="w-5 h-5 text-indigo-400" />}
+        icon={<BarChart3 className="w-5 h-5 text-brand" />}
         title="Reportes y auditoría"
         subtitle={`${branch?.name} · registro de solo inserción`}
         actions={<FilterChips options={RANGES} value={range} onChange={setRange} />}
       />
 
       {metricsError ? (
-        <div role="alert" className="text-xs text-rose-300">{metricsError}</div>
+        <div role="alert" className="text-xs text-danger">{metricsError}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Facturado en el periodo" tone="text-emerald-400"
+          <StatCard label="Facturado en el periodo" tone="text-success"
             value={metrics ? formatCents(metrics.sales_cents, symbol) : '—'}
             hint={metrics ? `${metrics.invoice_count} comprobantes` : undefined} />
-          <StatCard label="Anulado" tone={metrics && metrics.annulled_cents > 0 ? 'text-rose-400' : 'text-slate-500'}
+          <StatCard label="Anulado" tone={metrics && metrics.annulled_cents > 0 ? 'text-danger' : 'text-faint'}
             value={metrics ? formatCents(metrics.annulled_cents, symbol) : '—'} />
-          <StatCard label="Vehículos recibidos" tone="text-indigo-400"
+          <StatCard label="Vehículos recibidos" tone="text-brand"
             value={metrics ? String(metrics.arrived) : '—'}
             hint={metrics ? `${metrics.delivered} entregados` : undefined} />
-          <StatCard label="Eventos auditados" tone="text-amber-400"
+          <StatCard label="Eventos auditados" tone="text-warning"
             value={q.loading ? '—' : String(q.total)} hint="histórico completo" />
         </div>
       )}
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <h3 className="font-bold text-white text-sm">Bitácora de auditoría</h3>
+          <ShieldCheck className="w-4 h-4 text-success" />
+          <h3 className="font-bold text-strong text-sm">Bitácora de auditoría</h3>
         </div>
         <SearchBox id="audit-search" label="Buscar en la bitácora" value={q.searchInput}
           onChange={q.setSearchInput} placeholder="Buscar por acción, detalle o usuario…" />
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <caption className="sr-only">Eventos auditados</caption>
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+                <tr className="border-b border-line text-muted bg-canvas/50">
                   <th scope="col" className="p-3 font-semibold">CUÁNDO</th>
                   <th scope="col" className="p-3 font-semibold">ACCIÓN</th>
                   <th scope="col" className="p-3 font-semibold">DETALLE</th>
                   <th scope="col" className="p-3 font-semibold">QUIÉN</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-line/60">
                 {q.loading ? <SkeletonRows cols={4} />
                   : q.rows.length === 0 ? (
                     <EmptyRow cols={4}>
                       {q.searchInput ? 'Ningún evento coincide con la búsqueda.' : 'Todavía no hay eventos registrados.'}
                     </EmptyRow>
                   ) : q.rows.map(log => (
-                    <tr key={log.id} className="hover:bg-slate-800/40 align-top">
-                      <td className="p-3 text-slate-500 whitespace-nowrap">
+                    <tr key={log.id} className="hover:bg-surface-2/40 align-top">
+                      <td className="p-3 text-faint whitespace-nowrap">
                         {new Date(log.occurred_at).toLocaleString('es-DO')}
                       </td>
                       <td className="p-3">
-                        <span className="font-bold text-indigo-300 whitespace-nowrap">{log.action}</span>
-                        <div className="text-xs text-slate-500">{log.entity}</div>
+                        <span className="font-bold text-brand-hi whitespace-nowrap">{log.action}</span>
+                        <div className="text-xs text-faint">{log.entity}</div>
                       </td>
-                      <td className="p-3 text-slate-300">{log.details}</td>
-                      <td className="p-3 text-slate-400 whitespace-nowrap">
+                      <td className="p-3 text-body">{log.details}</td>
+                      <td className="p-3 text-muted whitespace-nowrap">
                         {log.actor_name || '—'}
-                        {log.actor_role && <div className="text-xs text-slate-600 uppercase">{log.actor_role}</div>}
+                        {log.actor_role && <div className="text-xs text-faint uppercase">{log.actor_role}</div>}
                       </td>
                     </tr>
                   ))}
@@ -151,7 +151,7 @@ export const ReportsSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+      <p className="text-xs text-faint flex items-center gap-1.5">
         {q.loading && <Loader2 className="w-3 h-3 animate-spin" />}
         La bitácora no admite modificación ni borrado, garantizado por permisos, políticas y
         trigger. El autor y la hora los sella el servidor.

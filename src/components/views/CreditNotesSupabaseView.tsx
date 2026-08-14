@@ -122,7 +122,7 @@ export const CreditNotesSupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<FileMinus className="w-5 h-5 text-indigo-400" />}
+        <ViewHeader icon={<FileMinus className="w-5 h-5 text-brand" />}
           title="Notas de crédito" subtitle="Corregir un renglón sin tumbar la factura" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -137,12 +137,12 @@ export const CreditNotesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
-        icon={<FileMinus className="w-5 h-5 text-indigo-400" />}
+        icon={<FileMinus className="w-5 h-5 text-brand" />}
         title="Notas de crédito"
         subtitle="Acredita renglones concretos; la factura solo se anula si se acredita entera"
         actions={canManage ? (
           <button onClick={abrir}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <FileMinus className="w-4 h-4" /> Emitir nota
           </button>
         ) : undefined}
@@ -152,12 +152,12 @@ export const CreditNotesSupabaseView: React.FC = () => {
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
       {error && !showForm && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Notas de crédito emitidas</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">NOTA</th>
                 <th scope="col" className="p-3 font-semibold">NCF</th>
                 <th scope="col" className="p-3 font-semibold">CLIENTE</th>
@@ -165,17 +165,17 @@ export const CreditNotesSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold text-right">IMPORTE</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? <SkeletonRows cols={5} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={5}>Todavía no se ha emitido ninguna nota de crédito.</EmptyRow>
                 ) : rows.map(n => (
-                  <tr key={n.id} className="hover:bg-slate-800/40">
-                    <td className="p-3 font-bold text-white tabular-nums">{n.invoice_number}</td>
-                    <td className="p-3 text-slate-400 tabular-nums">{n.ncf ?? '—'}</td>
-                    <td className="p-3 text-slate-400">{n.customer_name}</td>
-                    <td className="p-3 text-slate-400 tabular-nums">{fecha(n.created_at)}</td>
-                    <td className="p-3 text-right font-bold text-rose-400 tabular-nums">
+                  <tr key={n.id} className="hover:bg-surface-2/40">
+                    <td className="p-3 font-bold text-strong tabular-nums">{n.invoice_number}</td>
+                    <td className="p-3 text-muted tabular-nums">{n.ncf ?? '—'}</td>
+                    <td className="p-3 text-muted">{n.customer_name}</td>
+                    <td className="p-3 text-muted tabular-nums">{fecha(n.created_at)}</td>
+                    <td className="p-3 text-right font-bold text-danger tabular-nums">
                       −{formatCents(n.total_cents, symbol)}
                     </td>
                   </tr>
@@ -203,22 +203,22 @@ export const CreditNotesSupabaseView: React.FC = () => {
                   placeholder="Número, cliente o placa…" />
               </Field>
               {candidatas.length === 0 ? (
-                <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                <p className="text-xs text-muted flex items-center gap-1.5">
                   <Search className="w-3.5 h-3.5" /> Ninguna factura vigente coincide.
                 </p>
               ) : (
-                <ul className="max-h-72 overflow-y-auto divide-y divide-slate-800/60">
+                <ul className="max-h-72 overflow-y-auto divide-y divide-line/60">
                   {candidatas.map(inv => (
                     <li key={inv.id}>
                       <button type="button" onClick={() => elegir(inv)}
-                        className="w-full text-left py-2.5 px-2 hover:bg-slate-800/60 rounded-lg">
+                        className="w-full text-left py-2.5 px-2 hover:bg-surface-2/60 rounded-lg">
                         <div className="flex justify-between gap-2">
-                          <span className="font-bold text-white text-sm tabular-nums">{inv.invoice_number}</span>
-                          <span className="text-sm text-slate-300 tabular-nums">
+                          <span className="font-bold text-strong text-sm tabular-nums">{inv.invoice_number}</span>
+                          <span className="text-sm text-body tabular-nums">
                             {formatCents(inv.total_cents, symbol)}
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-faint">
                           {inv.customer_name} · {fecha(inv.created_at)}
                           {inv.credited_cents > 0 && ` · ya acreditado ${formatCents(inv.credited_cents, symbol)}`}
                         </div>
@@ -231,35 +231,35 @@ export const CreditNotesSupabaseView: React.FC = () => {
           ) : (
             <>
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted">
                   {elegida.customer_name} · {fecha(elegida.created_at)}
                   {elegida.ncf && ` · NCF ${elegida.ncf}`}
                 </p>
                 <button type="button" onClick={() => setElegida(null)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                   <X className="w-3 h-3" /> Cambiar
                 </button>
               </div>
 
               {lineas.length === 0 ? (
-                <p className="text-xs text-amber-400">
+                <p className="text-xs text-warning">
                   Esta factura ya tiene todas sus líneas acreditadas.
                 </p>
               ) : (
-                <ul className="divide-y divide-slate-800/60">
+                <ul className="divide-y divide-line/60">
                   {lineas.map(i => {
                     const disponible = i.quantity - i.credited_quantity;
                     return (
                       <li key={i.id} className="py-2.5 flex items-center justify-between gap-3">
                         <div>
-                          <div className="font-bold text-white text-sm">{i.name}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="font-bold text-strong text-sm">{i.name}</div>
+                          <div className="text-xs text-faint">
                             {formatCents(i.unit_price_cents, symbol)} c/u · quedan {disponible} de {i.quantity}
                           </div>
                         </div>
                         <input
                           aria-label={`Unidades a acreditar de ${i.name}`}
-                          className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-sm text-white text-right tabular-nums"
+                          className="w-20 bg-canvas border border-line rounded-lg px-2 py-1.5 text-sm text-strong text-right tabular-nums"
                           inputMode="numeric"
                           value={cantidades[i.id] ?? 0}
                           onChange={e => setCantidad(i.id, Number(e.target.value) || 0, disponible)} />
@@ -274,7 +274,7 @@ export const CreditNotesSupabaseView: React.FC = () => {
                   onChange={e => setMotivo(e.target.value)}
                   placeholder="Se entregó uno de menos" />
               </Field>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-faint">
                 El importe final lo calcula el servidor con el ITBIS de la empresa.
                 Si la venta fue a crédito, lo acreditado baja primero la deuda; solo lo
                 que exceda el saldo se devuelve en efectivo.

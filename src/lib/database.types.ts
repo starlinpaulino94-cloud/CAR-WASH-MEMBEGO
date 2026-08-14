@@ -25,6 +25,7 @@ export type Enums = {
   inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
   item_type: "service" | "package" | "product";
   membego_status: "active" | "inactive" | "none";
+  customer_origin: "carwash" | "membego";
   ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";
   order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
   payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";
@@ -684,6 +685,9 @@ export interface Database {
           membego_customer_id: string | null;
           membego_status: "active" | "inactive" | "none";
           membego_tier: string | null;
+          // Procedencia (0037). NO está en Insert ni en Update: la decide un
+          // disparador con los datos de la fila y después no se puede cambiar.
+          origin: "carwash" | "membego";
           total_visits: number;
           total_spent_cents: number;
           last_visit_at: string | null;
@@ -2784,6 +2788,10 @@ export interface Database {
         Args: { p_entity: string; p_rows: Json; p_apply: boolean };
         Returns: Json;
       };
+      customer_origin_summary: {
+        Args: { p_from?: string | null; p_to?: string | null };
+        Returns: Json;
+      };
       refresh_alerts: {
         Args: Record<string, never>;
         Returns: Json;
@@ -3074,6 +3082,7 @@ export interface Database {
       inventory_movement_kind: "entrada" | "compra" | "venta" | "devolucion" | "consumo" | "ajuste" | "merma" | "transferencia";
       item_type: "service" | "package" | "product";
       membego_status: "active" | "inactive" | "none";
+      customer_origin: "carwash" | "membego";
       ncf_type: "B01" | "B02" | "B04" | "B14" | "B15";
       order_status: "pendiente" | "en_espera" | "asignada" | "en_proceso" | "control_calidad" | "listo" | "entregado" | "cancelado";
       payment_method: "efectivo" | "tarjeta" | "transferencia" | "pago_movil" | "membego_beneficio" | "credito" | "cortesia" | "mixto";

@@ -11,17 +11,17 @@ export const InvoicesView: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="border-b border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Receipt className="w-5 h-5 text-indigo-400" /> Historial de Facturas & Comprobantes
+      <div className="border-b border-line pb-4">
+        <h2 className="text-xl font-bold text-strong flex items-center gap-2">
+          <Receipt className="w-5 h-5 text-brand" /> Historial de Facturas & Comprobantes
         </h2>
-        <p className="text-xs text-slate-400">Reimpresión de tickets térmicos, NCF fiscal y anulaciones</p>
+        <p className="text-xs text-muted">Reimpresión de tickets térmicos, NCF fiscal y anulaciones</p>
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+            <tr className="border-b border-line text-muted bg-canvas/50">
               <th className="p-3">COMPROBANTE</th>
               <th className="p-3">FECHA</th>
               <th className="p-3">CLIENTE</th>
@@ -30,28 +30,28 @@ export const InvoicesView: React.FC = () => {
               <th className="p-3 text-right">ACCIONES</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-line/60">
             {invoices.map(inv => (
-              <tr key={inv.id} className={`hover:bg-slate-800/40 ${inv.isAnulled ? 'opacity-50 line-through' : ''}`}>
-                <td className="p-3 font-bold text-indigo-300">{inv.invoiceNumber}</td>
-                <td className="p-3 text-slate-400">{new Date(inv.createdAt).toLocaleString()}</td>
-                <td className="p-3 text-white font-medium">{inv.customerName}</td>
-                <td className="p-3 text-slate-300 font-mono">{inv.ncfFiscalNumber || 'Consumidor Final'}</td>
-                <td className="p-3 font-bold text-white">{company.currencySymbol} {inv.total.toLocaleString()}</td>
+              <tr key={inv.id} className={`hover:bg-surface-2/40 ${inv.isAnulled ? 'opacity-50 line-through' : ''}`}>
+                <td className="p-3 font-bold text-brand-hi">{inv.invoiceNumber}</td>
+                <td className="p-3 text-muted">{new Date(inv.createdAt).toLocaleString()}</td>
+                <td className="p-3 text-strong font-medium">{inv.customerName}</td>
+                <td className="p-3 text-body font-mono">{inv.ncfFiscalNumber || 'Consumidor Final'}</td>
+                <td className="p-3 font-bold text-strong">{company.currencySymbol} {inv.total.toLocaleString()}</td>
                 <td className="p-3 text-right flex gap-2 justify-end">
                   <button
                     onClick={() => {
                       setSelectedInvoice(inv);
                       setIsModalOpen(true);
                     }}
-                    className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs flex items-center gap-1 font-semibold"
+                    className="p-1.5 bg-brand hover:bg-brand text-on-accent rounded text-xs flex items-center gap-1 font-semibold"
                   >
                     <Printer className="w-3.5 h-3.5" /> Reimprimir Ticket
                   </button>
                   {!inv.isAnulled && (
                     <button
                       onClick={() => annulInvoice(inv.id, 'Anulación solicitada por cajero')}
-                      className="p-1.5 bg-rose-600/30 text-rose-300 hover:bg-rose-600 hover:text-white rounded text-xs flex items-center gap-1 font-semibold border border-rose-500/30"
+                      className="p-1.5 bg-danger/30 text-danger hover:bg-danger hover:text-on-accent rounded text-xs flex items-center gap-1 font-semibold border border-danger/30"
                     >
                       <Ban className="w-3.5 h-3.5" /> Anular
                     </button>

@@ -6,7 +6,7 @@
 --
 -- Por qué existe teniendo ya `estado_migraciones.sql`: aquel busca UN objeto por
 -- migración, así que solo sabe si el parche arrancó. Este comprueba los 510
--- objetos que crean las 40 migraciones —tablas, columnas, funciones, tipos,
+-- objetos que crean las 41 migraciones —tablas, columnas, funciones, tipos,
 -- disparadores, políticas e índices— uno por uno. Si un parche se cortó a la
 -- mitad, aquí sale «INCOMPLETA» con el nombre de lo que falta; allá salía
 -- «aplicada».
@@ -552,7 +552,13 @@ with esperadas (num, modulo, parche, tipo, objeto) as (
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.slug_code'),
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'app.parse_vehicle_category'),
     ('0035', 'Importación masiva', 'importacion_0035.sql', 'func', 'public.import_batch'),
-    ('0036', 'SSO Membego (7 parches)', '(ya en el repositorio: supabase/migrations)', 'srcfunc', 'public.membego_sso_upsert_user::app.branch_ctx')
+    ('0036', 'SSO Membego (7 parches)', '(ya en el repositorio: supabase/migrations)', 'srcfunc', 'public.membego_sso_upsert_user::app.branch_ctx'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'type',   'app.customer_origin'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'column', 'public.customers.origin'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'func',   'app.customers_origin_guard'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'func',   'public.customer_origin_summary'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'trigger','customers_origin_guard'),
+    ('0037', 'Procedencia del cliente', 'procedencia_0037.sql', 'index',  'public.customers_company_origin_idx')
 ),
 -- Cada objeto se busca donde de verdad vive, no por su nombre a secas.
 detectadas as (
@@ -630,7 +636,7 @@ from (
     (select count(*) filter (where hay = total) || ' / ' || count(*)
        from veredicto) as "Objetos",
     case when (select count(*) from veredicto where hay <> total) = 0
-         then 'Las 40 migraciones están completas. No hay nada pendiente.'
+         then 'Las 41 migraciones están completas. No hay nada pendiente.'
          else 'Ejecute estos parches EN ESTE ORDEN, uno por uno:'
     end as "Qué falta",
     coalesce((select string_agg(coalesce(parche, '(esquema base)'), '  →  '

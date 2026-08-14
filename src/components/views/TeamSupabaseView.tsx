@@ -137,7 +137,7 @@ export const TeamSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Briefcase className="w-5 h-5 text-indigo-400" />}
+        icon={<Briefcase className="w-5 h-5 text-brand" />}
         title="Equipo y comisiones"
         subtitle="Personal de la sucursal y comisiones generadas al entregar"
         actions={
@@ -145,7 +145,7 @@ export const TeamSupabaseView: React.FC = () => {
             <FilterChips options={RANGES} value={range} onChange={setRange} />
             {canManageStaff && (
               <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
                 <Plus className="w-4 h-4" /> Nuevo empleado
               </button>
             )}
@@ -166,19 +166,19 @@ export const TeamSupabaseView: React.FC = () => {
 
       {seesAll && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard label="Comisiones del periodo" value={formatCents(totals.total, symbol)} tone="text-indigo-400" />
+          <StatCard label="Comisiones del periodo" value={formatCents(totals.total, symbol)} tone="text-brand" />
           <StatCard label="Pendientes de pago" value={formatCents(totals.unpaid, symbol)}
-            tone={totals.unpaid > 0 ? 'text-amber-400' : 'text-slate-500'} />
+            tone={totals.unpaid > 0 ? 'text-warning' : 'text-faint'} />
           <StatCard label="Personal activo" value={String(team.filter(t => t.is_active).length)} />
         </div>
       )}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <caption className="sr-only">Personal y comisiones</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">PERSONA</th>
                 <th scope="col" className="p-3 font-semibold">ROL</th>
                 <th scope="col" className="p-3 font-semibold text-right">TASA</th>
@@ -187,40 +187,40 @@ export const TeamSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold text-right">POR PAGAR</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} aria-hidden="true">
-                    <td colSpan={6} className="p-3"><div className="h-5 bg-slate-800/60 rounded animate-pulse" /></td>
+                    <td colSpan={6} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
                   </tr>
                 ))
               ) : team.length === 0 ? (
-                <tr><td colSpan={6} className="p-10 text-center text-slate-500 italic">
+                <tr><td colSpan={6} className="p-10 text-center text-faint italic">
                   No hay personal registrado.
                 </td></tr>
               ) : team.map(person => {
                 const s = summary.get(person.id);
                 return (
-                  <tr key={person.id} className={`hover:bg-slate-800/40 ${person.is_active ? '' : 'opacity-50'}`}>
+                  <tr key={person.id} className={`hover:bg-surface-2/40 ${person.is_active ? '' : 'opacity-50'}`}>
                     <td className="p-3">
-                      <div className="font-bold text-white">{person.full_name || person.email}</div>
-                      <div className="text-xs text-slate-500">{person.email}</div>
+                      <div className="font-bold text-strong">{person.full_name || person.email}</div>
+                      <div className="text-xs text-faint">{person.email}</div>
                     </td>
                     <td className="p-3">
-                      <span className="bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded text-xs uppercase">
+                      <span className="bg-brand-soft text-brand-hi font-bold px-2 py-0.5 rounded text-xs uppercase">
                         {person.role ?? 'sin rol'}
                       </span>
-                      {!person.is_active && <span className="ml-1 text-xs text-slate-500">inactivo</span>}
+                      {!person.is_active && <span className="ml-1 text-xs text-faint">inactivo</span>}
                     </td>
-                    <td className="p-3 text-right text-emerald-400 font-bold">
+                    <td className="p-3 text-right text-success font-bold">
                       {person.commission_bps ? bpsToPercent(person.commission_bps) : '—'}
                     </td>
-                    <td className="p-3 text-right text-slate-300 tabular-nums">{s?.count ?? 0}</td>
-                    <td className="p-3 text-right font-bold text-indigo-300 whitespace-nowrap">
+                    <td className="p-3 text-right text-body tabular-nums">{s?.count ?? 0}</td>
+                    <td className="p-3 text-right font-bold text-brand-hi whitespace-nowrap">
                       {formatCents(s?.totalCents ?? 0, symbol)}
                     </td>
                     <td className={`p-3 text-right font-bold whitespace-nowrap ${
-                      (s?.unpaidCents ?? 0) > 0 ? 'text-amber-400' : 'text-slate-600'
+                      (s?.unpaidCents ?? 0) > 0 ? 'text-warning' : 'text-faint'
                     }`}>
                       {formatCents(s?.unpaidCents ?? 0, symbol)}
                     </td>
@@ -232,7 +232,7 @@ export const TeamSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 flex items-center gap-1.5">
+      <p className="text-xs text-faint flex items-center gap-1.5">
         {loading && <Loader2 className="w-3 h-3 animate-spin" />}
         Las comisiones se generan al entregar el vehículo, repartiendo cada servicio entre
         los operarios asignados con la tasa de cada uno.
@@ -248,8 +248,8 @@ export const TeamSupabaseView: React.FC = () => {
           onClose={() => setShowCreate(false)}
           onDismissError={() => setCreateError(null)}
         >
-          <div className="flex items-start gap-2 p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-xs text-slate-300">
-            <UserCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-indigo-400" />
+          <div className="flex items-start gap-2 p-3 bg-surface-2/50 border border-line-strong rounded-xl text-xs text-body">
+            <UserCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-brand" />
             <span>
               Se crea el acceso del empleado (correo y contraseña) y su rol dentro de tu
               empresa. Podrá iniciar sesión de inmediato con esos datos.
@@ -280,16 +280,16 @@ export const TeamSupabaseView: React.FC = () => {
               <select id="emp-role" className={textInputClass} value={form.role}
                 onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
                 {ROLE_OPTIONS.map(r => (
-                  <option key={r.id} value={r.id} className="bg-slate-900">{r.label}</option>
+                  <option key={r.id} value={r.id} className="bg-surface">{r.label}</option>
                 ))}
               </select>
             </Field>
             <Field label="Sucursal" htmlFor="emp-branch">
               <select id="emp-branch" className={textInputClass} value={form.branchId}
                 onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}>
-                <option value="" className="bg-slate-900">Sin asignar</option>
+                <option value="" className="bg-surface">Sin asignar</option>
                 {branches.map(b => (
-                  <option key={b.id} value={b.id} className="bg-slate-900">{b.name}</option>
+                  <option key={b.id} value={b.id} className="bg-surface">{b.name}</option>
                 ))}
               </select>
             </Field>

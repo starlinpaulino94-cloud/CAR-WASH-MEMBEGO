@@ -121,7 +121,7 @@ export const ServicesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Layers className="w-5 h-5 text-indigo-400" />}
+        icon={<Layers className="w-5 h-5 text-brand" />}
         title="Servicios y matriz de precios"
         subtitle="Tarifa por categoría de vehículo y comisión por lavador"
         actions={
@@ -132,7 +132,7 @@ export const ServicesSupabaseView: React.FC = () => {
             )}
             {editable && (
               <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
                 <Plus className="w-4 h-4" /> Nuevo servicio
               </button>
             )}
@@ -147,17 +147,17 @@ export const ServicesSupabaseView: React.FC = () => {
       )}
       {actionError && <InlineAlert tone="error" onDismiss={() => setActionError(null)}>{actionError}</InlineAlert>}
       {editable && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-faint">
           Toque un precio para editarlo. Enter guarda, Escape cancela.
         </p>
       )}
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <caption className="sr-only">Matriz de precios por servicio y categoría</caption>
             <thead>
-              <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+              <tr className="border-b border-line text-muted bg-canvas/50">
                 <th scope="col" className="p-3 font-semibold">SERVICIO</th>
                 {COLUMNS.map(c => (
                   <th key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
@@ -168,26 +168,26 @@ export const ServicesSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold text-right">RECETA</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-line/60">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} aria-hidden="true">
                     <td colSpan={COLUMNS.length + 3} className="p-3">
-                      <div className="h-5 bg-slate-800/60 rounded animate-pulse" />
+                      <div className="h-5 bg-surface-2/60 rounded animate-pulse" />
                     </td>
                   </tr>
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={COLUMNS.length + 3} className="p-10 text-center text-slate-500 italic">
+                  <td colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
                     Todavía no hay servicios en el catálogo.
                   </td>
                 </tr>
               ) : rows.map(s => (
-                <tr key={s.id} className={`hover:bg-slate-800/40 ${s.is_active ? '' : 'opacity-50'}`}>
+                <tr key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
                   <td className="p-3">
-                    <div className="font-bold text-white">{s.name}</div>
-                    <div className="text-xs text-slate-400">
+                    <div className="font-bold text-strong">{s.name}</div>
+                    <div className="text-xs text-muted">
                       {s.code} · {s.estimated_minutes} min
                       {!s.is_active && ' · inactivo'}
                     </div>
@@ -207,14 +207,14 @@ export const ServicesSupabaseView: React.FC = () => {
                                 if (e.key === 'Escape') setEditing(null);
                               }}
                               aria-label={`Precio de ${s.name} para ${c.label}`}
-                              className="w-20 bg-slate-950 border border-indigo-500 rounded p-1 text-right text-white"
+                              className="w-20 bg-canvas border border-brand rounded p-1 text-right text-strong"
                             />
                             <button onClick={() => void commit()} disabled={busy} aria-label="Guardar"
-                              className="p-1 text-emerald-400 hover:text-emerald-300">
+                              className="p-1 text-success hover:text-success">
                               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                             </button>
                             <button onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
-                              className="p-1 text-slate-500 hover:text-slate-300">
+                              className="p-1 text-faint hover:text-body">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </span>
@@ -224,8 +224,8 @@ export const ServicesSupabaseView: React.FC = () => {
                             disabled={!editable}
                             aria-label={`Precio de ${s.name} para ${c.label}`}
                             className={`px-2 py-1 rounded font-bold tabular-nums whitespace-nowrap ${
-                              editable ? 'hover:bg-slate-800 text-slate-200' : 'text-slate-300 cursor-default'
-                            } ${price === undefined ? 'text-slate-600 italic font-normal' : ''}`}
+                              editable ? 'hover:bg-surface-2 text-body' : 'text-body cursor-default'
+                            } ${price === undefined ? 'text-faint italic font-normal' : ''}`}
                           >
                             {price === undefined ? 'sin precio' : formatCents(price, symbol)}
                             {editable && price !== undefined && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
@@ -234,13 +234,13 @@ export const ServicesSupabaseView: React.FC = () => {
                       </td>
                     );
                   })}
-                  <td className="p-3 font-bold text-indigo-400 text-right">{bpsToPercent(s.commission_bps)}</td>
+                  <td className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</td>
                   <td className="p-3 text-right">
                     <button
                       onClick={() => setRecipeFor({ id: s.id, name: s.name })}
                       aria-label={`Receta de ${s.name}`}
                       title="Insumos que consume este servicio"
-                      className="p-1.5 text-purple-400 hover:text-purple-300 rounded-lg hover:bg-slate-800">
+                      className="p-1.5 text-accent hover:text-accent rounded-lg hover:bg-surface-2">
                       <FlaskConical className="w-4 h-4" />
                     </button>
                   </td>
@@ -251,7 +251,7 @@ export const ServicesSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-faint">
         Un servicio sin precio para una categoría no se ofrece en el punto de venta ni al
         registrar la llegada: facturarlo fallaría.
       </p>
@@ -301,23 +301,23 @@ export const ServicesSupabaseView: React.FC = () => {
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-            <input type="checkbox" checked={form.membego} className="accent-indigo-600"
+          <label className="flex items-center gap-2 text-xs text-body cursor-pointer">
+            <input type="checkbox" checked={form.membego} className="accent-brand"
               onChange={e => setForm(f => ({ ...f, membego: e.target.checked }))} />
             Incluido en el beneficio Membego
           </label>
 
           <div className="space-y-2 pt-1">
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            <div className="text-xs font-semibold text-muted uppercase tracking-wide">
               Precio por categoría ({symbol})
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-faint">
               Deje en blanco las categorías que este servicio no cubre.
             </p>
             <div className="grid grid-cols-3 gap-2">
               {COLUMNS.map(c => (
                 <div key={c.id} className="space-y-1">
-                  <label htmlFor={`svc-price-${c.id}`} className="block text-xs text-slate-400">{c.label}</label>
+                  <label htmlFor={`svc-price-${c.id}`} className="block text-xs text-muted">{c.label}</label>
                   <input id={`svc-price-${c.id}`} type="text" inputMode="decimal"
                     className={textInputClass} value={form.prices[c.id] ?? ''}
                     onChange={e => setForm(f => ({ ...f, prices: { ...f.prices, [c.id]: e.target.value } }))}

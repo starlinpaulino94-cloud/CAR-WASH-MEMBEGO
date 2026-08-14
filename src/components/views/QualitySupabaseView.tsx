@@ -68,7 +68,7 @@ export const QualitySupabaseView: React.FC = () => {
   if (phase !== 'ready') {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-purple-400" />}
+        <ViewHeader icon={<ShieldCheck className="w-5 h-5 text-accent" />}
           title="Calidad" subtitle="Puntos de revisión antes de entregar" />
         <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
@@ -82,7 +82,7 @@ export const QualitySupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <ViewHeader
-        icon={<ShieldCheck className="w-5 h-5 text-purple-400" />}
+        icon={<ShieldCheck className="w-5 h-5 text-accent" />}
         title="Calidad"
         subtitle="Qué se revisa antes de entregar un vehículo"
       />
@@ -96,29 +96,29 @@ export const QualitySupabaseView: React.FC = () => {
         devuelve a lavado como reproceso, con el motivo visible para el operario.
       </InlineAlert>
 
-      <section className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2">
+      <section className="bg-surface/80 border border-line rounded-2xl p-5 space-y-4">
+        <h3 className="font-bold text-strong text-sm border-b border-line pb-2">
           Puntos de revisión
         </h3>
 
         {loading ? (
-          <div className="h-24 bg-slate-800/60 rounded-xl animate-pulse" />
+          <div className="h-24 bg-surface-2/60 rounded-xl animate-pulse" />
         ) : items.length === 0 ? (
-          <p className="text-sm text-slate-500 italic text-center py-4">
+          <p className="text-sm text-faint italic text-center py-4">
             Todavía no hay puntos configurados. Sin ellos se puede aprobar o rechazar, pero no
             queda constancia de qué se revisó.
           </p>
         ) : (
           <ol className="space-y-2">
             {items.map((i, idx) => (
-              <li key={i.id} className="flex items-center gap-3 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
-                <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold grid place-items-center flex-shrink-0">
+              <li key={i.id} className="flex items-center gap-3 bg-canvas/60 border border-line rounded-xl p-3">
+                <span className="w-6 h-6 rounded-lg bg-surface-2 text-muted text-xs font-bold grid place-items-center flex-shrink-0">
                   {idx + 1}
                 </span>
-                <span className="flex-1 text-sm font-medium text-white">{i.label}</span>
+                <span className="flex-1 text-sm font-medium text-strong">{i.label}</span>
                 {editable && (
                   <button onClick={() => void remove(i.id)} aria-label={`Quitar ${i.label}`}
-                    className="p-1.5 text-slate-500 hover:text-rose-400">
+                    className="p-1.5 text-faint hover:text-danger">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}
@@ -128,13 +128,13 @@ export const QualitySupabaseView: React.FC = () => {
         )}
 
         {editable && (
-          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-800">
+          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-line">
             <input aria-label="Nuevo punto de revisión" className={`${textInputClass} flex-1`}
               value={label} onChange={e => setLabel(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') void add(); }}
               placeholder="Ej.: Cristales sin marcas" />
             <button onClick={() => void add()} disabled={busy || !label.trim()}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2">
+              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center justify-center gap-2">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               Agregar punto
             </button>

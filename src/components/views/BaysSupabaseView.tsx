@@ -16,17 +16,17 @@ const BAY_TYPES: { id: BayType; label: string }[] = [
 ];
 
 const TONE: Record<BayStatus, string> = {
-  disponible:    'bg-slate-900 border-slate-800',
-  ocupada:       'bg-indigo-950/40 border-indigo-500/50',
-  mantenimiento: 'bg-amber-950/40 border-amber-500/50',
-  limpieza:      'bg-sky-950/40 border-sky-500/50'
+  disponible:    'bg-surface border-line',
+  ocupada:       'bg-brand-soft/40 border-brand/50',
+  mantenimiento: 'bg-warning/40 border-warning/50',
+  limpieza:      'bg-info/40 border-info/50'
 };
 
 const BADGE: Record<BayStatus, string> = {
-  disponible:    'bg-emerald-500/20 text-emerald-400',
-  ocupada:       'bg-indigo-500/20 text-indigo-300',
-  mantenimiento: 'bg-amber-500/20 text-amber-300',
-  limpieza:      'bg-sky-500/20 text-sky-300'
+  disponible:    'bg-success/20 text-success',
+  ocupada:       'bg-brand/20 text-brand-hi',
+  mantenimiento: 'bg-warning/20 text-warning',
+  limpieza:      'bg-info/20 text-info'
 };
 
 /**
@@ -92,12 +92,12 @@ export const BaysSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<Warehouse className="w-5 h-5 text-indigo-400" />}
+        icon={<Warehouse className="w-5 h-5 text-brand" />}
         title="Bahías y estaciones"
         subtitle={loading ? branch?.name : `${branch?.name} · ${free} de ${bays.length} libres`}
         actions={editable ? (
           <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl">
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
             <Plus className="w-4 h-4" /> Nueva bahía
           </button>
         ) : undefined}
@@ -113,11 +113,11 @@ export const BaysSupabaseView: React.FC = () => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-40 bg-slate-900 border border-slate-800 rounded-2xl animate-pulse" />
+            <div key={i} className="h-40 bg-surface border border-line rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : bays.length === 0 ? (
-        <p className="text-center py-12 text-sm text-slate-500 italic">
+        <p className="text-center py-12 text-sm text-faint italic">
           Esta sucursal no tiene bahías registradas.
         </p>
       ) : (
@@ -128,15 +128,15 @@ export const BaysSupabaseView: React.FC = () => {
             return (
               <article key={bay.id} className={`p-4 rounded-2xl border space-y-3 ${TONE[bay.status]}`}>
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-bold text-sm text-white">{bay.name}</h3>
+                  <h3 className="font-bold text-sm text-strong">{bay.name}</h3>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${BADGE[bay.status]}`}>
                     {bay.status}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 uppercase">{bay.type}</p>
+                <p className="text-xs text-faint uppercase">{bay.type}</p>
 
                 {occupied && (
-                  <p className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-300">
+                  <p className="p-3 bg-canvas rounded-xl border border-line text-xs text-body">
                     Hay un vehículo en servicio. Se liberará al moverlo en el tablero.
                   </p>
                 )}
@@ -144,14 +144,14 @@ export const BaysSupabaseView: React.FC = () => {
                 <div className="flex gap-2 pt-1">
                   {bay.status === 'mantenimiento' ? (
                     <button onClick={() => void change(bay, 'disponible')} disabled={busy}
-                      className="flex-1 py-1.5 bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white font-bold text-xs rounded-lg border border-emerald-500/30 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                      className="flex-1 py-1.5 bg-success/30 hover:bg-success text-success hover:text-on-accent font-bold text-xs rounded-lg border border-success/30 disabled:opacity-50 flex items-center justify-center gap-1.5">
                       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                       Volver al servicio
                     </button>
                   ) : (
                     <button onClick={() => void change(bay, 'mantenimiento')} disabled={busy || occupied}
                       title={occupied ? 'Hay un vehículo dentro' : undefined}
-                      className="flex-1 py-1.5 bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white font-bold text-xs rounded-lg border border-amber-500/30 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
+                      className="flex-1 py-1.5 bg-warning/30 hover:bg-warning text-warning hover:text-on-accent font-bold text-xs rounded-lg border border-warning/30 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
                       {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
                       Fuera de servicio
                     </button>
@@ -182,7 +182,7 @@ export const BaysSupabaseView: React.FC = () => {
             <select id="bay-type" className={textInputClass} value={form.type}
               onChange={e => setForm(f => ({ ...f, type: e.target.value as BayType }))}>
               {BAY_TYPES.map(t => (
-                <option key={t.id} value={t.id} className="bg-slate-900">{t.label}</option>
+                <option key={t.id} value={t.id} className="bg-surface">{t.label}</option>
               ))}
             </select>
           </Field>

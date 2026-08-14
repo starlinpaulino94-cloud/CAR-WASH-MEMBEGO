@@ -107,7 +107,7 @@ export const ExpensesSupabaseView: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <ViewHeader
-        icon={<DollarSign className="w-5 h-5 text-indigo-400" />}
+        icon={<DollarSign className="w-5 h-5 text-brand" />}
         title="Gastos operativos"
         subtitle={session
           ? `Caja abierta · ${formatCents(session.expected_cash_cents, symbol)} en gaveta`
@@ -126,12 +126,12 @@ export const ExpensesSupabaseView: React.FC = () => {
           </div>
           <FilterChips options={CATEGORY_FILTERS} value={category} onChange={setCategory} />
 
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <caption className="sr-only">Gastos registrados</caption>
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 bg-slate-950/50">
+                  <tr className="border-b border-line text-muted bg-canvas/50">
                     <th scope="col" className="p-3 font-semibold">FECHA</th>
                     <th scope="col" className="p-3 font-semibold">CONCEPTO</th>
                     <th scope="col" className="p-3 font-semibold">CATEGORÍA</th>
@@ -139,7 +139,7 @@ export const ExpensesSupabaseView: React.FC = () => {
                     <th scope="col" className="p-3 font-semibold text-right">IMPORTE</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-line/60">
                   {q.loading ? <SkeletonRows cols={5} />
                     : q.rows.length === 0 ? (
                       <EmptyRow cols={5}>
@@ -148,19 +148,19 @@ export const ExpensesSupabaseView: React.FC = () => {
                           : 'Todavía no hay gastos registrados.'}
                       </EmptyRow>
                     ) : q.rows.map(e => (
-                      <tr key={e.id} className="hover:bg-slate-800/40">
-                        <td className="p-3 text-slate-400 whitespace-nowrap">
+                      <tr key={e.id} className="hover:bg-surface-2/40">
+                        <td className="p-3 text-muted whitespace-nowrap">
                           {new Date(e.expense_date).toLocaleDateString('es-DO')}
                         </td>
                         <td className="p-3">
-                          <div className="font-bold text-white">{e.description}</div>
-                          {e.supplier_name && <div className="text-xs text-slate-500">{e.supplier_name}</div>}
+                          <div className="font-bold text-strong">{e.description}</div>
+                          {e.supplier_name && <div className="text-xs text-faint">{e.supplier_name}</div>}
                         </td>
-                        <td className="p-3 text-slate-400">
+                        <td className="p-3 text-muted">
                           {CATEGORY_FILTERS.find(c => c.id === e.category)?.label ?? e.category}
                         </td>
-                        <td className="p-3 text-slate-300 uppercase text-xs">{e.payment_method}</td>
-                        <td className="p-3 font-extrabold text-rose-400 text-right whitespace-nowrap">
+                        <td className="p-3 text-body uppercase text-xs">{e.payment_method}</td>
+                        <td className="p-3 font-extrabold text-danger text-right whitespace-nowrap">
                           −{formatCents(e.amount_cents, symbol)}
                         </td>
                       </tr>
@@ -173,34 +173,34 @@ export const ExpensesSupabaseView: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 h-fit">
-          <h3 className="font-bold text-white text-sm border-b border-slate-800 pb-2">Registrar gasto</h3>
+        <div className="bg-surface border border-line rounded-2xl p-5 space-y-4 h-fit">
+          <h3 className="font-bold text-strong text-sm border-b border-line pb-2">Registrar gasto</h3>
           <div className="space-y-3 text-xs">
             <div>
-              <label htmlFor="e-desc" className="text-slate-400">Concepto *</label>
+              <label htmlFor="e-desc" className="text-muted">Concepto *</label>
               <input id="e-desc" type="text" value={description} disabled={busy || !allowed}
                 onChange={ev => setDescription(ev.target.value)}
                 placeholder="Ej: compra de toallas de microfibra"
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white mt-1 placeholder-slate-600 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong mt-1 placeholder-faint disabled:opacity-50" />
             </div>
             <div>
-              <label htmlFor="e-amount" className="text-slate-400">Importe ({symbol}) *</label>
+              <label htmlFor="e-amount" className="text-muted">Importe ({symbol}) *</label>
               <input id="e-amount" type="text" inputMode="decimal" value={amount} disabled={busy || !allowed}
                 onChange={ev => setAmount(ev.target.value)} placeholder="0.00"
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white mt-1 font-bold placeholder-slate-600 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong mt-1 font-bold placeholder-faint disabled:opacity-50" />
             </div>
             <div>
-              <label htmlFor="e-cat" className="text-slate-400">Categoría</label>
+              <label htmlFor="e-cat" className="text-muted">Categoría</label>
               <select id="e-cat" value={formCategory} disabled={busy || !allowed}
                 onChange={ev => setFormCategory(ev.target.value as ExpenseCategory)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white mt-1 disabled:opacity-50">
+                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong mt-1 disabled:opacity-50">
                 {CATEGORY_FILTERS.filter(c => c.id !== 'all').map(c => (
                   <option key={c.id} value={c.id}>{c.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <span className="text-slate-400">Forma de pago</span>
+              <span className="text-muted">Forma de pago</span>
               <div className="grid grid-cols-3 gap-1.5 mt-1">
                 {METHODS.map(m => {
                   const blocked = m.id === 'efectivo' && !session;
@@ -210,8 +210,8 @@ export const ExpensesSupabaseView: React.FC = () => {
                       title={blocked ? 'Requiere caja abierta' : undefined}
                       className={`py-1.5 rounded-lg text-xs font-bold border transition-all disabled:opacity-30 ${
                         method === m.id
-                          ? 'bg-indigo-600 text-white border-indigo-500'
-                          : 'bg-slate-950 text-slate-400 border-slate-800'
+                          ? 'bg-brand text-on-accent border-brand'
+                          : 'bg-canvas text-muted border-line'
                       }`}>
                       {m.label}
                     </button>
@@ -220,20 +220,20 @@ export const ExpensesSupabaseView: React.FC = () => {
               </div>
             </div>
             <div>
-              <label htmlFor="e-sup" className="text-slate-400">Proveedor</label>
+              <label htmlFor="e-sup" className="text-muted">Proveedor</label>
               <input id="e-sup" type="text" value={supplier} disabled={busy || !allowed}
                 onChange={ev => setSupplier(ev.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white mt-1 disabled:opacity-50" />
+                className="w-full bg-canvas border border-line rounded-lg p-2 text-strong mt-1 disabled:opacity-50" />
             </div>
 
             {formError && <InlineAlert tone="error">{formError}</InlineAlert>}
 
             <button onClick={() => void submit()} disabled={busy || !allowed}
-              className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2">
+              className="w-full py-2.5 bg-danger hover:bg-danger disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-danger/30 flex items-center justify-center gap-2">
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Registrar gasto
             </button>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-faint">
               Un gasto en efectivo descuenta la gaveta en la misma operación: o se registran
               las dos cosas o ninguna.
             </p>
