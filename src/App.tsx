@@ -50,6 +50,7 @@ const QualityView           = lazyView(() => import('./components/views/QualityS
 const SalesReportView       = lazyView(() => import('./components/views/SalesReportSupabaseView'), 'SalesReportSupabaseView');
 const ProfitReportView      = lazyView(() => import('./components/views/ProfitReportSupabaseView'), 'ProfitReportSupabaseView');
 const SettingsSupabaseView  = lazyView(() => import('./components/views/SettingsSupabaseView'), 'SettingsSupabaseView');
+const AppearanceSettingsView = lazyView(() => import('./components/views/AppearanceSettingsView'), 'AppearanceSettingsView');
 
 // --- Vistas de demostración (sin base de datos conectada)
 
@@ -97,6 +98,7 @@ const VIEW_REGISTRY: Record<ViewKey, React.ReactElement> = {
   'report-sales': <SalesReportView />,
   'report-margin': <ProfitReportView />,
   'settings-empresa': <SettingsSupabaseView seccion="empresa" />,
+  'settings-apariencia': <AppearanceSettingsView />,
   'settings-impresion': <SettingsSupabaseView seccion="impresion" />,
   'settings-membego': <SettingsSupabaseView seccion="membego" />,
 };

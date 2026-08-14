@@ -5,7 +5,7 @@ import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import { fetchManagementReport, ManagementReport } from '../../data/adminRepository';
 import {
-  ViewHeader, ErrorState, StatCard, FilterChips, ReadOnlyNotice, InlineAlert
+  ViewHeader, ErrorState, StatCard, FilterChips, ReadOnlyNotice, InlineAlert, HelpNote
 } from '../common/DataViewShell';
 import { RangeId, RANGES, rangeDates } from '../../lib/reportRanges';
 
@@ -156,10 +156,10 @@ export const ProfitReportSupabaseView: React.FC = () => {
             </div>
           </section>
 
-          <p className="text-sm text-faint">
-            El margen descuenta SOLO los insumos con receta; no prorratea nómina, comisiones ni
-            gastos fijos. Un servicio sin receta muestra margen igual a sus ventas.
-          </p>
+          <HelpNote summary="Qué descuenta este margen">
+            SOLO los insumos con receta. No prorratea nómina, comisiones ni gastos
+            fijos, así que un servicio sin receta muestra margen igual a sus ventas.
+          </HelpNote>
         </>
       )}
     </div>

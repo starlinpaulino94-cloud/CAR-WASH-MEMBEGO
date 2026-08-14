@@ -6,7 +6,7 @@ import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../
 import {
   fetchServicesWithPrices, upsertServicePrice, createService, ServiceWithPrices, VehicleCategory
 } from '../../data/adminRepository';
-import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
+import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, HelpNote } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { RecipeModal } from '../modals/RecipeModal';
 import { ExportButton } from '../common/ExportButton';
@@ -251,10 +251,10 @@ export const ServicesSupabaseView: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-xs text-faint">
-        Un servicio sin precio para una categoría no se ofrece en el punto de venta ni al
-        registrar la llegada: facturarlo fallaría.
-      </p>
+      <HelpNote summary="Qué pasa si falta un precio">
+        Un servicio sin precio para una categoría no se ofrece en el punto de venta
+        ni al registrar la llegada: facturarlo fallaría.
+      </HelpNote>
 
       {recipeFor && (
         <RecipeModal serviceId={recipeFor.id} serviceName={recipeFor.name}

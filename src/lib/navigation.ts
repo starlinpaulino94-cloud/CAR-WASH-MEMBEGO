@@ -27,7 +27,8 @@ export type ViewKey =
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
   | 'team' | 'shifts' | 'attendance' | 'payroll'
   | 'reports' | 'report-sales' | 'report-margin'
-  | 'settings-empresa' | 'settings-impresion' | 'settings-membego' | 'branches' | 'users';
+  | 'settings-empresa' | 'settings-apariencia' | 'settings-impresion' | 'settings-membego'
+  | 'branches' | 'users';
 
 export interface SubModule {
   /** Segmento de la URL, sin acentos: /modulo/<slug> */
@@ -149,9 +150,12 @@ export const NAVIGATION: Module[] = [
   },
   {
     id: 'configuracion', pathId: 'configuracion', label: 'Configuración', icon: Settings,
-    description: 'Empresa, impresión e integraciones',
+    description: 'Empresa, apariencia, impresión e integraciones',
     items: [
       { slug: 'empresa', label: 'Empresa', view: 'settings-empresa' },
+      // Apariencia sin permiso: es preferencia de quien mira la pantalla, no un
+      // dato de la empresa. Hasta el cajero puede elegir cómo ve su caja.
+      { slug: 'apariencia', label: 'Apariencia', view: 'settings-apariencia' },
       { slug: 'impresion', label: 'Impresión', view: 'settings-impresion' },
       { slug: 'membego', label: 'Membego', view: 'settings-membego', permission: 'manageStaff' },
       { slug: 'sucursales', label: 'Sucursales', view: 'branches' },

@@ -9,7 +9,7 @@ import {
   Notification, NotificationKind, NotificationStatus
 } from '../../data/notificationRepository';
 import {
-  ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, FilterChips, StatCard
+  ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, FilterChips, StatCard, HelpNote
 } from '../common/DataViewShell';
 
 type Filter = 'pendiente' | 'todas';
@@ -207,11 +207,11 @@ export const AlertsSupabaseView: React.FC = () => {
         </ul>
       )}
 
-      <p className="text-xs text-faint">
-        Los avisos al cliente se envían desde el WhatsApp de este dispositivo: el
-        botón abre el chat con el texto ya escrito. Después, márquelo como enviado
-        para que salga de lo pendiente.
-      </p>
+      <HelpNote summary="Cómo se envía un aviso">
+        Salen desde el WhatsApp de este dispositivo: el botón abre el chat con el
+        texto ya escrito. Después, márquelo como enviado para que salga de lo
+        pendiente.
+      </HelpNote>
     </div>
   );
 };
