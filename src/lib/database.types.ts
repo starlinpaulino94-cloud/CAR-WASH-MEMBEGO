@@ -670,6 +670,29 @@ export interface Database {
         };
         Relationships: [];
       };
+      vehicle_category_levels: {
+        Row: {
+          company_id: string;
+          category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          // Sin fila = sin nivel configurado. NO es 1: con 1 por defecto, todas
+          // las categorías cabrían en el plan más barato de Membego.
+          level: number;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          level: number;
+          updated_at?: string;
+        };
+        Update: {
+          company_id?: string;
+          category?: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          level?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;
@@ -2651,6 +2674,10 @@ export interface Database {
           p_promotion_code?: string | null;
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      set_vehicle_category_levels: {
+        Args: { p_niveles: Json };
+        Returns: Database['public']['Tables']['vehicle_category_levels']['Row'][];
       };
       create_work_order: {
         Args: {

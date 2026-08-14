@@ -8,6 +8,7 @@ import {
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
+import { NivelesMembego } from '../settings/NivelesMembego';
 
 /**
  * Configuración de la empresa.
@@ -202,6 +203,11 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           Guardar cambios
         </button>
       )}
+
+      {/* Los niveles van con Membego y no en una pantalla aparte: existen solo
+          para hablar con Membego, y es donde alguien los va a buscar cuando una
+          membresía no cubra lo que debería. */}
+      {show('membego') && canManageMembego && <NivelesMembego editable={editable} />}
 
       {show('membego') && canManageMembego && (
         <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">

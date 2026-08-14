@@ -820,3 +820,53 @@ export async function recordMembegoLog(input: {
   });
   if (error) throw error;
 }
+
+// ─────────────────────────────────── Niveles tarifarios de Membego
+
+/**
+ * Equivalencia entre las categorías de vehículo de este sistema y los niveles
+ * tarifarios de Membego.
+ *
+ * Membego decide si una membresía cubre un carro comparando NÚMEROS: cada plan
+ * lleva un tope y cada categoría un nivel. Cuál de las nuestras vale 1 y cuál 3
+ * es una decisión del negocio —en un local una jeepeta y una SUV son lo mismo y
+ * en otro no—, así que se configura, no se codifica.
+ *
+ * Sin fila = sin nivel. NO es 1: con 1 por defecto, todas las categorías
+ * cabrían en el plan más barato y el negocio regalaría lavados de camión sin
+ * enterarse.
+ */
+
+export type NivelesPorCategoria = Partial<Record<VehicleCategory, number>>;
+
+export async function fetchVehicleCategoryLevels(): Promise<NivelesPorCategoria> {
+  const { data, error } = await requireSupabase()
+    .from('vehicle_category_levels')
+    .select('category, level');
+  if (error) throw error;
+
+  const mapa: NivelesPorCategoria = {};
+  for (const fila of data ?? []) mapa[fila.category as VehicleCategory] = fila.level;
+  return mapa;
+}
+
+/**
+ * Guarda el mapa entero de una vez.
+ *
+ * Una llamada por categoría dejaría el mapa a medias si la tercera falla, y un
+ * mapa a medias cobra mal sin avisar. `null` en una categoría la devuelve a
+ * «sin configurar»; una categoría ausente se deja como estaba.
+ */
+export async function setVehicleCategoryLevels(
+  niveles: Partial<Record<VehicleCategory, number | null>>
+): Promise<NivelesPorCategoria> {
+  const { data, error } = await requireSupabase()
+    .rpc('set_vehicle_category_levels', { p_niveles: niveles as never });
+  if (error) throw new Error(error.message);
+
+  const mapa: NivelesPorCategoria = {};
+  for (const fila of (data ?? []) as { category: string; level: number }[]) {
+    mapa[fila.category as VehicleCategory] = fila.level;
+  }
+  return mapa;
+}

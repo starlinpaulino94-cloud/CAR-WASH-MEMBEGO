@@ -5,6 +5,7 @@ import { formatCents } from '../../lib/money';
 import {
   createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
+import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
 import {
   lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
   CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
@@ -98,6 +99,15 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [ficha, setFicha] = useState<FichaMembego | null>(null);
   const [fichaBuscando, setFichaBuscando] = useState(false);
   const [fichaError, setFichaError] = useState<string | null>(null);
+  // El nivel tarifario de cada categoría, configurado en Ajustes › Membego. Sin
+  // él la cobertura no se puede decidir por categoría, solo por placa.
+  const [niveles, setNiveles] = useState<NivelesPorCategoria>({});
+
+  useEffect(() => {
+    fetchVehicleCategoryLevels()
+      .then(setNiveles)
+      .catch(() => { /* sin niveles se decide solo por placa: no es un fallo */ });
+  }, []);
 
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,7 +215,12 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     setFichaBuscando(true);
     setFichaError(null);
     const t = setTimeout(() => {
-      fetchFichaMembego(idMembego, { placa: plate || null })
+      fetchFichaMembego(idMembego, {
+        placa: plate || null,
+        // `undefined` si esa categoría no tiene nivel: mandar un 1 inventado
+        // haría que Membego diera por cubierto un camión.
+        nivelVehiculo: niveles[category] ?? null
+      })
         .then(f => { if (active) setFicha(f); })
         .catch(err => {
           if (!active) return;
@@ -218,7 +233,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     }, 300);
 
     return () => { active = false; clearTimeout(t); };
-  }, [cliente, plate]);
+  }, [cliente, plate, category, niveles]);
 
   // Diálogo accesible: foco inicial, Escape y foco atrapado.
   useEffect(() => {
