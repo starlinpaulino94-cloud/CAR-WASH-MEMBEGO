@@ -58,7 +58,11 @@ export const PERMISSIONS = {
   // estas dos listas se separan, la pantalla ofrecería un botón que la base
   // rechaza en silencio —un DELETE denegado por RLS afecta cero filas y no da
   // error—, que es la peor forma de fallar.
-  deleteRecords:     ['propietario', 'administrador', 'superadmin']
+  deleteRecords:     ['propietario', 'administrador', 'superadmin'],
+  // Cancelar una orden borra trabajo del tablero y descuadra el conteo del día.
+  // Mismos roles que anular una factura, que es la operación correctiva
+  // equivalente, y los MISMOS que el gate de cancel_work_order() en 0041.
+  cancelOrder:       ['propietario', 'administrador', 'supervisor', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

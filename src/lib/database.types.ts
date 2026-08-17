@@ -2693,6 +2693,11 @@ export interface Database {
         Args: { p_invoice_id: string };
         Returns: Database['public']['Tables']['invoices']['Row'];
       };
+      /** Migración 0041. Cancela con motivo obligatorio; rechaza las facturadas. */
+      cancel_work_order: {
+        Args: { p_order_id: string; p_reason: string };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
+      };
       create_work_order: {
         Args: {
           p_branch_id: string;

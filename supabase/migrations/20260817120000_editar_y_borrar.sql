@@ -167,15 +167,27 @@ security invoker
 set search_path = public, pg_temp
 as $$
 declare
-  v_fila   jsonb := to_jsonb(OLD);
-  v_nombre text  := coalesce(v_fila ->> 'name', v_fila ->> 'plate', v_fila ->> 'code');
+  v_fila    jsonb := to_jsonb(OLD);
+  -- `full_name` está por los empleados (0041): `profiles` no tiene `name`, y sin
+  -- esto la bitácora diría «se eliminó un registro de profiles».
+  v_nombre  text  := coalesce(v_fila ->> 'name', v_fila ->> 'full_name',
+                              v_fila ->> 'plate', v_fila ->> 'code');
+  v_empresa uuid  := (v_fila ->> 'company_id')::uuid;
 begin
+  -- Sin empresa no hay dónde anotarlo: `audit_logs.company_id` es NOT NULL y el
+  -- insert tumbaría el borrado. Pasa solo con fichas que nunca se asignaron a
+  -- ninguna empresa, y bloquear su borrado por no poder auditarlo sería peor
+  -- que borrarlas sin nota.
+  if v_empresa is null then
+    return OLD;
+  end if;
+
   insert into public.audit_logs (
     company_id, branch_id, actor_id, actor_name, actor_role,
     action, entity, entity_id, details
   )
   values (
-    (v_fila ->> 'company_id')::uuid,
+    v_empresa,
     (v_fila ->> 'branch_id')::uuid,
     auth.uid(),
     coalesce((select full_name from public.profiles where id = auth.uid()), ''),

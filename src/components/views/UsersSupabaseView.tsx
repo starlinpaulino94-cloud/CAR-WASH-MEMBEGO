@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can, outranks } from '../../lib/auth';
 import {
@@ -9,6 +9,8 @@ import {
   ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, SkeletonRows, EmptyRow
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
+import { eliminarEmpleado } from '../../data/adminRepository';
 
 const ROLES: { id: Role; label: string; nota: string }[] = [
   { id: 'operario',      label: 'Operario',      nota: 'Lava. Ve sus comisiones y su turno.' },
@@ -34,6 +36,20 @@ const ROLES: { id: Role; label: string; nota: string }[] = [
 export const UsersSupabaseView: React.FC = () => {
   const { profile, phase } = useAuth();
   const canManage = can(profile, 'manageStaff');
+
+  /*
+   * Eliminar la ficha de un empleado.
+   *
+   * Quitar el acceso ya se podía; eliminar, no. Una ficha creada con el correo
+   * mal escrito se quedaba en la lista para siempre marcada «sin acceso».
+   *
+   * En la práctica solo se borra a quien NUNCA trabajó: la base cuenta sus
+   * acciones y se niega si tiene alguna, porque su nombre debe seguir en lo que
+   * hizo. Aquí no se replica ese cálculo —sería una segunda verdad que se
+   * desincroniza—: se intenta y se enseña lo que la base responda.
+   */
+  const puedeBorrar = can(profile, 'deleteRecords');
+  const [borrando, setBorrando] = useState<Profile | null>(null);
 
   const [rows, setRows] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,6 +224,14 @@ export const UsersSupabaseView: React.FC = () => {
                               className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
                               {p.is_active ? 'Quitar acceso' : 'Dar acceso'}
                             </button>
+                            {puedeBorrar && (
+                              <button onClick={() => setBorrando(p)}
+                                aria-label={`Eliminar la ficha de ${p.full_name}`}
+                                title="Solo se puede si nunca trabajó"
+                                className="ml-1 p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2 align-middle">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </>
                         ) : (
                           <span className="text-xs text-faint">
@@ -222,6 +246,19 @@ export const UsersSupabaseView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {borrando && (
+        <ConfirmarEliminar
+          queEs="la ficha de"
+          nombre={borrando.full_name ?? 'este empleado'}
+          onEliminar={() => eliminarEmpleado(borrando.id)}
+          onCerrar={() => setBorrando(null)}
+          onHecho={() => { setNonce(n => n + 1); setNotice(
+            `Ficha de ${borrando.full_name} eliminada. Su credencial de acceso sigue existiendo ` +
+            'en Supabase Auth: bórrela también en Authentication › Users si quiere quitarla del todo.'
+          ); }}
+        />
+      )}
 
       {claveTarget && (
         <FormModal

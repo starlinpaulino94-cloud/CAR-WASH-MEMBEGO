@@ -989,3 +989,38 @@ export async function archivarFila(
     throw new Error('No se pudo archivar: puede que su rol no lo permita.');
   }
 }
+
+/**
+ * Eliminar la ficha de un empleado.
+ *
+ * No entra en `eliminarFila` por dos razones que se ven en el mensaje de error:
+ *
+ *   · Los «no» son distintos y no todos son «tiene historia». Borrarse a sí
+ *     mismo y borrar al último administrador son reglas de negocio con su propia
+ *     explicación, y la base las devuelve con `check_violation`, no con un error
+ *     de clave ajena.
+ *   · Aquí NO se ofrece archivar. La salida es otra —quitarle el acceso, que ya
+ *     existe en esta misma pantalla— y ofrecer «archivar» mandaría al usuario a
+ *     buscar un botón que no está.
+ */
+export async function eliminarEmpleado(id: string): Promise<void> {
+  const { data, error } = await requireSupabase()
+    .from('profiles').delete().eq('id', id).select();
+
+  if (error) {
+    // 23503 lo pone el guardián al contar lo que hizo; 23514 son las reglas de
+    // negocio. Los dos textos ya están escritos para el usuario y dicen qué
+    // hacer, así que se pasan tal cual.
+    if (error.code === '23503' || error.code === '23514') {
+      throw new ErrorBorrado('con_historia', error.message);
+    }
+    throw new ErrorBorrado('desconocido', error.message ?? 'No se pudo eliminar.');
+  }
+
+  if (!data || data.length === 0) {
+    throw new ErrorBorrado(
+      'sin_permiso',
+      'No se pudo eliminar: su rol no lo permite, o esta ficha está fuera de su alcance.'
+    );
+  }
+}
