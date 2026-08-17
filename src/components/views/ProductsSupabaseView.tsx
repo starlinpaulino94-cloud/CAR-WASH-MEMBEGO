@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Pencil, AlertTriangle, Plus } from 'lucide-react';
+import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
-import { fetchProductPage, adjustStock, createProduct, Product } from '../../data/adminRepository';
+import {
+  fetchProductPage, adjustStock, createProduct, updateProduct,
+  eliminarFila, archivarFila, Product
+} from '../../data/adminRepository';
+import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
   InlineAlert, ReadOnlyNotice, FilterChips
@@ -95,6 +99,73 @@ export const ProductsSupabaseView: React.FC = () => {
     setActionError(null);
   };
 
+  /*
+   * La FICHA del producto: nombre, código, categoría, precio, unidad.
+   *
+   * Hasta aquí solo se ajustaba la existencia. Un producto con el precio mal
+   * puesto había que dejarlo así, y no había forma de retirarlo del catálogo.
+   *
+   * La existencia sigue FUERA de este formulario, y a propósito: desde 0019
+   * todo cambio de stock es un movimiento con motivo, y editarlo aquí sería
+   * volver al ajuste silencioso que esa migración vino a quitar.
+   */
+  const puedeBorrar = can(profile, 'deleteRecords');
+  const [fichaDe, setFichaDe] = useState<Product | null>(null);
+  const [borrando, setBorrando] = useState<Product | null>(null);
+  const [ficha, setFicha] = useState({
+    name: '', code: '', category: '', cost: '', price: '', minStock: '', unit: '', forSale: true
+  });
+  const [fichaBusy, setFichaBusy] = useState(false);
+  const [fichaError, setFichaError] = useState<string | null>(null);
+
+  const abrirFicha = (p: Product) => {
+    setFicha({
+      name: p.name, code: p.code, category: p.category ?? '',
+      cost: (p.cost_cents / 100).toFixed(2), price: (p.price_cents / 100).toFixed(2),
+      minStock: String(p.min_stock), unit: p.unit, forSale: p.is_for_sale
+    });
+    setFichaError(null);
+    setFichaDe(p);
+  };
+
+  const guardarFicha = async () => {
+    if (!fichaDe) return;
+    if (!ficha.name.trim()) { setFichaError('El nombre es obligatorio.'); return; }
+    const costo = parseAmountToCents(ficha.cost);
+    const precio = parseAmountToCents(ficha.price);
+    if (costo === null || precio === null) {
+      setFichaError('Costo y precio deben ser importes válidos.'); return;
+    }
+    const minimo = Number(ficha.minStock);
+    if (!Number.isInteger(minimo) || minimo < 0) {
+      setFichaError('La existencia mínima debe ser un entero no negativo.'); return;
+    }
+    setFichaBusy(true);
+    setFichaError(null);
+    try {
+      await updateProduct(fichaDe.id, {
+        name: ficha.name.trim(), code: ficha.code.trim(),
+        category: ficha.category.trim(), cost_cents: costo, price_cents: precio,
+        min_stock: minimo, unit: ficha.unit.trim() || 'Unidad', is_for_sale: ficha.forSale
+      });
+      setFichaDe(null);
+      q.reload();
+    } catch (err) {
+      setFichaError(err instanceof Error ? err.message : 'No se pudo guardar.');
+    } finally {
+      setFichaBusy(false);
+    }
+  };
+
+  const alternarActivo = async (p: Product) => {
+    try {
+      await archivarFila('products', p.id, p.is_active);
+      q.reload();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado.');
+    }
+  };
+
   const submitAdjust = async () => {
     if (!adjusting || busy) return;
     const value = Number(adjustQty);
@@ -169,12 +240,13 @@ export const ProductsSupabaseView: React.FC = () => {
                 <th scope="col" className="p-3 font-semibold text-right">PRECIO</th>
                 <th scope="col" className="p-3 font-semibold text-right">EXISTENCIA</th>
                 <th scope="col" className="p-3 font-semibold">ESTADO</th>
+                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60">
-              {q.loading ? <SkeletonRows cols={6} />
+              {q.loading ? <SkeletonRows cols={7} />
                 : q.rows.length === 0 ? (
-                  <EmptyRow cols={6}>
+                  <EmptyRow cols={7}>
                     {q.searchInput || lowOnly === 'low'
                       ? 'Ningún producto coincide con el filtro.'
                       : 'Todavía no hay productos registrados.'}
@@ -223,6 +295,31 @@ export const ProductsSupabaseView: React.FC = () => {
                           </span>
                         )}
                       </td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {editable && (
+                            <button onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
+                              title="Nombre, código, precio y unidad"
+                              className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          )}
+                          {puedeBorrar && (
+                            <>
+                              <button onClick={() => void alternarActivo(p)}
+                                aria-label={`${p.is_active ? 'Desactivar' : 'Activar'} ${p.name}`}
+                                title={p.is_active ? 'Deja de ofrecerse en caja' : 'Vuelve a ofrecerse'}
+                                className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                                {p.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
+                              </button>
+                              <button onClick={() => setBorrando(p)} aria-label={`Eliminar ${p.name}`}
+                                className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -232,6 +329,77 @@ export const ProductsSupabaseView: React.FC = () => {
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
       </div>
+
+      {fichaDe && (
+        <FormModal
+          title={`Editar — ${fichaDe.name}`}
+          submitLabel="Guardar cambios"
+          busy={fichaBusy}
+          error={fichaError}
+          onSubmit={() => void guardarFicha()}
+          onClose={() => setFichaDe(null)}
+          onDismissError={() => setFichaError(null)}
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Field label="Nombre" htmlFor="ed-prd-name">
+                <input id="ed-prd-name" className={textInputClass} value={ficha.name} autoFocus
+                  onChange={e => setFicha(f => ({ ...f, name: e.target.value }))} />
+              </Field>
+            </div>
+            <Field label="Código" htmlFor="ed-prd-code">
+              <input id="ed-prd-code" className={textInputClass} value={ficha.code}
+                onChange={e => setFicha(f => ({ ...f, code: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Categoría" htmlFor="ed-prd-cat">
+              <input id="ed-prd-cat" className={textInputClass} value={ficha.category}
+                onChange={e => setFicha(f => ({ ...f, category: e.target.value }))} />
+            </Field>
+            <Field label="Unidad" htmlFor="ed-prd-unit">
+              <input id="ed-prd-unit" className={textInputClass} value={ficha.unit}
+                onChange={e => setFicha(f => ({ ...f, unit: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Costo" htmlFor="ed-prd-cost">
+              <input id="ed-prd-cost" inputMode="decimal" className={textInputClass} value={ficha.cost}
+                onChange={e => setFicha(f => ({ ...f, cost: e.target.value }))} />
+            </Field>
+            <Field label="Precio" htmlFor="ed-prd-price">
+              <input id="ed-prd-price" inputMode="decimal" className={textInputClass} value={ficha.price}
+                onChange={e => setFicha(f => ({ ...f, price: e.target.value }))} />
+            </Field>
+            <Field label="Mínimo" htmlFor="ed-prd-min">
+              <input id="ed-prd-min" type="number" min="0" className={textInputClass} value={ficha.minStock}
+                onChange={e => setFicha(f => ({ ...f, minStock: e.target.value }))} />
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-body">
+            <input type="checkbox" checked={ficha.forSale} className="accent-brand"
+              onChange={e => setFicha(f => ({ ...f, forSale: e.target.checked }))} />
+            Se vende en caja (si no, es de uso interno)
+          </label>
+          {/* La existencia no está aquí a propósito: desde 0019 todo cambio de
+              stock es un movimiento con motivo, y editarla en un formulario
+              sería el ajuste silencioso que esa migración vino a quitar. */}
+          <p className="text-xs text-faint">
+            La existencia se cambia tocando la cifra en la tabla, y queda en el kardex con su motivo.
+          </p>
+        </FormModal>
+      )}
+
+      {borrando && (
+        <ConfirmarEliminar
+          queEs="el producto"
+          nombre={borrando.name}
+          onEliminar={() => eliminarFila('products', borrando.id)}
+          onArchivar={() => archivarFila('products', borrando.id, true)}
+          onCerrar={() => setBorrando(null)}
+          onHecho={() => q.reload()}
+        />
+      )}
 
       {adjusting && (
         <FormModal

@@ -10,8 +10,14 @@ import { PagedResult } from '../hooks/usePagedQuery';
  * histórico completo para contarlo o buscarlo en memoria.
  */
 
-export type Customer = Tables<'customers'>;
-export type Vehicle = Tables<'vehicles'>;
+/**
+ * `is_active` llegó a clientes y vehículos en la migración 0040 y los tipos se
+ * generan contra la base (`npm run db:types`), así que se declara a mano hasta
+ * la siguiente generación. Sin él no hay forma de archivar, que es lo que se
+ * ofrece cuando el borrado se niega por tener historia.
+ */
+export type Customer = Tables<'customers'> & { is_active?: boolean };
+export type Vehicle = Tables<'vehicles'> & { is_active?: boolean };
 export type Service = Tables<'services'>;
 export type ServicePrice = Tables<'service_prices'>;
 export type Product = Tables<'products'>;
@@ -51,7 +57,8 @@ export type CustomerOrigin = Enums['customer_origin'];
  * sabe cuántas filas hay de verdad.
  */
 export async function fetchCustomerPage(
-  page: number, pageSize: number, search: string, origin?: CustomerOrigin
+  page: number, pageSize: number, search: string, origin?: CustomerOrigin,
+  incluirArchivados = false
 ): Promise<PagedResult<Customer>> {
   let query = requireSupabase().from('customers').select('*', { count: 'exact' });
   if (search.trim()) {
@@ -59,6 +66,10 @@ export async function fetchCustomerPage(
     query = query.or(`name.ilike.%${t}%,phone.ilike.%${t}%,email.ilike.%${t}%,tax_id.ilike.%${t}%`);
   }
   if (origin) query = query.eq('origin', origin);
+  // Archivar no sirve de nada si el archivado sigue apareciendo. El filtro va al
+  // servidor para que el contador y la paginación digan la verdad.
+  // El cast, otra vez, es por los tipos generados: `is_active` llegó en 0040.
+  if (!incluirArchivados) query = query.eq('is_active' as never, true as never);
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
@@ -173,6 +184,24 @@ export async function fetchVehiclePage(
     return { ...vehicle, customer_name: customers?.name ?? null };
   });
   return { rows, total: count ?? 0 };
+}
+
+/**
+ * Corregir la ficha de un vehículo.
+ *
+ * La placa se manda tal como se escribió: la normaliza un trigger del servidor
+ * desde 0002. Normalizarla también aquí, con otras reglas, es exactamente cómo
+ * se acaba teniendo dos formas de la misma matrícula y un carro duplicado.
+ */
+export async function updateVehicle(
+  id: string, patch: UpdateDto<'vehicles'>
+): Promise<Vehicle> {
+  const { data, error } = await requireSupabase()
+    .from('vehicles').update(patch).eq('id', id).select();
+  if (error) throw friendlyDuplicate(error, 'vehículo', 'placa');
+  // RLS filtra en silencio: 0 filas es denegado, no éxito.
+  if (!data || data.length === 0) throw new Error('No se pudo actualizar: puede que no tenga permiso.');
+  return data[0];
 }
 
 // --------------------------------------------------------------- Servicios
@@ -869,4 +898,94 @@ export async function setVehicleCategoryLevels(
     mapa[fila.category as VehicleCategory] = fila.level;
   }
   return mapa;
+}
+
+// ─────────────────────────────────── Eliminar y archivar (migración 0040)
+
+/**
+ * Por qué no se pudo borrar. El motivo importa porque cada uno tiene una salida
+ * distinta, y decirle «error» a las tres es dejar al usuario sin saber qué hacer.
+ */
+export type MotivoNoBorrado = 'con_historia' | 'sin_permiso' | 'desconocido';
+
+export class ErrorBorrado extends Error {
+  constructor(readonly motivo: MotivoNoBorrado, mensaje: string) {
+    super(mensaje);
+  }
+}
+
+/** Las tablas que la migración 0040 abrió. Nada más se puede pasar por aquí. */
+export type TablaBorrable =
+  | 'services' | 'products' | 'customers' | 'vehicles' | 'suppliers'
+  | 'promotions' | 'equipment' | 'bays' | 'appointments' | 'claims' | 'fleets';
+
+/**
+ * Borrar una fila, distinguiendo los tres «no» posibles.
+ *
+ * ──────────────────────────────────────────────────────────────────────────
+ * UN DELETE DENEGADO POR RLS NO DA ERROR
+ *
+ * Esta es la trampa. PostgREST no falla cuando una política impide borrar:
+ * la sentencia se ejecuta, afecta CERO filas y responde 200. Sin comprobar
+ * cuántas filas volvieron, la pantalla diría «eliminado» y la fila seguiría
+ * ahí — el peor de los resultados, porque el usuario deja de mirar.
+ *
+ * De ahí el `.select()`: obliga a que la respuesta traiga lo borrado, y si
+ * viene vacía es que no se borró nada.
+ *
+ * ──────────────────────────────────────────────────────────────────────────
+ * EL MENSAJE DE LA BASE SE APROVECHA CUANDO ES BUENO
+ *
+ * El disparador de 0040 ya redacta «tiene 40 facturas asociadas», así que ese
+ * texto se pasa tal cual. Pero cuando salta la clave ajena en crudo —le pasa a
+ * un administrador limitado a una sucursal, que no ve el historial de la otra—
+ * el mensaje es ilegible y se sustituye.
+ */
+export async function eliminarFila(tabla: TablaBorrable, id: string): Promise<void> {
+  const { data, error } = await requireSupabase()
+    .from(tabla).delete().eq('id', id).select();
+
+  if (error) {
+    // 23503 = clave ajena. Es «tiene historia», venga del disparador con su
+    // mensaje bueno o de la restricción con el suyo, que no se le puede
+    // enseñar a nadie.
+    if (error.code === '23503') {
+      const suyo = error.message?.includes('No se puede eliminar')
+        ? error.message
+        : 'No se puede eliminar: tiene registros asociados (puede que en otra sucursal). ' +
+          'Archívelo en vez de borrarlo: deja de aparecer y el historial se conserva.';
+      throw new ErrorBorrado('con_historia', suyo);
+    }
+    throw new ErrorBorrado('desconocido', error.message ?? 'No se pudo eliminar.');
+  }
+
+  if (!data || data.length === 0) {
+    throw new ErrorBorrado(
+      'sin_permiso',
+      'No se pudo eliminar: su rol no lo permite. Solo el propietario y los administradores pueden.'
+    );
+  }
+}
+
+/**
+ * Archivar en vez de borrar: la salida que se ofrece cuando hay historia.
+ *
+ * No es un borrado suave disfrazado — la fila sigue entera y sus facturas
+ * siguen enlazadas. Lo único que cambia es que deja de aparecer en búsquedas y
+ * selectores, que es lo que de verdad estorbaba.
+ */
+export async function archivarFila(
+  tabla: 'customers' | 'vehicles' | 'services' | 'products' | 'suppliers' | 'promotions',
+  id: string,
+  archivar = true
+): Promise<void> {
+  // El cast es por los tipos generados, que todavía no conocen `is_active` en
+  // clientes ni vehículos. La columna existe desde 0040; se va con la próxima
+  // generación de tipos.
+  const { data, error } = await requireSupabase()
+    .from(tabla).update({ is_active: !archivar } as never).eq('id', id).select();
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error('No se pudo archivar: puede que su rol no lo permita.');
+  }
 }

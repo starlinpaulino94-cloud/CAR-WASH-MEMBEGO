@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Loader2, Check, X, Pencil, Plus, FlaskConical } from 'lucide-react';
+import { Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
 import {
-  fetchServicesWithPrices, upsertServicePrice, createService, ServiceWithPrices, VehicleCategory
+  fetchServicesWithPrices, upsertServicePrice, createService, updateService,
+  eliminarFila, archivarFila, ServiceWithPrices, VehicleCategory
 } from '../../data/adminRepository';
+import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, HelpNote } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { RecipeModal } from '../modals/RecipeModal';
@@ -47,6 +49,74 @@ export const ServicesSupabaseView: React.FC = () => {
   const [editing, setEditing] = useState<{ serviceId: string; category: VehicleCategory } | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+
+  /*
+   * La FICHA del servicio, que es lo que no se podía tocar.
+   *
+   * Hasta aquí solo se editaban los precios celda a celda: un servicio con el
+   * nombre mal escrito se quedaba así, y para «quitarlo» del catálogo no había
+   * nada — ni desactivar ni borrar.
+   */
+  const puedeBorrar = can(profile, 'deleteRecords');
+  const [fichaDe, setFichaDe] = useState<ServiceWithPrices | null>(null);
+  const [borrando, setBorrando] = useState<ServiceWithPrices | null>(null);
+  const [ficha, setFicha] = useState({ name: '', code: '', description: '', minutes: '', commission: '', membego: false });
+  const [fichaBusy, setFichaBusy] = useState(false);
+  const [fichaError, setFichaError] = useState<string | null>(null);
+
+  const abrirFicha = (s: ServiceWithPrices) => {
+    setFicha({
+      name: s.name, code: s.code, description: s.description ?? '',
+      minutes: String(s.estimated_minutes),
+      commission: bpsToPercent(s.commission_bps).replace('%', '').trim(),
+      membego: s.included_in_membego
+    });
+    setFichaError(null);
+    setFichaDe(s);
+  };
+
+  const guardarFicha = async () => {
+    if (!fichaDe) return;
+    if (!ficha.name.trim()) { setFichaError('El nombre es obligatorio.'); return; }
+    const minutos = Number(ficha.minutes);
+    if (!Number.isFinite(minutos) || minutos <= 0) {
+      setFichaError('Los minutos estimados deben ser un número mayor que cero.'); return;
+    }
+    const pct = Number(ficha.commission);
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      setFichaError('La comisión debe ir entre 0 y 100.'); return;
+    }
+    setFichaBusy(true);
+    setFichaError(null);
+    try {
+      await updateService(fichaDe.id, {
+        name: ficha.name.trim(),
+        code: ficha.code.trim(),
+        description: ficha.description.trim(),
+        estimated_minutes: Math.round(minutos),
+        // La comisión se guarda en puntos base, no en porcentaje: 12,5 % es 1250
+        // y no 12,5 — con decimales de por medio, el redondeo se hace aquí una
+        // vez y no en cada lectura.
+        commission_bps: Math.round(pct * 100),
+        included_in_membego: ficha.membego
+      });
+      setFichaDe(null);
+      await load();
+    } catch (err) {
+      setFichaError(err instanceof Error ? err.message : 'No se pudo guardar.');
+    } finally {
+      setFichaBusy(false);
+    }
+  };
+
+  const alternarActivo = async (s: ServiceWithPrices) => {
+    try {
+      await archivarFila('services', s.id, s.is_active);
+      await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar el estado.');
+    }
+  };
 
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyServiceForm);
@@ -164,7 +234,7 @@ export const ServicesSupabaseView: React.FC = () => {
                   </th>
                 ))}
                 <th scope="col" className="p-3 font-semibold text-right">COMISIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">RECETA</th>
+                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60">
@@ -234,14 +304,39 @@ export const ServicesSupabaseView: React.FC = () => {
                     );
                   })}
                   <td className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</td>
-                  <td className="p-3 text-right">
-                    <button
-                      onClick={() => setRecipeFor({ id: s.id, name: s.name })}
-                      aria-label={`Receta de ${s.name}`}
-                      title="Insumos que consume este servicio"
-                      className="p-1.5 text-accent hover:text-accent rounded-lg hover:bg-surface-2">
-                      <FlaskConical className="w-4 h-4" />
-                    </button>
+                  <td className="p-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setRecipeFor({ id: s.id, name: s.name })}
+                        aria-label={`Receta de ${s.name}`}
+                        title="Insumos que consume este servicio"
+                        className="p-1.5 text-accent hover:text-accent rounded-lg hover:bg-surface-2">
+                        <FlaskConical className="w-4 h-4" />
+                      </button>
+                      {editable && (
+                        <button onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
+                          title="Nombre, código, minutos y comisión"
+                          className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {puedeBorrar && (
+                        <>
+                          <button onClick={() => void alternarActivo(s)}
+                            aria-label={`${s.is_active ? 'Desactivar' : 'Activar'} ${s.name}`}
+                            title={s.is_active
+                              ? 'Deja de ofrecerse en caja y recepción'
+                              : 'Vuelve a ofrecerse'}
+                            className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                            {s.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
+                          </button>
+                          <button onClick={() => setBorrando(s)} aria-label={`Eliminar ${s.name}`}
+                            className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -258,6 +353,70 @@ export const ServicesSupabaseView: React.FC = () => {
       {recipeFor && (
         <RecipeModal serviceId={recipeFor.id} serviceName={recipeFor.name}
           onClose={() => setRecipeFor(null)} />
+      )}
+
+      {fichaDe && (
+        <FormModal
+          title={`Editar — ${fichaDe.name}`}
+          submitLabel="Guardar cambios"
+          busy={fichaBusy}
+          error={fichaError}
+          onSubmit={() => void guardarFicha()}
+          onClose={() => setFichaDe(null)}
+          onDismissError={() => setFichaError(null)}
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <Field label="Nombre" htmlFor="ed-srv-name">
+                <input id="ed-srv-name" className={textInputClass} value={ficha.name} autoFocus
+                  onChange={e => setFicha(f => ({ ...f, name: e.target.value }))} />
+              </Field>
+            </div>
+            <Field label="Código" htmlFor="ed-srv-code">
+              <input id="ed-srv-code" className={textInputClass} value={ficha.code}
+                onChange={e => setFicha(f => ({ ...f, code: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Descripción" htmlFor="ed-srv-desc">
+            <textarea id="ed-srv-desc" rows={2} className={textInputClass} value={ficha.description}
+              onChange={e => setFicha(f => ({ ...f, description: e.target.value }))} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Minutos estimados" htmlFor="ed-srv-min">
+              <input id="ed-srv-min" type="number" min="1" className={textInputClass} value={ficha.minutes}
+                onChange={e => setFicha(f => ({ ...f, minutes: e.target.value }))} />
+            </Field>
+            <Field label="Comisión %" htmlFor="ed-srv-com">
+              <input id="ed-srv-com" type="number" min="0" max="100" step="0.5"
+                className={textInputClass} value={ficha.commission}
+                onChange={e => setFicha(f => ({ ...f, commission: e.target.value }))} />
+            </Field>
+          </div>
+          <label className="flex items-start gap-2 text-sm text-body">
+            <input type="checkbox" checked={ficha.membego} className="accent-brand mt-0.5"
+              onChange={e => setFicha(f => ({ ...f, membego: e.target.checked }))} />
+            <span>
+              Entra en las membresías de Membego
+              <span className="block text-xs text-faint">
+                Solo los servicios marcados se pueden cubrir con una membresía.
+              </span>
+            </span>
+          </label>
+          <p className="text-xs text-faint">
+            Los precios por categoría se editan en la tabla, tocando cada celda.
+          </p>
+        </FormModal>
+      )}
+
+      {borrando && (
+        <ConfirmarEliminar
+          queEs="el servicio"
+          nombre={borrando.name}
+          onEliminar={() => eliminarFila('services', borrando.id)}
+          onArchivar={() => archivarFila('services', borrando.id, true)}
+          onCerrar={() => setBorrando(null)}
+          onHecho={() => void load()}
+        />
       )}
 
       {showCreate && (
