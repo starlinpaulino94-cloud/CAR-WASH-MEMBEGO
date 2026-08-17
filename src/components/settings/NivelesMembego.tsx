@@ -98,6 +98,27 @@ export const NivelesMembego: React.FC<{ editable: boolean }> = ({ editable }) =>
         corresponde a cada categoría de este local.
       </p>
 
+      {/*
+       * Esta advertencia existe porque sin ella la tabla parece funcionar y no
+       * hace nada, que es la peor combinación.
+       *
+       * En Membego, `TipoVehiculo.nivelTarifario` vale 1 por defecto y hoy no
+       * hay pantalla ni API que lo cambie. Con todos los tipos en 1, cualquier
+       * plan cubre cualquier vehículo: la respuesta será siempre «sí cubre» y la
+       * diferencia a pagar no se calculará jamás, se ponga aquí lo que se ponga.
+       *
+       * Se dice en voz alta en vez de dejar que alguien rellene ocho casillas y
+       * pase una semana preguntándose por qué el mostrador no cobra diferencias.
+       */}
+      <p className="text-xs text-warning leading-relaxed border border-warning/40 bg-warning/10 rounded-lg p-2.5">
+        <strong>Esto no surte efecto por sí solo.</strong> Los niveles hay que
+        diferenciarlos también en Membego: mientras allá todos sus tipos de
+        vehículo sigan en nivel 1 —que es el valor de fábrica—, cualquier plan
+        cubrirá cualquier carro y aquí no se cobrará ninguna diferencia. Esta
+        tabla dice cómo se traducen sus categorías; los números de verdad los
+        pone Membego.
+      </p>
+
       {error && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
 
