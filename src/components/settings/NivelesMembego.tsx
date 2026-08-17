@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Layers, Loader2, Save } from 'lucide-react';
 import {
-  fetchVehicleCategoryLevels, setVehicleCategoryLevels,
-  NivelesPorCategoria, VehicleCategory
+  fetchVehicleCategoryLevels, setVehicleCategoryLevels, fetchNivelesDeMembego,
+  NivelesPorCategoria, VehicleCategory, NivelesDeMembego
 } from '../../data/adminRepository';
 import { InlineAlert } from '../common/DataViewShell';
 
@@ -40,12 +40,25 @@ export const NivelesMembego: React.FC<{ editable: boolean }> = ({ editable }) =>
   const [notice, setNotice] = useState<string | null>(null);
   // Lo guardado, para saber qué cambió y no mandar el mapa entero cada vez.
   const [original, setOriginal] = useState<NivelesPorCategoria>({});
+  /*
+   * Los niveles que Membego usa DE VERDAD.
+   *
+   * Antes esta pantalla pedía ocho números que el usuario no tenía de dónde
+   * sacar, y un nivel que en Membego no existe no casa con nada: cobraría mal
+   * para siempre y el cliente solo vería «no cubierto».
+   *
+   * `null` = no se pudieron consultar. Es una ayuda para mapear, no un
+   * requisito: que Membego esté caído no impide guardar los niveles.
+   */
+  const [membego, setMembego] = useState<NivelesDeMembego | null>(null);
 
   useEffect(() => {
     fetchVehicleCategoryLevels()
       .then(m => { setNiveles(m); setOriginal(m); })
       .catch(e => setError(e instanceof Error ? e.message : 'No se pudieron cargar los niveles'))
       .finally(() => setCargando(false));
+    // En paralelo y sin bloquear: si Membego no contesta, la tabla funciona igual.
+    void fetchNivelesDeMembego().then(setMembego);
   }, []);
 
   const cambiar = (cat: VehicleCategory, valor: string) => {
@@ -99,25 +112,46 @@ export const NivelesMembego: React.FC<{ editable: boolean }> = ({ editable }) =>
       </p>
 
       {/*
-       * Esta advertencia existe porque sin ella la tabla parece funcionar y no
-       * hace nada, que es la peor combinación.
+       * Los niveles REALES de Membego, cuando se pueden consultar.
        *
-       * En Membego, `TipoVehiculo.nivelTarifario` vale 1 por defecto y hoy no
-       * hay pantalla ni API que lo cambie. Con todos los tipos en 1, cualquier
-       * plan cubre cualquier vehículo: la respuesta será siempre «sí cubre» y la
-       * diferencia a pagar no se calculará jamás, se ponga aquí lo que se ponga.
-       *
-       * Se dice en voz alta en vez de dejar que alguien rellene ocho casillas y
-       * pase una semana preguntándose por qué el mostrador no cobra diferencias.
+       * Antes aquí había una advertencia estática que decía «puede que en
+       * Membego estén todos en 1». Ahora se pregunta y se sabe: enseñar el
+       * catálogo de allá convierte ocho casillas a ciegas en un mapeo mirando.
        */}
-      <p className="text-xs text-warning leading-relaxed border border-warning/40 bg-warning/10 rounded-lg p-2.5">
-        <strong>Esto no surte efecto por sí solo.</strong> Los niveles hay que
-        diferenciarlos también en Membego: mientras allá todos sus tipos de
-        vehículo sigan en nivel 1 —que es el valor de fábrica—, cualquier plan
-        cubrirá cualquier carro y aquí no se cobrará ninguna diferencia. Esta
-        tabla dice cómo se traducen sus categorías; los números de verdad los
-        pone Membego.
-      </p>
+      {membego && membego.tipos.length > 0 && (
+        <div className="border border-line rounded-lg p-3 space-y-2 bg-canvas/50">
+          <span className="text-xs font-semibold text-muted uppercase">
+            Los niveles que usa Membego
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {membego.tipos.map(t => (
+              <span key={t.id}
+                className="px-2 py-0.5 rounded-md text-xs border bg-surface border-line text-body">
+                {t.nombre} <strong className="text-strong">· {t.nivelTarifario}</strong>
+              </span>
+            ))}
+          </div>
+          {/* Este es el aviso que de verdad importa, y ahora se da con dato en
+              la mano en vez de por si acaso. */}
+          {membego.sinDiferenciar && (
+            <p className="text-xs text-warning">
+              <strong>Todos están en nivel 1</strong>, que es el valor de fábrica.
+              Mientras siga así, cualquier plan cubre cualquier vehículo y aquí no
+              se cobrará ninguna diferencia. Los niveles se diferencian en Membego,
+              en Panel → App → Car wash → Catálogo → Tipos de vehículo.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Sin respuesta de Membego se dice, en vez de callar y dejar que alguien
+          crea que su catálogo está vacío. */}
+      {membego === null && (
+        <p className="text-xs text-faint">
+          No se pudieron consultar los niveles de Membego. Puede guardar igual: la
+          tabla funciona sin ellos, solo que sin la lista de referencia al lado.
+        </p>
+      )}
 
       {error && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}

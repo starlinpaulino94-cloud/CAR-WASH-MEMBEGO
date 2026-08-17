@@ -1024,3 +1024,42 @@ export async function eliminarEmpleado(id: string): Promise<void> {
     );
   }
 }
+
+// ─────────────────────── Tipos de vehículo de Membego (niveles reales)
+
+export interface TipoVehiculoMembego {
+  id: string;
+  nombre: string;
+  nivelTarifario: number;
+}
+
+export interface NivelesDeMembego {
+  tipos: TipoVehiculoMembego[];
+  /** true = todos están en 1, o sea que la cobertura por categoría no aplica. */
+  sinDiferenciar: boolean;
+}
+
+/**
+ * Los niveles que Membego usa de verdad.
+ *
+ * Sin esto, la tabla de Configuración pedía teclear ocho números a ciegas: los
+ * niveles los define Membego y un valor que allá no existe no casa con nada.
+ *
+ * Falla en silencio a propósito —devuelve `null`— porque es una AYUDA para
+ * mapear, no un requisito. Que Membego esté caído no puede impedirle a nadie
+ * abrir Configuración ni guardar los niveles que ya conoce.
+ */
+export async function fetchNivelesDeMembego(): Promise<NivelesDeMembego | null> {
+  try {
+    const res = await fetch('/api/membego/tipos-vehiculo');
+    if (!res.ok) return null;
+    const body = (await res.json()) as {
+      vehicleTypes?: TipoVehiculoMembego[];
+      sinDiferenciar?: boolean;
+    };
+    if (!Array.isArray(body.vehicleTypes)) return null;
+    return { tipos: body.vehicleTypes, sinDiferenciar: body.sinDiferenciar ?? false };
+  } catch {
+    return null;
+  }
+}
