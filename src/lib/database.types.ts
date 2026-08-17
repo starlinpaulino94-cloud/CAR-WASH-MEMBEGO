@@ -670,6 +670,29 @@ export interface Database {
         };
         Relationships: [];
       };
+      vehicle_category_levels: {
+        Row: {
+          company_id: string;
+          category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          // Sin fila = sin nivel configurado. NO es 1: con 1 por defecto, todas
+          // las categorías cabrían en el plan más barato de Membego.
+          level: number;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          category: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          level: number;
+          updated_at?: string;
+        };
+        Update: {
+          company_id?: string;
+          category?: "sedan" | "suv" | "jeep" | "pickup" | "van" | "truck" | "motorcycle" | "special";
+          level?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       customers: {
         Row: {
           id: string;
@@ -2651,6 +2674,29 @@ export interface Database {
           p_promotion_code?: string | null;
         };
         Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      set_vehicle_category_levels: {
+        Args: { p_niveles: Json };
+        Returns: Database['public']['Tables']['vehicle_category_levels']['Row'][];
+      };
+      record_membego_redemption: {
+        Args: {
+          p_invoice_id: string;
+          p_visit_id: string | null;
+          p_membership_id: string | null;
+          p_covered_cents?: number;
+          p_error?: string | null;
+        };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      record_membego_reversal: {
+        Args: { p_invoice_id: string };
+        Returns: Database['public']['Tables']['invoices']['Row'];
+      };
+      /** Migración 0041. Cancela con motivo obligatorio; rechaza las facturadas. */
+      cancel_work_order: {
+        Args: { p_order_id: string; p_reason: string };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
       };
       create_work_order: {
         Args: {

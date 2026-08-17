@@ -789,14 +789,14 @@ await page.waitForTimeout(1800);
 
 const deMembego = Number(sql("select count(*) from customers where origin='membego'"));
 check('el filtro «De Membego» trae exactamente los de Membego',
-  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 1
-  && (await page.getByRole('cell', { name: 'Ramona Ventura' }).count()) === 0,
+  (await page.getByRole('row', { name: /Vino De Membego/ }).count()) === 1
+  && (await page.getByRole('row', { name: /Ramona Ventura/ }).count()) === 0,
   `en la base hay ${deMembego}`);
 
 await page.getByRole('button', { name: 'Del car wash', exact: true }).click();
 await page.waitForTimeout(1800);
 check('y «Del car wash» deja fuera a los de Membego',
-  (await page.getByRole('cell', { name: 'Vino De Membego' }).count()) === 0);
+  (await page.getByRole('row', { name: /Vino De Membego/ }).count()) === 0);
 
 // Vincular después a Membego NO cambia de dónde vino: es lo que hace fiable la
 // atribución de ventas entre los dos canales.

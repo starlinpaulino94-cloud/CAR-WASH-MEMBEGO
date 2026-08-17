@@ -52,7 +52,17 @@ export const PERMISSIONS = {
   // el gate de import_batch() en la migración 0035. Exportar no lleva permiso
   // propio: quien ve un listado puede llevarse lo que ya está viendo, y RLS
   // decide qué filas son esas.
-  importData:        ['propietario', 'administrador', 'superadmin']
+  importData:        ['propietario', 'administrador', 'superadmin'],
+  // Borrar del catálogo y las fichas. MISMOS roles que la política
+  // `<tabla>_borrar_solo_admin` de la migración 0040, que es RESTRICTIVE: si
+  // estas dos listas se separan, la pantalla ofrecería un botón que la base
+  // rechaza en silencio —un DELETE denegado por RLS afecta cero filas y no da
+  // error—, que es la peor forma de fallar.
+  deleteRecords:     ['propietario', 'administrador', 'superadmin'],
+  // Cancelar una orden borra trabajo del tablero y descuadra el conteo del día.
+  // Mismos roles que anular una factura, que es la operación correctiva
+  // equivalente, y los MISMOS que el gate de cancel_work_order() en 0041.
+  cancelOrder:       ['propietario', 'administrador', 'supervisor', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

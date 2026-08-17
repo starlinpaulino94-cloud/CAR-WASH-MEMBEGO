@@ -1,15 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X
+  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
 import {
   fetchBoardOrders, fetchItemsForOrders, fetchBays, fetchOperators, fetchAssignees,
-  advanceOrder, allowedTransitions, STATUS_LABEL,
+  advanceOrder, cancelOrder, allowedTransitions, STATUS_LABEL,
   WorkOrder, WorkOrderItem, Bay, Profile, OrderStatus
 } from '../../data/ordersRepository';
+import { can } from '../../lib/auth';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { QcReviewModal } from '../modals/QcReviewModal';
 
@@ -35,7 +37,7 @@ const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
  *    transición y libera la bahía al salir de lavado.
  */
 export const KanbanSupabaseView: React.FC = () => {
-  const { branch, company } = useAuth();
+  const { branch, company, profile } = useAuth();
   const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
@@ -53,6 +55,20 @@ export const KanbanSupabaseView: React.FC = () => {
   const [movingId, setMovingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [startTarget, setStartTarget] = useState<WorkOrder | null>(null);
+
+  /*
+   * Cancelar una orden.
+   *
+   * El tablero ya excluía `cancelado` de los botones de transición
+   * (`nexts.filter(n => n !== 'cancelado')`) porque no había forma de pedir el
+   * motivo. Esto es lo que faltaba: un diálogo aparte, con su motivo
+   * obligatorio, para lo que es una operación correctiva y no un paso del flujo.
+   */
+  const puedeCancelar = can(profile, 'cancelOrder');
+  const [cancelando, setCancelando] = useState<WorkOrder | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!branch) return;
@@ -113,6 +129,29 @@ export const KanbanSupabaseView: React.FC = () => {
       setActionError(err instanceof Error ? err.message : 'No se pudo mover la orden');
     } finally {
       setMovingId(null);
+    }
+  };
+
+  const confirmarCancelacion = async () => {
+    if (!cancelando) return;
+    if (motivo.trim().length < 5) {
+      setCancelError('Explique por qué se cancela (mínimo 5 caracteres).');
+      return;
+    }
+    setCancelBusy(true);
+    setCancelError(null);
+    try {
+      await cancelOrder(cancelando.id, motivo.trim());
+      setCancelando(null);
+      setMotivo('');
+      await load();
+      refreshQueue();
+    } catch (err) {
+      // El servidor ya redacta lo importante —«anule primero la factura»—, así
+      // que se enseña tal cual y el diálogo se queda abierto para leerlo.
+      setCancelError(err instanceof Error ? err.message : 'No se pudo cancelar la orden');
+    } finally {
+      setCancelBusy(false);
     }
   };
 
@@ -285,6 +324,20 @@ export const KanbanSupabaseView: React.FC = () => {
                           ))}
                         </div>
                       )}
+
+                      {/* Cancelar va aparte de los botones de flujo y en gris:
+                          no es un paso siguiente, es deshacer. Solo aparece
+                          donde la máquina de estados lo permite. */}
+                      {puedeCancelar && nexts.includes('cancelado') && (
+                        <button
+                          disabled={busy}
+                          onClick={() => { setMotivo(''); setCancelError(null); setCancelando(order); }}
+                          aria-label={`Cancelar la orden ${order.order_number}`}
+                          className="w-full py-1 text-faint hover:text-danger disabled:opacity-40 font-bold text-xs rounded transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Ban className="w-3 h-3" /> Cancelar orden
+                        </button>
+                      )}
                     </article>
                   );
                 })}
@@ -293,6 +346,35 @@ export const KanbanSupabaseView: React.FC = () => {
           );
         })}
       </div>
+
+      {cancelando && (
+        <FormModal
+          title={`Cancelar la orden ${cancelando.order_number}`}
+          submitLabel="Cancelar la orden"
+          busy={cancelBusy}
+          error={cancelError}
+          onSubmit={() => void confirmarCancelacion()}
+          onClose={() => { setCancelando(null); setCancelError(null); }}
+          onDismissError={() => setCancelError(null)}
+        >
+          <p className="text-sm text-body">
+            El vehículo <strong className="text-strong">{cancelando.vehicle_plate}</strong> de{' '}
+            <strong className="text-strong">{cancelando.customer_name}</strong> sale del tablero.
+            La bahía, si tenía una, queda libre.
+          </p>
+          <Field label="Motivo" htmlFor="cnl-motivo"
+            hint="Queda guardado con la orden y en la bitácora. Sin él nadie puede explicar la semana que viene por qué se cayó este lavado.">
+            <textarea id="cnl-motivo" rows={3} className={textInputClass} value={motivo} autoFocus
+              onChange={e => setMotivo(e.target.value)}
+              placeholder="El cliente se llevó el carro sin lavar" />
+          </Field>
+          {/* Si ya se cobró, esto va a fallar. Decirlo antes ahorra el viaje. */}
+          <p className="text-xs text-faint">
+            Si la orden ya está facturada, primero hay que anular la factura en
+            Facturación: se emite su nota de crédito y después se puede cancelar.
+          </p>
+        </FormModal>
+      )}
 
       {reviewing && (
         <QcReviewModal

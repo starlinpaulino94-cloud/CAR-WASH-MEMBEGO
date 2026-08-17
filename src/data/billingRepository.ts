@@ -12,7 +12,25 @@ import { Tables, Enums } from '../lib/database.types';
 
 export type Service = Tables<'services'>;
 export type Product = Tables<'products'>;
-export type Invoice = Tables<'invoices'>;
+/**
+ * Los tipos se generan contra la base (`npm run db:types`), y las columnas del
+ * canje llegaron en la migración 0039 —después de la última generación—. Se
+ * declaran a mano hasta la siguiente: sin ellas, anular una factura no sabría
+ * qué visita devolverle al cliente.
+ */
+export interface MembegoCanjeFields {
+  membego_membership_id: string | null;
+  /** La visita en Membego. Es con lo que se deshace el canje. */
+  membego_visit_id: string | null;
+  membego_covered_cents: number;
+  membego_canje_estado:
+    'sin_beneficio' | 'pendiente' | 'canjeado' | 'fallido' | 'revertido';
+  membego_canje_error: string | null;
+  membego_canjeado_at: string | null;
+  membego_revertido_at: string | null;
+}
+
+export type Invoice = Tables<'invoices'> & Partial<MembegoCanjeFields>;
 export type CashSession = Tables<'cash_sessions'>;
 export type CashMovement = Tables<'cash_movements'>;
 export type VehicleCategory = Enums['vehicle_category'];
@@ -66,6 +84,30 @@ export async function fetchServices(category: VehicleCategory): Promise<ServiceW
     };
     return { ...service, price_cents: service_prices[0]?.price_cents ?? 0 };
   });
+}
+
+/**
+ * Precios de TODOS los servicios en una categoría, sin traerse los servicios.
+ *
+ * Hace falta para calcular la diferencia cuando un cliente llega en un carro por
+ * encima de su plan: la membresía absorbe lo que valdría ese lavado en la
+ * categoría tope del plan, y ese precio no está en el catálogo que el punto de
+ * venta tiene cargado —el catálogo trae la categoría del carro que está delante,
+ * no la del plan.
+ */
+export async function fetchServicePricesForCategory(
+  category: VehicleCategory
+): Promise<Record<string, number>> {
+  const { data, error } = await requireSupabase()
+    .from('service_prices')
+    .select('service_id, price_cents')
+    .eq('vehicle_category', category);
+
+  if (error) throw error;
+
+  const mapa: Record<string, number> = {};
+  for (const fila of data ?? []) mapa[fila.service_id] = fila.price_cents;
+  return mapa;
 }
 
 export async function fetchProducts(): Promise<Product[]> {
@@ -556,4 +598,112 @@ export async function fetchChargeableOrders(
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as unknown as ChargeableOrder[];
+}
+
+// ───────────────────────────────────────────── El canje de Membego
+
+/**
+ * Consumir el beneficio en Membego y dejarlo escrito en la factura.
+ *
+ * PRIMERO SE FACTURA, DESPUÉS SE CANJEA, y el orden no es casual. Son dos
+ * sistemas sin transacción común: uno de los pasos queda primero y el otro
+ * puede fallar, así que la pregunta real es quién paga ese error.
+ *
+ *   · Canjear primero — si falla la factura, el cliente perdió un lavado y no
+ *     tiene comprobante. Perdió él, y no tiene cómo enterarse.
+ *   · Facturar primero — si falla el canje, el cliente tiene su factura con el
+ *     lavado descontado y su lavado sigue en el saldo. Perdió el negocio, sabe
+ *     cuánto, y se puede reintentar.
+ *
+ * Un fallo NO se traga: se anota en la factura como `fallido` con su motivo.
+ * Una factura cubierta cuyo canje nadie confirmó es un hecho que hay que poder
+ * ver y reintentar.
+ */
+
+export interface ResultadoCanje {
+  ok: boolean;
+  visitId: string | null;
+  /** Lavados que le quedan al cliente. `null` en planes ilimitados. */
+  usesLeft: number | null;
+  /** Por qué falló, cuando falló. */
+  motivo: string | null;
+}
+
+export async function canjearEnMembego(params: {
+  invoiceId: string;
+  membershipId: string;
+  servicio: string;
+  coveredCents: number;
+  sucursalId?: string | null;
+}): Promise<ResultadoCanje> {
+  let visitId: string | null = null;
+  let usesLeft: number | null = null;
+  let motivo: string | null = null;
+
+  try {
+    const res = await fetch('/api/membego/canjear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoiceId: params.invoiceId,
+        membershipId: params.membershipId,
+        servicio: params.servicio,
+        sucursalId: params.sucursalId ?? null
+      })
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      visitId?: string; usesLeft?: number | null; message?: string; error?: string;
+    };
+    if (res.ok && body.visitId) {
+      visitId = body.visitId;
+      usesLeft = body.usesLeft ?? null;
+    } else {
+      motivo = body.message ?? body.error ?? `Membego respondió ${res.status}`;
+    }
+  } catch {
+    motivo = 'No se pudo contactar con Membego.';
+  }
+
+  // Se anota SIEMPRE, haya salido bien o mal. Un canje fallido sin rastro es
+  // una factura que dice «cubierto» y una membresía que nunca se enteró.
+  try {
+    await requireSupabase().rpc('record_membego_redemption', {
+      p_invoice_id: params.invoiceId,
+      p_visit_id: visitId,
+      p_membership_id: params.membershipId,
+      p_covered_cents: params.coveredCents,
+      p_error: motivo
+    });
+  } catch {
+    // Anotar es lo último y lo menos grave: el canje ya ocurrió (o no) en
+    // Membego, y eso es lo que decide el saldo del cliente.
+  }
+
+  return { ok: visitId !== null, visitId, usesLeft, motivo };
+}
+
+/**
+ * Devolverle el lavado al cliente al anular la factura.
+ *
+ * Revertir dos veces devuelve un lavado, no dos: Membego responde 200 con
+ * `applied: false` si ya estaba revertida, y eso es lo correcto ante un
+ * reintento tras un timeout.
+ */
+export async function revertirEnMembego(
+  invoiceId: string, visitId: string, motivo: string
+): Promise<{ ok: boolean; mensaje: string | null }> {
+  try {
+    const res = await fetch('/api/membego/revertir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitId, reason: motivo })
+    });
+    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    if (!res.ok) return { ok: false, mensaje: body.message ?? body.error ?? 'Membego rechazó la reversa.' };
+
+    await requireSupabase().rpc('record_membego_reversal', { p_invoice_id: invoiceId });
+    return { ok: true, mensaje: null };
+  } catch {
+    return { ok: false, mensaje: 'No se pudo contactar con Membego.' };
+  }
 }

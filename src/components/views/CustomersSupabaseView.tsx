@@ -1,15 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Loader2, Car, BadgeCheck, Store, Network } from 'lucide-react';
+import { Plus, Loader2, Car, BadgeCheck, Store, Network, Pencil, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
-  fetchCustomerPage, createCustomer, fetchCustomerMembego, fetchCustomerOriginSummary,
+  fetchCustomerPage, createCustomer, updateCustomer, eliminarFila, archivarFila,
+  fetchCustomerMembego, fetchCustomerOriginSummary,
   Customer, CustomerMembego, CustomerOrigin, CustomerOriginSummary
 } from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow, InlineAlert, FilterChips, HelpNote
 } from '../common/DataViewShell';
+import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import { MembegoCustomerModal } from '../modals/MembegoCustomerModal';
 import { ExportButton } from '../common/ExportButton';
 import { ImportButton } from '../common/ImportModal';
@@ -32,13 +35,19 @@ export const CustomersSupabaseView: React.FC = () => {
   // ausencia de filtro; por eso no vive en el enum de la base.
   const [origen, setOrigen] = useState<CustomerOrigin | 'todos'>('todos');
 
+  // Los archivados no estorban por defecto, que es para lo que se archivan.
+  const [verArchivados, setVerArchivados] = useState(false);
+
   const fetcher = useCallback(
     (page: number, pageSize: number, search: string) =>
-      fetchCustomerPage(page, pageSize, search, origen === 'todos' ? undefined : origen),
-    [origen]
+      fetchCustomerPage(page, pageSize, search,
+        origen === 'todos' ? undefined : origen, verArchivados),
+    [origen, verArchivados]
   );
 
-  const q = usePagedQuery<Customer>({ fetcher, pageSize: PAGE_SIZE, deps: [origen] });
+  const q = usePagedQuery<Customer>({
+    fetcher, pageSize: PAGE_SIZE, deps: [origen, verArchivados]
+  });
 
   // Resumen de los dos canales. Se pide una vez y se refresca al dar de alta.
   const [resumen, setResumen] = useState<CustomerOriginSummary | null>(null);
@@ -56,6 +65,65 @@ export const CustomersSupabaseView: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  /*
+   * Editar y eliminar.
+   *
+   * Editar no lleva permiso propio: la política `customers_write` no pide rol
+   * ninguno, así que quien está en el mostrador puede corregir un teléfono mal
+   * tecleado. Eliminar sí, y es el MISMO gate que la base — pedir menos aquí
+   * pintaría un botón que RLS rechaza sin dar error.
+   */
+  const puedeBorrar = can(profile, 'deleteRecords');
+  const [editando, setEditando] = useState<Customer | null>(null);
+  const [borrando, setBorrando] = useState<Customer | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', taxId: '', notes: '' });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const abrirEdicion = (c: Customer) => {
+    setEditForm({
+      name: c.name, phone: c.phone ?? '', email: c.email ?? '',
+      taxId: c.tax_id ?? '', notes: c.notes ?? ''
+    });
+    setEditError(null);
+    setEditando(c);
+  };
+
+  const guardarEdicion = async () => {
+    if (!editando) return;
+    if (!editForm.name.trim()) { setEditError('El nombre es obligatorio.'); return; }
+    setEditBusy(true);
+    setEditError(null);
+    try {
+      await updateCustomer(editando.id, {
+        name: editForm.name.trim(),
+        phone: editForm.phone.trim() || null,
+        email: editForm.email.trim() || null,
+        tax_id: editForm.taxId.trim() || null,
+        notes: editForm.notes.trim() || null
+      });
+      setEditando(null);
+      setNotice(`Ficha de ${editForm.name.trim()} actualizada.`);
+      q.reload();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'No se pudo guardar.');
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
+  const alternarArchivo = async (c: Customer) => {
+    try {
+      await archivarFila('customers', c.id, c.is_active !== false);
+      setNotice(c.is_active === false
+        ? `${c.name} vuelve a estar activo.`
+        : `${c.name} archivado. Deja de aparecer en búsquedas; su historial queda intacto.`);
+      q.reload();
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'No se pudo archivar.');
+    }
+  };
 
   // Panel de beneficios Membego del cliente seleccionado.
   const [selected, setSelected] = useState<Customer | null>(null);
@@ -171,6 +239,14 @@ export const CustomersSupabaseView: React.FC = () => {
               value={origen}
               onChange={setOrigen}
             />
+            {/* Un archivado no desaparece: se deja de ver. Poder mirarlos es lo
+                que separa archivar de borrar. */}
+            <label className="flex items-center gap-2 text-xs text-muted whitespace-nowrap self-center">
+              <input type="checkbox" checked={verArchivados}
+                onChange={e => setVerArchivados(e.target.checked)}
+                className="accent-brand" />
+              Ver archivados
+            </label>
           </div>
 
           <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
@@ -185,12 +261,13 @@ export const CustomersSupabaseView: React.FC = () => {
                     <th scope="col" className="p-3 font-semibold">MEMBEGO</th>
                     <th scope="col" className="p-3 font-semibold text-right">VISITAS</th>
                     <th scope="col" className="p-3 font-semibold text-right">CONSUMO</th>
+                    <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60">
-                  {q.loading ? <SkeletonRows cols={6} />
+                  {q.loading ? <SkeletonRows cols={7} />
                     : q.rows.length === 0 ? (
-                      <EmptyRow cols={6}>
+                      <EmptyRow cols={7}>
                         {q.searchInput
                           ? 'Ningún cliente coincide con la búsqueda.'
                           : origen === 'carwash' ? 'Todavía no hay clientes propios del car wash.'
@@ -200,7 +277,16 @@ export const CustomersSupabaseView: React.FC = () => {
                     ) : q.rows.map(c => (
                       <tr key={c.id} className="hover:bg-surface-2/40">
                         <td className="p-3">
-                          <div className="font-bold text-strong">{c.name}</div>
+                          <div className="font-bold text-strong flex items-center gap-1.5">
+                            {c.name}
+                            {/* Archivado se dice, no se insinúa: si no, alguien
+                                se pregunta por qué no sale en el buscador. */}
+                            {c.is_active === false && (
+                              <span className="text-xs font-bold text-faint bg-surface-2 border border-line px-1.5 py-0.5 rounded">
+                                Archivado
+                              </span>
+                            )}
+                          </div>
                           {c.tax_id && <div className="text-xs text-faint">RNC {c.tax_id}</div>}
                         </td>
                         <td className="p-3 text-muted">
@@ -228,6 +314,29 @@ export const CustomersSupabaseView: React.FC = () => {
                         <td className="p-3 text-body font-bold text-right tabular-nums">{c.total_visits}</td>
                         <td className="p-3 text-brand-hi font-bold text-right whitespace-nowrap">
                           {formatCents(c.total_spent_cents, symbol)}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => abrirEdicion(c)} aria-label={`Editar ${c.name}`}
+                              className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            {puedeBorrar && (
+                              <>
+                                <button onClick={() => void alternarArchivo(c)}
+                                  aria-label={`${c.is_active === false ? 'Reactivar' : 'Archivar'} ${c.name}`}
+                                  className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                                  {c.is_active === false
+                                    ? <ArchiveRestore className="w-4 h-4" />
+                                    : <Archive className="w-4 h-4" />}
+                                </button>
+                                <button onClick={() => setBorrando(c)} aria-label={`Eliminar ${c.name}`}
+                                  className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -272,6 +381,57 @@ export const CustomersSupabaseView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {editando && (
+        <FormModal
+          title={`Editar — ${editando.name}`}
+          submitLabel="Guardar cambios"
+          busy={editBusy}
+          error={editError}
+          onSubmit={() => void guardarEdicion()}
+          onClose={() => setEditando(null)}
+          onDismissError={() => setEditError(null)}
+        >
+          <Field label="Nombre" htmlFor="ed-cli-name">
+            <input id="ed-cli-name" className={textInputClass} value={editForm.name} autoFocus
+              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Teléfono" htmlFor="ed-cli-phone">
+              <input id="ed-cli-phone" type="tel" className={textInputClass} value={editForm.phone}
+                onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+            </Field>
+            <Field label="RNC / Cédula" htmlFor="ed-cli-tax">
+              <input id="ed-cli-tax" className={textInputClass} value={editForm.taxId}
+                onChange={e => setEditForm(f => ({ ...f, taxId: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Correo" htmlFor="ed-cli-email">
+            <input id="ed-cli-email" type="email" className={textInputClass} value={editForm.email}
+              onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+          </Field>
+          <Field label="Notas" htmlFor="ed-cli-notes">
+            <textarea id="ed-cli-notes" rows={2} className={textInputClass} value={editForm.notes}
+              onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+          </Field>
+          {/* El cupo de crédito NO se toca por aquí: un trigger de 0028 lo
+              rechaza y solo se cambia con set_customer_credit(). */}
+          <p className="text-xs text-faint">
+            El cupo de crédito se cambia en Clientes › Por cobrar, no aquí.
+          </p>
+        </FormModal>
+      )}
+
+      {borrando && (
+        <ConfirmarEliminar
+          queEs="el cliente"
+          nombre={borrando.name}
+          onEliminar={() => eliminarFila('customers', borrando.id)}
+          onArchivar={() => archivarFila('customers', borrando.id, true)}
+          onCerrar={() => setBorrando(null)}
+          onHecho={() => { q.reload(); setResumenNonce(n => n + 1); }}
+        />
+      )}
 
       {selected && (
         <MembegoCustomerModal

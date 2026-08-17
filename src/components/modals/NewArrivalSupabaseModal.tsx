@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History } from 'lucide-react';
+import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import {
   createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
+import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
 import {
-  lookupVehicleByPlate, normalizePlate, searchCustomers, CustomerMatch, VehicleMatch
+  lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
+  CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
+import { PanelFichaMembego } from '../common/FichaMembego';
 
 const CATEGORIES: { id: VehicleCategory; label: string }[] = [
   { id: 'sedan', label: 'Sedán' },
@@ -44,14 +47,18 @@ const Etiqueta: React.FC<{ children: React.ReactNode; tono?: 'ok' | 'info' }> = 
 /**
  * Registro de llegada.
  *
- * Versión sobre Supabase del asistente de nueva llegada. Deja fuera el canje de
- * beneficios Membego: las membresías y promociones ENTRAN solas por webhook y se
- * pueden consultar, pero aplicarlas a una venta exige avisar a Membego de que se
- * consumieron, y ese contrato no lo tenemos. Antes eso lo tapaba un simulador en
- * el cliente; se retiró, porque fingir la respuesta del proveedor no acerca la
- * integración, solo esconde que falta. Lo que sí hace esta pantalla —crear
- * cliente, vehículo, orden y líneas— ocurre en una sola transacción del
- * servidor.
+ * Versión sobre Supabase del asistente de nueva llegada. Crear cliente,
+ * vehículo, orden y líneas ocurre en una sola transacción del servidor.
+ *
+ * Al elegir un cliente que viene de Membego se le pregunta a Membego, en vivo,
+ * qué tiene: su membresía con los lavados que le quedan y cuándo se le vence,
+ * sus promociones disponibles y sus vehículos. Y si ya hay placa, si esa
+ * membresía cubre ESE carro.
+ *
+ * Nada de eso se guarda. Los beneficios NO se proyectan —lo dice el contrato de
+ * Membego— porque una copia desfasada regala un lavado ya consumido. Y si
+ * Membego no contesta, el aviso va al lado del cliente y no sobre el botón: un
+ * lavadero no deja de recibir carros porque la fidelización esté caída.
  *
  * El cliente puede ser uno de tres:
  *
@@ -86,6 +93,22 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [resultados, setResultados] = useState<CustomerMatch[]>([]);
   const [buscando, setBuscando] = useState(false);
   const [conocido, setConocido] = useState<VehicleMatch | null>(null);
+
+  // Lo que Membego sabe del cliente elegido: sus vehículos y sus beneficios.
+  // Se pide al elegirlo y se vuelve a pedir si cambia la placa, porque la
+  // respuesta depende del carro: la misma membresía cubre un sedán y no una SUV.
+  const [ficha, setFicha] = useState<FichaMembego | null>(null);
+  const [fichaBuscando, setFichaBuscando] = useState(false);
+  const [fichaError, setFichaError] = useState<string | null>(null);
+  // El nivel tarifario de cada categoría, configurado en Ajustes › Membego. Sin
+  // él la cobertura no se puede decidir por categoría, solo por placa.
+  const [niveles, setNiveles] = useState<NivelesPorCategoria>({});
+
+  useEffect(() => {
+    fetchVehicleCategoryLevels()
+      .then(setNiveles)
+      .catch(() => { /* sin niveles se decide solo por placa: no es un fallo */ });
+  }, []);
 
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +194,47 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     setCliente(null);
     setCustomerName('');
     setCustomerPhone('');
+    setFicha(null);
+    setFichaError(null);
   }, []);
+
+  /**
+   * La ficha de Membego del cliente elegido.
+   *
+   * Depende de la placa: la misma membresía cubre un sedán y no una SUV, así
+   * que cambiar el carro cambia la respuesta y hay que volver a preguntar.
+   *
+   * Si Membego no contesta, se avisa y se sigue. Un lavadero no puede dejar de
+   * recibir carros porque un servicio de fidelización esté caído: el error se
+   * enseña al lado del cliente, no encima del botón de registrar.
+   */
+  useEffect(() => {
+    const idMembego = cliente?.membego_customer_id;
+    if (!idMembego) { setFicha(null); setFichaError(null); return; }
+
+    let active = true;
+    setFichaBuscando(true);
+    setFichaError(null);
+    const t = setTimeout(() => {
+      fetchFichaMembego(idMembego, {
+        placa: plate || null,
+        // `undefined` si esa categoría no tiene nivel: mandar un 1 inventado
+        // haría que Membego diera por cubierto un camión.
+        nivelVehiculo: niveles[category] ?? null
+      })
+        .then(f => { if (active) setFicha(f); })
+        .catch(err => {
+          if (!active) return;
+          setFicha(null);
+          setFichaError(err instanceof ErrorFichaMembego
+            ? err.message
+            : 'No se pudo consultar Membego.');
+        })
+        .finally(() => { if (active) setFichaBuscando(false); });
+    }, 300);
+
+    return () => { active = false; clearTimeout(t); };
+  }, [cliente, plate, category, niveles]);
 
   // Diálogo accesible: foco inicial, Escape y foco atrapado.
   useEffect(() => {
@@ -365,6 +428,19 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                   {cliente.credit_enabled && <Etiqueta tono="info">Con crédito</Etiqueta>}
                   <Etiqueta>{cliente.total_visits} {cliente.total_visits === 1 ? 'visita' : 'visitas'}</Etiqueta>
                 </div>
+
+
+                {/* Lo que Membego sabe de él. Aparece solo, sin pedirlo.
+                    El panel es el mismo que ve la caja: el que recibe y el que
+                    cobra no pueden ver saldos distintos del mismo cliente. */}
+                {cliente.membego_customer_id && (
+                  <div className="mt-3 pt-3 border-t border-brand/30">
+                    <PanelFichaMembego
+                      ficha={ficha} error={fichaError} buscando={fichaBuscando}
+                      placa={plate} onElegirPlaca={setPlate} disabled={busy}
+                    />
+                  </div>
+                )}
 
                 {/* El carro figura a nombre de otro. Puede ser correcto —lo trae
                     un familiar, se vendió— pero se avisa: colgar la venta de

@@ -3,8 +3,8 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**221 comprobaciones** en cinco ensayos (`pos-cash`, `invoices`,
-`orders-kanban`, `admin-views` y `flujo-completo`).
+**250 comprobaciones** en seis ensayos (`pos-cash`, `invoices`,
+`orders-kanban`, `admin-views`, `flujo-completo` y `membego-canje`).
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 
@@ -44,6 +44,11 @@ debe:
 | Tema | Se elige en Configuración › Apariencia, no desde la barra superior; el modo día aclara el lienzo de verdad y el de noche lo oscurece —se mide la luminancia, no que «cambie»—; la elección sobrevive a recargar y «como el sistema» devuelve la decisión al sistema operativo |
 | Barra superior | Solo lleva el local, «Ir a Membego» y la cuenta; el rol y la salida siguen a un clic, en el menú de cuenta |
 | Ruta de navegación | Con pestañas, la miga no repite el submódulo que la pestaña activa ya nombra dos centímetros más abajo |
+| Membresía en la caja | El beneficio se aplica **solo**, sin que el cajero marque nada: el lavado cubierto deja el total en cero y la factura recuerda qué visita lo consumió |
+| Diferencia a pagar | Un carro por encima del plan paga **solo el salto de categoría** —la membresía absorbe lo que valía en la categoría tope del plan— y la cifra se dice con todas las letras antes de cobrar |
+| Canje rechazado | Si Membego rechaza el canje, la factura se emite igual, el fallo queda **escrito en la factura** con su motivo, y el cajero se entera con el cliente delante |
+| Reversa | Anular la factura le **devuelve el lavado** al cliente: la reversa se pide por la visita y con motivo, y la factura queda sellada como revertida |
+| Membego caído | Se avisa y se sigue vendiendo: un lavadero no cierra porque la fidelización esté caída, y sin ficha no se inventa ningún beneficio |
 
 Cada aserción se comprueba consultando PostgreSQL directamente, no leyendo la
 pantalla: lo que importa es lo que quedó escrito.
@@ -73,7 +78,11 @@ node tests/e2e/pos-cash.e2e.mjs
 node tests/e2e/invoices.e2e.mjs      # requiere reset.sh previo: siembra sus datos
 node tests/e2e/orders-kanban.e2e.mjs # ídem
 node tests/e2e/admin-views.e2e.mjs   # ídem
+node tests/e2e/membego-canje.e2e.mjs # ídem; Membego va interceptado, la base no
 ```
+
+Cada ensayo siembra sus datos sobre una base recién reconstruida: hay que
+correr `reset.sh` **antes de cada uno**, no una vez para todos.
 
 ## Sobre el emulador
 

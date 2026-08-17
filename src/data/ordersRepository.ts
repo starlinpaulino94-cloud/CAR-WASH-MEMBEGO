@@ -260,8 +260,35 @@ export async function advanceOrder(
   return data as unknown as WorkOrder;
 }
 
+/**
+ * Cancelar una orden, con motivo obligatorio.
+ *
+ * No pasa por `advanceOrder`: cancelar exige motivo, comprueba que la orden no
+ * esté facturada y pide un rol distinto. Meterlo en el cambio de estado
+ * genérico habría hecho que el motivo fuera opcional en la firma, y un motivo
+ * opcional es un motivo que nadie escribe.
+ */
+export async function cancelOrder(orderId: string, reason: string): Promise<WorkOrder> {
+  const { data, error } = await requireSupabase().rpc('cancel_work_order', {
+    p_order_id: orderId,
+    p_reason: reason
+  });
+
+  if (error) throw new Error(translate(error.message));
+  return data as unknown as WorkOrder;
+}
+
 /** Mensajes del servidor traducidos a algo accionable en el taller. */
 function translate(message: string): string {
+  // Los mensajes de cancel_work_order ya vienen escritos para el usuario y
+  // dicen qué hacer («anule primero la factura»). Traducirlos otra vez sería
+  // reemplazar algo específico por algo genérico.
+  if (message.includes('ya está facturada') ||
+      message.includes('lista para entregar') ||
+      message.includes('Explique por qué') ||
+      message.includes('no permite cancelar')) {
+    return message;
+  }
   if (message.includes('ya está ocupada')) {
     return 'Esa bahía ya tiene un vehículo. Elija otra o libérela primero.';
   }
