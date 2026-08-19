@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Loader2, Car, BadgeCheck, Store, Network, Pencil, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
@@ -369,10 +370,10 @@ export const CustomersSupabaseView: React.FC = () => {
 
             {formError && <InlineAlert tone="error">{formError}</InlineAlert>}
 
-            <button onClick={() => void handleAdd()} disabled={busy}
-              className="w-full py-2.5 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-brand/30 flex items-center justify-center gap-2">
+            <Button className="w-full" onClick={() => void handleAdd()} disabled={busy}
+              >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar cliente
-            </button>
+            </Button>
 
             <p className="text-xs text-faint flex items-start gap-1.5">
               <Car className="w-3 h-3 flex-shrink-0 mt-0.5" />

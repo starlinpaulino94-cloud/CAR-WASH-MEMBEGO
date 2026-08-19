@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { X, Trash2, Loader2, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
@@ -202,11 +203,11 @@ export const RecipeModal: React.FC<{
                   value={qty} onChange={e => setQty(e.target.value)} placeholder="0.12" />
               </Field>
             </div>
-            <button onClick={() => void add()} disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button onClick={() => void add()} disabled={busy}
+              >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
               Agregar a la receta
-            </button>
+            </Button>
           </div>
         </div>
       </div>

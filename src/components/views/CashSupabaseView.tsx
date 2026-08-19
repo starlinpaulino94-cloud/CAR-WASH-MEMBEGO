@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import {
   CreditCard, Lock, Loader2, AlertCircle, RefreshCw, ArrowDownLeft,
   ArrowUpRight, History, EyeOff
@@ -162,9 +163,9 @@ export const CashSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudo cargar la caja
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
+          <Button size="sm" onClick={() => void load()} >
             <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -234,13 +235,13 @@ export const CashSupabaseView: React.FC = () => {
                 className="w-full bg-canvas border border-line rounded-xl p-3 text-sm font-bold text-strong placeholder-faint focus:outline-none focus:border-brand disabled:opacity-50"
               />
             </div>
-            <button
+            <Button size="lg" className="w-full"
               onClick={() => void handleOpen()}
               disabled={!allowed || busy}
-              className="w-full py-3 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2"
+              
             >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Abrir caja
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -390,13 +391,13 @@ export const CashSupabaseView: React.FC = () => {
                 placeholder="Motivo" disabled={!allowed || busy}
                 className="w-full bg-canvas border border-line rounded-lg p-2 text-xs text-strong placeholder-faint disabled:opacity-50"
               />
-              <button
+              <Button variant="outline" size="sm" className="w-full"
                 onClick={() => void handleMovement()}
                 disabled={!allowed || busy}
-                className="w-full py-2 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 border border-line-strong text-body font-bold text-xs rounded-lg transition-colors"
+                
               >
                 Registrar movimiento
-              </button>
+              </Button>
             </div>
           </div>
 

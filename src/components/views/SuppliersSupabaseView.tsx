@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -110,10 +111,10 @@ export const SuppliersSupabaseView: React.FC = () => {
               <ImportButton entity="proveedores" onImported={q.reload} />
             )}
             {canManage && (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={openCreate}
+            >
             <Plus className="w-4 h-4" /> Nuevo proveedor
-          </button>
+          </Button>
             )}
           </>
         }
@@ -167,10 +168,10 @@ export const SuppliersSupabaseView: React.FC = () => {
                           className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button onClick={() => void toggleActive(s)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                        <Button variant="secondary" size="xs" className="ml-1" onClick={() => void toggleActive(s)}
+                          >
                           {s.is_active ? 'Desactivar' : 'Activar'}
-                        </button>
+                        </Button>
                       </td>
                     )}
                   </tr>

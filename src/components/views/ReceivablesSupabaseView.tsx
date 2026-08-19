@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { HandCoins, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput } from '../../lib/money';
@@ -346,10 +347,10 @@ export const ReceivablesSupabaseView: React.FC = () => {
                       Cupo {formatCents(c.credit_limit_cents, symbol)} · {c.credit_terms_days} días de plazo
                     </div>
                   </div>
-                  <button onClick={() => openCredit(c)}
-                    className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="sm" onClick={() => openCredit(c)}
+                    >
                     Ajustar cupo
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -456,10 +457,10 @@ export const ReceivablesSupabaseView: React.FC = () => {
             El cupo no puede quedar por debajo de lo que el cliente ya debe, y el
             crédito no se retira con saldo pendiente.
           </p>
-          <button type="button" onClick={() => void submitCredit(false)} disabled={busy}
-            className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-surface-2 hover:bg-surface-3 text-body disabled:opacity-50">
+          <Button variant="secondary" size="sm" className="w-full" type="button" onClick={() => void submitCredit(false)} disabled={busy}
+            >
             Retirar el crédito a este cliente
-          </button>
+          </Button>
         </FormModal>
       )}
     </div>

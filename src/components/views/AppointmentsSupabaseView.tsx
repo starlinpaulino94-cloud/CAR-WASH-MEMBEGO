@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CarFront, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -192,10 +193,10 @@ export const AppointmentsSupabaseView: React.FC = () => {
         title="Agenda"
         subtitle="Reservas del día · la capacidad la marcan las bahías"
         actions={canBook ? (
-          <button onClick={() => { setBookDay(day); setError(null); setShowBook(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={() => { setBookDay(day); setError(null); setShowBook(true); }}
+            >
             <Plus className="w-4 h-4" /> Nueva cita
-          </button>
+          </Button>
         ) : undefined}
       />
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../ui/button';
 import { X, BookOpen, Layers, GitBranch, Database, Shield, Cpu, AlertTriangle, CheckCircle, FileText, Server } from 'lucide-react';
 
 interface Props {
@@ -278,12 +279,12 @@ export const PhaseArchitectureReportModal: React.FC<Props> = ({ isOpen, onClose 
         {/* Footer */}
         <div className="bg-surface-2/90 px-6 py-3 border-t border-line-strong flex justify-between items-center text-xs text-muted">
           <div>Estado de desarrollo: <span className="text-success font-bold">Fase 0 + Fase 1/2 Integradas en Runtime</span></div>
-          <button
+          <Button
             onClick={onClose}
-            className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-medium rounded-lg transition-colors shadow-lg shadow-brand/30"
+            
           >
             Entendido, volver a la aplicación
-          </button>
+          </Button>
         </div>
       </div>
     </div>

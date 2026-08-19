@@ -1,4 +1,5 @@
 import React, { useId, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import { Upload, Loader2, X, FileSpreadsheet, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { parseCsv, csvToObjects, toCsv, downloadCsv } from '../../lib/csv';
 import {
@@ -271,10 +272,10 @@ export const ImportModal: React.FC<{
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
-          <button type="button" onClick={() => { if (!busy) onClose(); }} disabled={busy}
-            className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40">
+          <Button variant="ghost" type="button" onClick={() => { if (!busy) onClose(); }} disabled={busy}
+            >
             {applied ? 'Cerrar' : 'Cancelar'}
-          </button>
+          </Button>
 
           {!applied && !preview && (
             <button type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Loader2, Wrench, CheckCircle2, Plus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -95,10 +96,10 @@ export const BaysSupabaseView: React.FC = () => {
         title="Bahías y estaciones"
         subtitle={loading ? branch?.name : `${branch?.name} · ${free} de ${bays.length} libres`}
         actions={editable ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={openCreate}
+            >
             <Plus className="w-4 h-4" /> Nueva bahía
-          </button>
+          </Button>
         ) : undefined}
       />
 

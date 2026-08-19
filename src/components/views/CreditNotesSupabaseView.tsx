@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { FileMinus, Search, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -140,10 +141,10 @@ export const CreditNotesSupabaseView: React.FC = () => {
         title="Notas de crédito"
         subtitle="Acredita renglones concretos; la factura solo se anula si se acredita entera"
         actions={canManage ? (
-          <button onClick={abrir}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={abrir}
+            >
             <FileMinus className="w-4 h-4" /> Emitir nota
-          </button>
+          </Button>
         ) : undefined}
       />
 

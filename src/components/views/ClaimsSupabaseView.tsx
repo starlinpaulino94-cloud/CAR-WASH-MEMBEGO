@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Loader2, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -168,10 +169,10 @@ export const ClaimsSupabaseView: React.FC = () => {
         title="Reclamos"
         subtitle="Qué reclamó el cliente, cómo se resolvió y cuánto costó"
         actions={canOpen ? (
-          <button onClick={() => { setError(null); setShowOpen(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={() => { setError(null); setShowOpen(true); }}
+            >
             <Plus className="w-4 h-4" /> Nuevo reclamo
-          </button>
+          </Button>
         ) : undefined}
       />
 

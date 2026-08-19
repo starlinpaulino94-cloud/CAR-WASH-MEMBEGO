@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
@@ -208,10 +209,10 @@ export const PromotionsSupabaseView: React.FC = () => {
               <ImportButton entity="promociones" onImported={() => setNonce(n => n + 1)} />
             )}
             {canManage && (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={openCreate}
+            >
             <Plus className="w-4 h-4" /> Nueva promoción
-          </button>
+          </Button>
             )}
           </>
         }
@@ -285,14 +286,14 @@ export const PromotionsSupabaseView: React.FC = () => {
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
-                        <button onClick={() => openEdit(p)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                        <Button variant="secondary" size="xs" onClick={() => openEdit(p)}
+                          >
                           Editar
-                        </button>
-                        <button onClick={() => void toggleActive(p)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                        </Button>
+                        <Button variant="secondary" size="xs" className="ml-1" onClick={() => void toggleActive(p)}
+                          >
                           {p.is_active ? 'Desactivar' : 'Activar'}
-                        </button>
+                        </Button>
                       </td>
                     )}
                   </tr>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import {
   Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight,
   ClipboardCheck
@@ -97,9 +98,9 @@ export const OrdersSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudieron cargar las órdenes
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
+          <Button size="sm" onClick={() => void load()} >
             <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -116,12 +117,12 @@ export const OrdersSupabaseView: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <ExportButton {...ordersExport()} />
-          <button
+          <Button size="sm"
             onClick={() => setCreating(true)}
-            className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center gap-2"
+            
           >
             <Plus className="w-4 h-4" /> Registrar llegada
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -235,17 +236,17 @@ export const OrdersSupabaseView: React.FC = () => {
               : <>Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total}</>}
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
+            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
               aria-label="Página anterior"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
+              >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
-            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1 || loading}
+            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1 || loading}
               aria-label="Página siguiente"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
+              >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
             {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
           </div>
         </div>

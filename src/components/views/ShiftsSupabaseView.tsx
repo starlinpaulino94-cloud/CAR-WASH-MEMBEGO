@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -164,19 +165,19 @@ export const ShiftsSupabaseView: React.FC = () => {
       {error && !showForm && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
       <div className="flex items-center gap-2">
-        <button onClick={() => shiftWeek(-1)} aria-label="Semana anterior"
-          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        <Button variant="secondary" size="icon-sm" onClick={() => shiftWeek(-1)} aria-label="Semana anterior"
+          >
           <ChevronLeft className="w-4 h-4" />
-        </button>
+        </Button>
         <span className="text-sm font-bold text-strong tabular-nums">
           {weekStart.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })}
           {' — '}
           {days[6].toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
-        <button onClick={() => shiftWeek(1)} aria-label="Semana siguiente"
-          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        <Button variant="secondary" size="icon-sm" onClick={() => shiftWeek(1)} aria-label="Semana siguiente"
+          >
           <ChevronRight className="w-4 h-4" />
-        </button>
+        </Button>
         <button onClick={() => setWeekStart(mondayOf(new Date()))}
           className="ml-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
           Esta semana

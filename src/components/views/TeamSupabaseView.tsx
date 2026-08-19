@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '../ui/button';
 import { Loader2, Plus, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -143,10 +144,10 @@ export const TeamSupabaseView: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <FilterChips options={RANGES} value={range} onChange={setRange} />
             {canManageStaff && (
-              <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+              <Button size="sm" onClick={openCreate}
+                >
                 <Plus className="w-4 h-4" /> Nuevo empleado
-              </button>
+              </Button>
             )}
           </div>
         }

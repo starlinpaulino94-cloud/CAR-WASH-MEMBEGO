@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Wrench, Plus, AlertTriangle, CheckCircle2, History, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -162,10 +163,10 @@ export const EquipmentSupabaseView: React.FC = () => {
         title="Equipos"
         subtitle="Serie, garantía, próxima revisión y costo acumulado de mantenimiento"
         actions={canManage ? (
-          <button onClick={() => { setForm(emptyForm); setError(null); setShowCreate(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={() => { setForm(emptyForm); setError(null); setShowCreate(true); }}
+            >
             <Plus className="w-4 h-4" /> Nuevo equipo
-          </button>
+          </Button>
         ) : undefined}
       />
 

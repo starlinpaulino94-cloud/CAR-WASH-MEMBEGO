@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -200,10 +201,10 @@ export const ServicesSupabaseView: React.FC = () => {
               <ImportButton entity="servicios" onImported={() => void load()} />
             )}
             {editable && (
-              <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+              <Button size="sm" onClick={openCreate}
+                >
                 <Plus className="w-4 h-4" /> Nuevo servicio
-              </button>
+              </Button>
             )}
           </>
         }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Trash2, HandCoins } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -164,10 +165,10 @@ export const PurchasesSupabaseView: React.FC = () => {
         title="Compras"
         subtitle="Cada compra entra el inventario; el crédito queda como cuenta por pagar"
         actions={canManage ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={openCreate}
+            >
             <Plus className="w-4 h-4" /> Nueva compra
-          </button>
+          </Button>
         ) : undefined}
       />
 

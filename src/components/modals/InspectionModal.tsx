@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import { X, ClipboardCheck, Trash2, Loader2, Lock, PenLine, Eraser } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -340,10 +341,10 @@ export const InspectionModal: React.FC<{
               </Field>
 
               {!frozen && (
-                <button onClick={() => void saveFields()} disabled={busy}
-                  className="px-4 py-2 bg-surface-2 hover:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center gap-2">
+                <Button variant="secondary" onClick={() => void saveFields()} disabled={busy}
+                  >
                   {busy && <Loader2 className="w-4 h-4 animate-spin" />} Guardar datos
-                </button>
+                </Button>
               )}
 
               {/* -------- Daños -------- */}

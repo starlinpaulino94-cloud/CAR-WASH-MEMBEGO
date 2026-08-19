@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import {
   Receipt, Search, Printer, Ban, AlertCircle, RefreshCw, Loader2,
   ChevronLeft, ChevronRight, FileMinus
@@ -167,9 +168,9 @@ export const InvoicesSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudo cargar el historial
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
+          <Button size="sm" onClick={() => void load()} >
             <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -348,23 +349,23 @@ export const InvoicesSupabaseView: React.FC = () => {
             )}
           </span>
           <div className="flex items-center gap-2">
-            <button
+            <Button variant="outline" size="icon-sm"
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0 || loading}
               aria-label="Página anterior"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body"
+              
             >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
-            <button
+            <Button variant="outline" size="icon-sm"
               onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
               disabled={page >= pageCount - 1 || loading}
               aria-label="Página siguiente"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body"
+              
             >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
             {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
           </div>
         </div>
