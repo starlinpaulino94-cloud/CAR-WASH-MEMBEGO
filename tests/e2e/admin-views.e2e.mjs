@@ -856,8 +856,13 @@ check('el modo día cambia el lienzo de verdad',
   fondoDia !== fondoNoche, `${fondoNoche} → ${fondoDia}`);
 
 // El de día tiene que ser CLARO y el de noche OSCURO: que cambie no basta.
-const luminancia = (rgb) => {
-  const [r, g, b] = rgb.match(/\d+/g).map(Number);
+// Desde la paleta b0 los colores se declaran en oklch y el navegador los
+// serializa tal cual, así que se leen ambos formatos: en oklch la L ya ES la
+// claridad perceptual; en rgb se calcula la luminancia relativa.
+const luminancia = (color) => {
+  const ok = color.match(/^oklch\(\s*([\d.]+%?)/);
+  if (ok) return ok[1].endsWith('%') ? parseFloat(ok[1]) / 100 : parseFloat(ok[1]);
+  const [r, g, b] = color.match(/\d+/g).map(Number);
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 };
 check('de día el fondo es claro y de noche oscuro',

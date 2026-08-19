@@ -19,7 +19,7 @@ const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
   { id: 'pendiente',       label: 'Llegadas',        tone: 'border-warning/50 bg-warning/5' },
   { id: 'en_espera',       label: 'En cola',          tone: 'border-info/50 bg-info/5' },
   { id: 'en_proceso',      label: 'En lavado',        tone: 'border-brand/50 bg-brand/5' },
-  { id: 'control_calidad', label: 'Control calidad',  tone: 'border-accent/50 bg-brand/5' },
+  { id: 'control_calidad', label: 'Control calidad',  tone: 'border-brand-2/50 bg-brand/5' },
   { id: 'listo',           label: 'Listo para entrega', tone: 'border-success/50 bg-success/5' },
   { id: 'entregado',       label: 'Entregados',       tone: 'border-line-strong bg-surface/30' }
 ];

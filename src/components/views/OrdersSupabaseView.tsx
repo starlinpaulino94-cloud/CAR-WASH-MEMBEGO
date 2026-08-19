@@ -31,7 +31,7 @@ const STATUS_TONE: Record<OrderStatus, string> = {
   en_espera: 'bg-info/20 text-info',
   asignada: 'bg-info/20 text-info',
   en_proceso: 'bg-brand/20 text-brand-hi',
-  control_calidad: 'bg-brand/20 text-accent',
+  control_calidad: 'bg-brand/20 text-brand-2',
   listo: 'bg-success/20 text-success',
   entregado: 'bg-surface-2 text-body',
   cancelado: 'bg-danger/20 text-danger'

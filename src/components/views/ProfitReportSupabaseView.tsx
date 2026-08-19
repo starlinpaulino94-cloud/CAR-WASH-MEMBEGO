@@ -76,7 +76,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Ventas" tone="text-success"
               value={formatCents(report.sales.total_cents, symbol)} />
-            <StatCard label="Insumos consumidos" tone="text-accent"
+            <StatCard label="Insumos consumidos" tone="text-brand-2"
               value={formatCents(report.consumption_cents, symbol)}
               hint="Según las recetas aplicadas al entregar" />
             <StatCard label="Gastos" tone="text-warning"
@@ -134,7 +134,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
                         <td className="p-2 text-right text-body tabular-nums whitespace-nowrap">
                           {formatCents(m.sales_cents, symbol)}
                         </td>
-                        <td className="p-2 text-right text-accent tabular-nums whitespace-nowrap">
+                        <td className="p-2 text-right text-brand-2 tabular-nums whitespace-nowrap">
                           {formatCents(m.consumption_cents, symbol)}
                         </td>
                         <td className={`p-2 text-right font-bold tabular-nums whitespace-nowrap ${

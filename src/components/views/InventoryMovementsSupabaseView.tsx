@@ -31,7 +31,7 @@ const KIND_STYLE: Record<InventoryMovementKind, string> = {
   compra: 'bg-success/20 text-success',
   venta: 'bg-brand/20 text-brand-hi',
   devolucion: 'bg-info/20 text-info',
-  consumo: 'bg-brand/20 text-accent',
+  consumo: 'bg-brand/20 text-brand-2',
   ajuste: 'bg-warning/20 text-warning',
   merma: 'bg-danger/20 text-danger',
   transferencia: 'bg-surface-3/20 text-body'

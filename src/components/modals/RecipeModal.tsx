@@ -107,7 +107,7 @@ export const RecipeModal: React.FC<{
         className="w-full max-w-2xl bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-bold text-strong text-sm flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-accent" /> Receta — {serviceName}
+            <FlaskConical className="w-4 h-4 text-brand-2" /> Receta — {serviceName}
           </h2>
           <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
             <X className="w-5 h-5" />
@@ -175,7 +175,7 @@ export const RecipeModal: React.FC<{
           {cost !== null && lines.length > 0 && (
             <p className="text-sm text-body bg-canvas/60 border border-line rounded-xl px-4 py-3">
               Costo estimado por ejecución (receta genérica):{' '}
-              <strong className="text-accent tabular-nums">{formatCents(cost, symbol)}</strong>
+              <strong className="text-brand-2 tabular-nums">{formatCents(cost, symbol)}</strong>
             </p>
           )}
 

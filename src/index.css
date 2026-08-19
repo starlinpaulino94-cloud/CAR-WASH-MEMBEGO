@@ -26,13 +26,14 @@
    gris en cualquier tema) y la marca deriva, porque nada dice cuál es el azul
    bueno.
 
-   Aquí cada color tiene NOMBRE SEMÁNTICO y dos valores. La pantalla dice qué
-   ES una cosa —lienzo, superficie, borde, marca, éxito— y el tema decide de qué
-   color se pinta. Los valores salen del Membego Design System v1.0 § 8, que es
-   la fuente oficial del ecosistema; el modo oscuro NO es el claro invertido:
-   tiene paleta propia diseñada, y por eso el azul de marca sube de #006bed a
-   #59a6ff (el de modo claro no contrasta sobre negro) y el texto sobre la marca
-   pasa a oscuro.
+   Aquí cada color tiene NOMBRE SEMÁNTICO: la pantalla dice qué ES una cosa
+   —lienzo, superficie, borde, marca, éxito— y el tema decide de qué color se
+   pinta. Desde la adopción del preset b0 de shadcn, esos nombres resuelven a
+   los tokens del preset (--background, --card, --border, --primary…), así que
+   las vistas escritas con bg-canvas/text-strong/bg-brand visten el mismo
+   sistema que los componentes de src/components/ui sin reescribirse. Los
+   --mb-* que quedan abajo solo alimentan los estados (éxito, aviso, info) y
+   el cyan categórico brand-2, que el preset no trae.
 
    Cómo cambiar de tema: el atributo `data-theme` en <html>. Sin atributo manda
    la preferencia del sistema operativo. Ver src/context/ThemeContext.tsx.
@@ -40,33 +41,33 @@
 
 @theme inline {
   /* Superficies, de atrás hacia delante */
-  --color-canvas:      var(--mb-canvas);
-  --color-surface:     var(--mb-surface);
-  --color-surface-2:   var(--mb-surface-2);
-  --color-surface-3:   var(--mb-surface-3);
+  --color-canvas:      var(--background);
+  --color-surface:     var(--card);
+  --color-surface-2:   var(--muted);
+  --color-surface-3:   color-mix(in oklab, var(--muted) 88%, var(--foreground));
 
   /* Líneas */
-  --color-line:        var(--mb-line);
-  --color-line-strong: var(--mb-line-strong);
+  --color-line:        var(--border);
+  --color-line-strong: color-mix(in oklab, var(--border) 75%, var(--foreground));
 
   /* Texto, de más a menos peso */
-  --color-strong:      var(--mb-strong);
-  --color-body:        var(--mb-body);
-  --color-muted:       var(--mb-muted);
-  --color-faint:       var(--mb-faint);
+  --color-strong:      var(--foreground);
+  --color-body:        color-mix(in oklab, var(--foreground) 88%, var(--background));
+  --color-muted:       var(--muted-foreground);
+  --color-faint:       color-mix(in oklab, var(--muted-foreground) 65%, var(--background));
 
   /* Marca. `on-accent` es el texto que va ENCIMA del azul: blanco en claro,
      casi negro en oscuro, porque en oscuro el azul es claro. */
-  --color-brand:       var(--mb-brand);
-  --color-brand-hi:    var(--mb-brand-hi);
-  --color-brand-soft:  var(--mb-brand-soft);
-  --color-on-accent:   var(--mb-on-accent);
+  --color-brand:       var(--primary);
+  --color-brand-hi:    color-mix(in oklab, var(--primary) 88%, var(--background));
+  --color-brand-soft:  var(--secondary);
+  --color-on-accent:   var(--primary-foreground);
 
   /* Estados. El verde es EXCLUSIVAMENTE éxito (MDS § 8.3) y el cyan-info
      nunca es color de acción: se leería como un botón. */
   --color-success:     var(--mb-success);
   --color-warning:     var(--mb-warning);
-  --color-danger:      var(--mb-danger);
+  --color-danger:      var(--destructive);
   --color-info:        var(--mb-info);
 
   /* Acento categórico. Es el cyan que cierra el gradiente del logo de Membego,
@@ -74,7 +75,7 @@
      informativo (MDS § 7.2 y § 8.4). Se usa para etiquetar familias que no son
      estados —control de calidad, recetas, beneficios de Membego—, que es la
      única excepción que el sistema admite a la paleta semántica. */
-  --color-accent:      var(--mb-accent);
+  --color-brand-2:     var(--mb-accent);
   --font-heading:      var(--font-sans);
   --font-sans:      'Inter Variable', sans-serif;
   --color-sidebar-ring:      var(--sidebar-ring);
@@ -94,6 +95,7 @@
   --color-input:      var(--input);
   --color-border:      var(--border);
   --color-destructive:      var(--destructive);
+  --color-accent:      var(--accent);
   --color-accent-foreground:      var(--accent-foreground);
   --color-muted-foreground:      var(--muted-foreground);
   --color-secondary-foreground:      var(--secondary-foreground);
@@ -169,7 +171,7 @@
 
   --accent:      oklch(0.97 0 0);
 
-  --accent-foreground:      var(--mb-on-accent); /* sobre --mb-accent, no sobre el gris del preset */
+  --accent-foreground:      oklch(0.205 0 0);
 
   --destructive:      oklch(0.577 0.245 27.325);
 
@@ -273,8 +275,8 @@
 
 /* El lienzo lo pinta el tema, no una clase suelta en App.tsx. */
 body {
-  background-color: var(--mb-canvas);
-  color: var(--mb-body);
+  background-color: var(--background);
+  color: color-mix(in oklab, var(--foreground) 88%, var(--background));
 }
 
 /* Cambiar de tema no debe ser un parpadeo brusco, pero tampoco una animación
@@ -385,7 +387,7 @@ html {
     --muted:      oklch(0.269 0 0);
     --muted-foreground:      oklch(0.708 0 0);
     --accent:      oklch(0.269 0 0);
-    --accent-foreground:      var(--mb-on-accent);
+    --accent-foreground:      oklch(0.985 0 0);
     --destructive:      oklch(0.704 0.191 22.216);
     --border:      oklch(1 0 0 / 10%);
     --input:      oklch(1 0 0 / 15%);
@@ -421,7 +423,7 @@ html {
   --muted:      oklch(0.269 0 0);
   --muted-foreground:      oklch(0.708 0 0);
   --accent:      oklch(0.269 0 0);
-  --accent-foreground:      var(--mb-on-accent);
+  --accent-foreground:      oklch(0.985 0 0);
   --destructive:      oklch(0.704 0.191 22.216);
   --border:      oklch(1 0 0 / 10%);
   --input:      oklch(1 0 0 / 15%);

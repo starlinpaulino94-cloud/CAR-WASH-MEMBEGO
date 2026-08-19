@@ -310,7 +310,7 @@ export const ServicesSupabaseView: React.FC = () => {
                         onClick={() => setRecipeFor({ id: s.id, name: s.name })}
                         aria-label={`Receta de ${s.name}`}
                         title="Insumos que consume este servicio"
-                        className="p-1.5 text-accent hover:text-accent rounded-lg hover:bg-surface-2">
+                        className="p-1.5 text-brand-2 hover:text-brand-2 rounded-lg hover:bg-surface-2">
                         <FlaskConical className="w-4 h-4" />
                       </button>
                       {editable && (

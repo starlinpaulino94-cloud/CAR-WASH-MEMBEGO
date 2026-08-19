@@ -273,7 +273,7 @@ export const CashSupabaseView: React.FC = () => {
                 <div className="flex justify-between text-brand">
                   <dt>Transferencia</dt><dd className="font-bold">{formatCents(session.total_transfer_sales_cents, symbol)}</dd>
                 </div>
-                <div className="flex justify-between text-accent">
+                <div className="flex justify-between text-brand-2">
                   <dt>Beneficios Membego</dt><dd className="font-bold">{formatCents(session.total_membego_cents, symbol)}</dd>
                 </div>
                 <div className="flex justify-between text-danger">

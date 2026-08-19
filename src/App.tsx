@@ -150,7 +150,7 @@ const AuthGate: React.FC = () => {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center" aria-busy="true">
         <div className="space-y-3 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand to-accent mx-auto animate-pulse" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand to-brand-2 mx-auto animate-pulse" />
           <p className="text-sm text-faint">Cargando…</p>
         </div>
       </div>

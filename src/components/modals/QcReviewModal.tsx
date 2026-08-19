@@ -84,7 +84,7 @@ export const QcReviewModal: React.FC<{
         className="w-full max-w-lg bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-bold text-strong text-sm flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-accent" />
+            <ShieldCheck className="w-4 h-4 text-brand-2" />
             Control de calidad — {plate}
             <span className="text-faint font-normal">· {orderNumber}</span>
           </h2>
