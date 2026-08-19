@@ -1,0 +1,106 @@
+[
+  {
+    "name": "new-york",
+    "label": "New York"
+  },
+  {
+    "name": "default",
+    "label": "Default"
+  },
+  {
+    "name": "base-vega",
+    "label": "Base UI Vega"
+  },
+  {
+    "name": "base-nova",
+    "label": "Base UI Nova"
+  },
+  {
+    "name": "base-maia",
+    "label": "Base UI Maia"
+  },
+  {
+    "name": "base-lyra",
+    "label": "Base UI Lyra"
+  },
+  {
+    "name": "base-mira",
+    "label": "Base UI Mira"
+  },
+  {
+    "name": "base-luma",
+    "label": "Base UI Luma"
+  },
+  {
+    "name": "base-sera",
+    "label": "Base UI Sera"
+  },
+  {
+    "name": "base-rhea",
+    "label": "Base UI Rhea"
+  },
+  {
+    "name": "aria-vega",
+    "label": "React Aria Vega"
+  },
+  {
+    "name": "aria-nova",
+    "label": "React Aria Nova"
+  },
+  {
+    "name": "aria-maia",
+    "label": "React Aria Maia"
+  },
+  {
+    "name": "aria-lyra",
+    "label": "React Aria Lyra"
+  },
+  {
+    "name": "aria-mira",
+    "label": "React Aria Mira"
+  },
+  {
+    "name": "aria-luma",
+    "label": "React Aria Luma"
+  },
+  {
+    "name": "aria-sera",
+    "label": "React Aria Sera"
+  },
+  {
+    "name": "aria-rhea",
+    "label": "React Aria Rhea"
+  },
+  {
+    "name": "radix-vega",
+    "label": "Radix UI Vega"
+  },
+  {
+    "name": "radix-nova",
+    "label": "Radix UI Nova"
+  },
+  {
+    "name": "radix-maia",
+    "label": "Radix UI Maia"
+  },
+  {
+    "name": "radix-lyra",
+    "label": "Radix UI Lyra"
+  },
+  {
+    "name": "radix-mira",
+    "label": "Radix UI Mira"
+  },
+  {
+    "name": "radix-luma",
+    "label": "Radix UI Luma"
+  },
+  {
+    "name": "radix-sera",
+    "label": "Radix UI Sera"
+  },
+  {
+    "name": "radix-rhea",
+    "label": "Radix UI Rhea"
+  }
+]
