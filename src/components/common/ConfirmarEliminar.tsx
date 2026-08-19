@@ -1,5 +1,7 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { AlertTriangle, Loader2, Archive, Trash2, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
 import { ErrorBorrado } from '../../data/adminRepository';
 
 /**
@@ -42,19 +44,10 @@ interface Props {
 export const ConfirmarEliminar: React.FC<Props> = ({
   nombre, queEs, onEliminar, onArchivar, onCerrar, onHecho
 }) => {
-  const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   /** true cuando el borrado se negó por historia y archivar es la salida. */
   const [ofrecerArchivar, setOfrecerArchivar] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCerrar(); };
-    document.addEventListener('keydown', onKey);
-    panelRef.current?.focus();
-    return () => document.removeEventListener('keydown', onKey);
-  }, [busy, onCerrar]);
 
   const intentarBorrar = async () => {
     setBusy(true);
@@ -94,23 +87,17 @@ export const ConfirmarEliminar: React.FC<Props> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onMouseDown={e => { if (e.target === e.currentTarget && !busy) onCerrar(); }}
-    >
-      <div
-        ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
-        className="w-full max-w-md bg-surface border border-line-strong rounded-2xl shadow-2xl focus:outline-none"
-      >
+    <Dialog open onOpenChange={open => { if (!open && !busy) onCerrar(); }}>
+      <DialogContent showCloseButton={false} className="flex max-w-md flex-col gap-0 overflow-hidden p-0">
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 id={titleId} className="font-bold text-strong text-sm flex items-center gap-2">
+          <DialogTitle className="font-bold text-strong text-sm flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-warning" />
             Eliminar {queEs}
-          </h2>
-          <button onClick={() => { if (!busy) onCerrar(); }} disabled={busy}
-            aria-label="Cerrar" className="p-1 text-muted hover:text-strong disabled:opacity-40">
-            <X className="w-5 h-5" />
-          </button>
+          </DialogTitle>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Cerrar" disabled={busy}
+            onClick={() => { if (!busy) onCerrar(); }}>
+            <X />
+          </Button>
         </div>
 
         <div className="p-5 space-y-3">
@@ -134,29 +121,26 @@ export const ConfirmarEliminar: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
-          <button type="button" onClick={() => { if (!busy) onCerrar(); }} disabled={busy}
-            className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40">
+        <div className="flex items-center justify-end gap-2 border-t border-line bg-muted/50 px-5 py-3.5">
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { if (!busy) onCerrar(); }}>
             {error ? 'Cerrar' : 'Cancelar'}
-          </button>
+          </Button>
 
           {ofrecerArchivar && (
-            <button type="button" onClick={() => void archivar()} disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 disabled:text-muted text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+            <Button type="button" disabled={busy} onClick={() => void archivar()}>
+              {busy ? <Loader2 className="animate-spin" /> : <Archive />}
               Archivar
-            </button>
+            </Button>
           )}
 
           {!error && (
-            <button type="button" onClick={() => void intentarBorrar()} disabled={busy}
-              className="px-4 py-2 bg-danger hover:bg-danger disabled:bg-surface-3 disabled:text-muted text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            <Button type="button" variant="destructive" disabled={busy} onClick={() => void intentarBorrar()}>
+              {busy ? <Loader2 className="animate-spin" /> : <Trash2 />}
               Eliminar
-            </button>
+            </Button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
