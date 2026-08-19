@@ -5,6 +5,7 @@ import {
   NivelesPorCategoria, VehicleCategory, NivelesDeMembego
 } from '../../data/adminRepository';
 import { InlineAlert } from '../common/DataViewShell';
+import { Button } from '../ui/button';
 
 /**
  * Equivalencia entre nuestras categorías y los niveles tarifarios de Membego.
@@ -178,7 +179,7 @@ export const NivelesMembego: React.FC<{ editable: boolean }> = ({ editable }) =>
                   disabled={!editable || busy}
                   onChange={e => cambiar(c.id, e.target.value)}
                   placeholder="—"
-                  className="w-16 flex-shrink-0 bg-surface border border-line rounded-lg px-2 py-1.5 text-center text-sm font-bold text-strong placeholder-faint focus:outline-none focus:border-brand disabled:opacity-60"
+                  className="w-16 flex-shrink-0 rounded-lg border border-input bg-transparent px-2 py-1.5 text-center text-sm font-bold text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
                 />
               </div>
             ))}
@@ -198,14 +199,10 @@ export const NivelesMembego: React.FC<{ editable: boolean }> = ({ editable }) =>
 
           {editable && (
             <div className="flex justify-end">
-              <button
-                onClick={() => void guardar()}
-                disabled={busy || !sucio}
-                className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl transition-colors"
-              >
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <Button onClick={() => void guardar()} disabled={busy || !sucio}>
+                {busy ? <Loader2 className="animate-spin" /> : <Save />}
                 Guardar niveles
-              </button>
+              </Button>
             </div>
           )}
         </>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { KeyRound, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can, outranks } from '../../lib/auth';
@@ -216,21 +217,19 @@ export const UsersSupabaseView: React.FC = () => {
                       <td className="p-3 text-right whitespace-nowrap">
                         {editable(p) ? (
                           <>
-                            <button onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
-                              <KeyRound className="w-3.5 h-3.5" /> Clave
-                            </button>
-                            <button onClick={() => void alternarActivo(p)}
-                              className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                            <Button variant="secondary" size="xs" onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}>
+                              <KeyRound /> Clave
+                            </Button>
+                            <Button variant="secondary" size="xs" className="ml-1" onClick={() => void alternarActivo(p)}>
                               {p.is_active ? 'Quitar acceso' : 'Dar acceso'}
-                            </button>
+                            </Button>
                             {puedeBorrar && (
-                              <button onClick={() => setBorrando(p)}
+                              <Button variant="ghost" size="icon-xs" className="ml-1 text-muted hover:text-danger"
+                                onClick={() => setBorrando(p)}
                                 aria-label={`Eliminar la ficha de ${p.full_name}`}
-                                title="Solo se puede si nunca trabajó"
-                                className="ml-1 p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2 align-middle">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                                title="Solo se puede si nunca trabajó">
+                                <Trash2 />
+                              </Button>
                             )}
                           </>
                         ) : (
