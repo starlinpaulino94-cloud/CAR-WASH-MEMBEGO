@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Button } from '../ui/button';
 import { RefreshCw, Loader2, ArrowRight, Clock, Car, CheckCircle2, DollarSign } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -88,10 +89,10 @@ export const DashboardSupabaseView: React.FC = () => {
                 </button>
               ))}
             </div>
-            <button onClick={() => void load()} disabled={loading} aria-label="Actualizar indicadores"
-              className="px-3 py-2 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body rounded-xl disabled:opacity-50">
+            <Button variant="outline" onClick={() => void load()} disabled={loading} aria-label="Actualizar indicadores"
+              >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            </Button>
           </>
         }
       />
@@ -140,11 +141,11 @@ export const DashboardSupabaseView: React.FC = () => {
             { tab: 'pos', label: 'Punto de venta', icon: DollarSign },
             { tab: 'cash', label: 'Control de caja', icon: CheckCircle2 }
           ].map(({ tab, label, icon: Icon }) => (
-            <button key={tab} onClick={() => navigate(tab)}
-              className="p-3 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold rounded-xl text-xs flex items-center justify-between transition-all">
+            <Button variant="outline" className="h-auto p-3 justify-between text-xs font-bold" key={tab} onClick={() => navigate(tab)}
+              >
               <span className="flex items-center gap-2.5"><Icon className="w-4 h-4 text-brand" />{label}</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Button>
           ))}
         </div>
       </section>

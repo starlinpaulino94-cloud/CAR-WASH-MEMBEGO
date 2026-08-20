@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '../ui/button';
 import {
   ShoppingBag, Plus, Minus, Trash2, CreditCard, Banknote, Building,
   Landmark, ClipboardList, X as XIcon, Search, UserCheck,
@@ -681,12 +682,9 @@ export const PosSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudo cargar el punto de venta
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button
-            onClick={() => void load()}
-            className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          <Button size="sm" onClick={() => void load()}>
+            <RefreshCw /> Reintentar
+          </Button>
         </div>
       </div>
     );
@@ -740,10 +738,10 @@ export const PosSupabaseView: React.FC = () => {
                   key={c.id}
                   onClick={() => setCategory(c.id)}
                   aria-pressed={category === c.id}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all ${
                     category === c.id
-                      ? 'bg-brand text-on-accent shadow-lg shadow-brand/30'
-                      : 'bg-surface text-muted border border-line hover:border-line-strong'
+                      ? 'bg-primary text-primary-foreground border-transparent'
+                      : 'bg-transparent text-muted border-line hover:bg-surface-2 hover:text-strong'
                   }`}
                 >
                   {c.label}
@@ -778,7 +776,7 @@ export const PosSupabaseView: React.FC = () => {
                 <button
                   key={s.id}
                   onClick={() => addService(s)}
-                  className="p-3.5 bg-surface border border-line hover:border-brand/50 rounded-xl text-left transition-all space-y-1.5 focus:outline-none focus:border-brand"
+                  className="p-3.5 bg-surface border border-line hover:border-ring rounded-xl text-left transition-all space-y-1.5 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   <span className="flex justify-between font-bold text-xs text-strong gap-2">
                     <span>{s.name}</span>
@@ -799,7 +797,7 @@ export const PosSupabaseView: React.FC = () => {
                   key={p.id}
                   onClick={() => addProduct(p)}
                   disabled={p.stock <= 0}
-                  className="p-3.5 bg-surface border border-line hover:border-brand/50 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-left transition-all space-y-1.5 focus:outline-none focus:border-brand"
+                  className="p-3.5 bg-surface border border-line hover:border-ring disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-left transition-all space-y-1.5 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 >
                   <span className="flex justify-between font-bold text-xs text-strong gap-2">
                     <span>{p.name}</span>
@@ -841,10 +839,10 @@ export const PosSupabaseView: React.FC = () => {
                     {orden.vehicle_plate} · {orden.customer_name || 'Sin cliente'}
                   </div>
                 </div>
-                <button onClick={soltarOrden} aria-label="Quitar la orden y cobrar una venta suelta"
-                  className="p-1 text-muted hover:text-strong flex-shrink-0">
+                <Button variant="ghost" size="icon-xs" className="flex-shrink-0" onClick={soltarOrden} aria-label="Quitar la orden y cobrar una venta suelta"
+                  >
                   <XIcon className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
               <p className="text-xs text-muted">
                 Las líneas del lavado vienen de la orden y no se editan. Puede
@@ -868,7 +866,7 @@ export const PosSupabaseView: React.FC = () => {
                   id="pos-orden-buscar" type="search" value={buscarOrden}
                   onChange={e => setBuscarOrden(e.target.value)}
                   placeholder="Buscar por placa, número o cliente…"
-                  className="w-full bg-surface border border-line rounded-lg p-2 text-sm text-strong placeholder-faint"
+                  className="w-full p-2 text-sm rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 />
                 <div className="max-h-52 overflow-y-auto space-y-1.5">
                   {ordenesBusy ? (
@@ -879,7 +877,7 @@ export const PosSupabaseView: React.FC = () => {
                     </p>
                   ) : ordenes.map(o => (
                     <button key={o.id} onClick={() => void elegirOrden(o)}
-                      className="w-full text-left p-2.5 bg-surface border border-line hover:border-brand/50 rounded-lg flex items-center justify-between gap-2">
+                      className="w-full text-left p-2.5 bg-surface border border-line hover:border-ring rounded-lg flex items-center justify-between gap-2">
                       <span className="min-w-0">
                         <span className="block font-bold text-sm text-strong">
                           {o.vehicle_plate || 'sin placa'}
@@ -924,10 +922,10 @@ export const PosSupabaseView: React.FC = () => {
                   </div>
                 )}
               </div>
-              <button onClick={soltarCliente} aria-label="Quitar el cliente y cobrar sin ficha"
-                className="p-1 text-muted hover:text-strong flex-shrink-0">
+              <Button variant="ghost" size="icon-xs" className="flex-shrink-0" onClick={soltarCliente} aria-label="Quitar el cliente y cobrar sin ficha"
+                >
                 <XIcon className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           ) : !orden && (
             <div className="space-y-1.5">
@@ -939,7 +937,7 @@ export const PosSupabaseView: React.FC = () => {
                   onChange={e => setBusqueda(e.target.value)}
                   placeholder="Buscar cliente registrado por nombre o teléfono…"
                   autoComplete="off"
-                  className="w-full bg-canvas border border-line rounded-lg pl-8 pr-2 py-2 text-xs text-strong placeholder-faint"
+                  className="w-full pl-8 pr-2 py-2 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 />
               </div>
               <div aria-live="polite" className="space-y-1.5 max-h-44 overflow-y-auto">
@@ -953,7 +951,7 @@ export const PosSupabaseView: React.FC = () => {
                 )}
                 {resultados.map(c => (
                   <button key={c.id} onClick={() => void elegirCliente(c)}
-                    className="w-full text-left p-2 bg-surface border border-line hover:border-brand/50 rounded-lg flex items-center justify-between gap-2">
+                    className="w-full text-left p-2 bg-surface border border-line hover:border-ring rounded-lg flex items-center justify-between gap-2">
                     <span className="min-w-0">
                       <span className="block font-bold text-sm text-strong truncate">{c.name}</span>
                       <span className="block text-xs text-muted truncate">
@@ -1021,13 +1019,13 @@ export const PosSupabaseView: React.FC = () => {
                 onKeyDown={e => { if (e.key === 'Enter') void checkMembego(); }}
                 placeholder="Teléfono para ver beneficios Membego"
                 aria-label="Teléfono para buscar beneficios Membego"
-                className="flex-1 bg-canvas border border-line rounded-lg p-2 text-xs text-strong placeholder-faint"
+                className="flex-1 p-2 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
-              <button onClick={() => void checkMembego()} disabled={membegoBusy || !membegoPhone.trim()}
-                className="px-2.5 rounded-lg bg-warning/20 text-warning hover:bg-warning/30 disabled:opacity-40 text-xs font-bold flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="bg-warning/20 text-warning hover:bg-warning/30 hover:text-warning" onClick={() => void checkMembego()} disabled={membegoBusy || !membegoPhone.trim()}
+                >
                 {membegoBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
                 Membego
-              </button>
+              </Button>
             </div>
             {membegoSummary && (
               <div role="status" className="flex items-center gap-2 p-2 bg-warning/30 border border-warning/40 rounded-lg text-xs text-warning">
@@ -1070,13 +1068,13 @@ export const PosSupabaseView: React.FC = () => {
                     <span className="px-2 font-bold text-strong tabular-nums">×{l.quantity}</span>
                   ) : (
                     <div className="flex items-center bg-surface border border-line rounded-lg">
-                      <button onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                      <Button variant="ghost" size="icon-xs" onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} >
                         <Minus className="w-3 h-3" />
-                      </button>
+                      </Button>
                       <span className="px-2 font-bold text-strong">{l.quantity}</span>
-                      <button onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                      <Button variant="ghost" size="icon-xs" onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} >
                         <Plus className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </div>
                   )}
                   <span className="font-bold text-brand-hi w-20 text-right">
@@ -1085,9 +1083,9 @@ export const PosSupabaseView: React.FC = () => {
                   {deLaOrden ? (
                     <span className="w-6" aria-hidden="true" />
                   ) : (
-                    <button onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} className="text-faint hover:text-danger p-1">
+                    <Button variant="ghost" size="icon-xs" className="text-faint hover:text-danger" onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -1100,19 +1098,17 @@ export const PosSupabaseView: React.FC = () => {
               <div className="flex gap-1.5 pb-1.5">
                 <input
                   aria-label="Código promocional"
-                  className="flex-1 bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-sm text-strong uppercase"
+                  className="flex-1 px-2.5 py-1.5 text-sm uppercase rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                   value={promoCode}
                   onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoPreview(null); }}
                   placeholder="Código promocional" />
                 {promoPreview?.valid
-                  ? <button type="button" onClick={quitarPromo}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  ? <Button type="button" variant="secondary" size="sm" onClick={quitarPromo}>
                       Quitar
-                    </button>
-                  : <button type="button" onClick={() => void aplicarPromo()} disabled={promoBusy || !promoCode.trim()}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body disabled:opacity-50">
+                    </Button>
+                  : <Button type="button" variant="secondary" size="sm" onClick={() => void aplicarPromo()} disabled={promoBusy || !promoCode.trim()}>
                       Aplicar
-                    </button>}
+                    </Button>}
               </div>
               {promoPreview && !promoPreview.valid && (
                 <p className="text-xs text-warning pb-1.5">{promoPreview.reason}</p>
@@ -1181,10 +1177,10 @@ export const PosSupabaseView: React.FC = () => {
                       aria-pressed={method === m.id}
                       title={!blocked ? undefined
                         : m.id === 'credito' ? motivoSinCredito! : 'Requiere caja abierta'}
-                      className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                      className={`p-2 rounded-lg border flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                         method === m.id
-                          ? 'bg-brand text-on-accent border-brand shadow-lg shadow-brand/30'
-                          : 'bg-canvas text-muted border-line hover:border-line-strong'
+                          ? 'bg-primary text-primary-foreground border-transparent'
+                          : 'bg-transparent text-muted border-line hover:bg-surface-2 hover:text-strong'
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />{m.label}

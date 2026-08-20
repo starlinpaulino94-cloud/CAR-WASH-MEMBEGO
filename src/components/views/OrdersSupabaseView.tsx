@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import {
   Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight,
   ClipboardCheck
@@ -31,7 +33,7 @@ const STATUS_TONE: Record<OrderStatus, string> = {
   en_espera: 'bg-info/20 text-info',
   asignada: 'bg-info/20 text-info',
   en_proceso: 'bg-brand/20 text-brand-hi',
-  control_calidad: 'bg-brand/20 text-accent',
+  control_calidad: 'bg-brand/20 text-brand-2',
   listo: 'bg-success/20 text-success',
   entregado: 'bg-surface-2 text-body',
   cancelado: 'bg-danger/20 text-danger'
@@ -97,9 +99,9 @@ export const OrdersSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudieron cargar las órdenes
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
+          <Button size="sm" onClick={() => void load()} >
             <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -116,12 +118,12 @@ export const OrdersSupabaseView: React.FC = () => {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <ExportButton {...ordersExport()} />
-          <button
+          <Button size="sm"
             onClick={() => setCreating(true)}
-            className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center gap-2"
+            
           >
             <Plus className="w-4 h-4" /> Registrar llegada
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -163,58 +165,58 @@ export const OrdersSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <Table className="text-xs">
             <caption className="sr-only">Listado de órdenes de servicio</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">ORDEN</th>
-                <th scope="col" className="p-3 font-semibold">VEHÍCULO</th>
-                <th scope="col" className="p-3 font-semibold">CLIENTE</th>
-                <th scope="col" className="p-3 font-semibold">LLEGADA</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                <th scope="col" className="p-3 font-semibold text-right">TOTAL</th>
-                <th scope="col" className="p-3 font-semibold text-right">INSPECCIÓN</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">ORDEN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">VEHÍCULO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">LLEGADA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">TOTAL</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">INSPECCIÓN</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} aria-hidden="true">
-                    <td colSpan={7} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
-                  </tr>
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell colSpan={7} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></TableCell>
+                  </TableRow>
                 ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-10 text-center text-faint italic">
+                <TableRow>
+                  <TableCell colSpan={7} className="p-10 text-center text-faint italic">
                     {search || status !== 'active'
                       ? 'Ninguna orden coincide con el filtro.'
                       : 'No hay vehículos en el taller ahora mismo.'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : rows.map(order => (
-                <tr key={order.id} className="hover:bg-surface-2/40 transition-colors">
-                  <td className="p-3 font-bold text-brand-hi whitespace-nowrap">{order.order_number}</td>
-                  <td className="p-3">
+                <TableRow key={order.id} className="hover:bg-surface-2/40 transition-colors">
+                  <TableCell className="p-3 font-bold text-brand-hi whitespace-nowrap">{order.order_number}</TableCell>
+                  <TableCell className="p-3">
                     <div className="font-bold text-strong uppercase">{order.vehicle_plate}</div>
                     <div className="text-xs text-muted">
                       {order.vehicle_make_model || '—'} ({order.vehicle_category})
                     </div>
-                  </td>
-                  <td className="p-3 text-body">{order.customer_name}</td>
-                  <td className="p-3 text-muted whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="p-3 text-body">{order.customer_name}</TableCell>
+                  <TableCell className="p-3 text-muted whitespace-nowrap">
                     {new Date(order.arrival_at).toLocaleString('es-DO')}
-                  </td>
-                  <td className="p-3">
+                  </TableCell>
+                  <TableCell className="p-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_TONE[order.status]}`}>
                       {STATUS_LABEL[order.status]}
                     </span>
-                  </td>
-                  <td className="p-3 font-bold text-right text-body whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="p-3 font-bold text-right text-body whitespace-nowrap">
                     {order.total_cents === 0
                       ? <span className="text-success">Beneficio</span>
                       : formatCents(order.total_cents, symbol)}
-                  </td>
-                  <td className="p-3 text-right">
+                  </TableCell>
+                  <TableCell className="p-3 text-right">
                     <button
                       onClick={() => setInspecting(order)}
                       aria-label={`Inspección de ${order.vehicle_plate}`}
@@ -222,11 +224,11 @@ export const OrdersSupabaseView: React.FC = () => {
                       className="p-1.5 text-info hover:text-info rounded-lg hover:bg-surface-2">
                       <ClipboardCheck className="w-4 h-4" />
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-line text-xs">
@@ -235,17 +237,17 @@ export const OrdersSupabaseView: React.FC = () => {
               : <>Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total}</>}
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
+            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
               aria-label="Página anterior"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
+              >
               <ChevronLeft className="w-4 h-4" />
-            </button>
+            </Button>
             <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
-            <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1 || loading}
+            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1 || loading}
               aria-label="Página siguiente"
-              className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
+              >
               <ChevronRight className="w-4 h-4" />
-            </button>
+            </Button>
             {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
           </div>
         </div>

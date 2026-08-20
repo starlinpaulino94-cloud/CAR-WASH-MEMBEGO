@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban
 } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
@@ -19,7 +21,7 @@ const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
   { id: 'pendiente',       label: 'Llegadas',        tone: 'border-warning/50 bg-warning/5' },
   { id: 'en_espera',       label: 'En cola',          tone: 'border-info/50 bg-info/5' },
   { id: 'en_proceso',      label: 'En lavado',        tone: 'border-brand/50 bg-brand/5' },
-  { id: 'control_calidad', label: 'Control calidad',  tone: 'border-accent/50 bg-brand/5' },
+  { id: 'control_calidad', label: 'Control calidad',  tone: 'border-brand-2/50 bg-brand/5' },
   { id: 'listo',           label: 'Listo para entrega', tone: 'border-success/50 bg-success/5' },
   { id: 'entregado',       label: 'Entregados',       tone: 'border-line-strong bg-surface/30' }
 ];
@@ -163,9 +165,9 @@ export const KanbanSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudo cargar el tablero
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          <Button size="sm" onClick={() => void load()}>
+            <RefreshCw /> Reintentar
+          </Button>
         </div>
       </div>
     );
@@ -185,19 +187,12 @@ export const KanbanSupabaseView: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => void load()}
-            disabled={loading}
-            className="px-3 py-2 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold text-xs rounded-xl transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualizar
-          </button>
-          <button
-            onClick={() => setCreating(true)}
-            className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Registrar llegada
-          </button>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className={loading ? 'animate-spin' : ''} /> Actualizar
+          </Button>
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus /> Registrar llegada
+          </Button>
         </div>
       </div>
 
@@ -296,31 +291,27 @@ export const KanbanSupabaseView: React.FC = () => {
 
                       {order.status === 'control_calidad' && (
                         <div className="pt-1">
-                          <button
-                            disabled={busy}
-                            onClick={() => setReviewing(order)}
-                            className="w-full py-1.5 bg-brand hover:bg-brand disabled:opacity-40 text-strong font-bold text-xs rounded transition-colors flex items-center justify-center gap-1"
-                          >
-                            <ShieldCheck className="w-3 h-3" /> Revisar calidad…
-                          </button>
+                          <Button size="xs" className="w-full" disabled={busy} onClick={() => setReviewing(order)}>
+                            <ShieldCheck /> Revisar calidad…
+                          </Button>
                         </div>
                       )}
 
                       {nexts.length > 0 && (
                         <div className="pt-1 space-y-1">
                           {nexts.filter(n => n !== 'cancelado').map(next => (
-                            <button
+                            <Button
                               key={next}
+                              variant="secondary" size="xs" className="w-full"
                               disabled={busy}
                               onClick={() => {
                                 if (next === 'en_proceso') setStartTarget(order);
                                 else void move(order, next);
                               }}
-                              className="w-full py-1.5 bg-surface-2 hover:bg-brand disabled:opacity-40 text-body hover:text-on-accent font-bold text-xs rounded transition-colors flex items-center justify-center gap-1"
                             >
-                              {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+                              {busy && <Loader2 className="animate-spin" />}
                               {next === 'en_proceso' ? 'Iniciar lavado…' : `Mover a ${STATUS_LABEL[next]}`}
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       )}
@@ -329,14 +320,14 @@ export const KanbanSupabaseView: React.FC = () => {
                           no es un paso siguiente, es deshacer. Solo aparece
                           donde la máquina de estados lo permite. */}
                       {puedeCancelar && nexts.includes('cancelado') && (
-                        <button
+                        <Button
+                          variant="ghost" size="xs" className="w-full text-faint hover:text-danger"
                           disabled={busy}
                           onClick={() => { setMotivo(''); setCancelError(null); setCancelando(order); }}
                           aria-label={`Cancelar la orden ${order.order_number}`}
-                          className="w-full py-1 text-faint hover:text-danger disabled:opacity-40 font-bold text-xs rounded transition-colors flex items-center justify-center gap-1"
                         >
-                          <Ban className="w-3 h-3" /> Cancelar orden
-                        </button>
+                          <Ban /> Cancelar orden
+                        </Button>
                       )}
                     </article>
                   );
@@ -439,12 +430,6 @@ const StartServiceDialog: React.FC<StartProps> = ({
   const [bayId, setBayId] = useState(available[0]?.id ?? '');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onCancel, busy]);
-
   const toggle = (id: string) => setSelected(prev => {
     const next = new Set(prev);
     next.has(id) ? next.delete(id) : next.add(id);
@@ -452,18 +437,16 @@ const StartServiceDialog: React.FC<StartProps> = ({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 backdrop-blur-md p-4">
-      <div role="dialog" aria-modal="true" aria-label="Iniciar lavado"
-        className="bg-surface border border-line w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-        <div className="bg-surface-2 px-5 py-3 border-b border-line-strong flex items-center justify-between">
+    <Dialog open onOpenChange={open => { if (!open && !busy) onCancel(); }}>
+      <DialogContent showCloseButton={false} className="flex max-w-md flex-col gap-0 overflow-hidden p-0">
+        <div className="px-5 py-3 border-b border-line flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-strong text-sm">Iniciar lavado</h2>
+            <DialogTitle className="font-bold text-strong text-sm">Iniciar lavado</DialogTitle>
             <p className="text-xs text-muted">{order.vehicle_plate} · {order.order_number}</p>
           </div>
-          <button onClick={onCancel} disabled={busy} aria-label="Cerrar"
-            className="text-muted hover:text-strong p-1.5 rounded-lg hover:bg-surface-3 disabled:opacity-40">
-            <X className="w-4 h-4" />
-          </button>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label="Cerrar" disabled={busy} onClick={onCancel}>
+            <X />
+          </Button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -478,7 +461,7 @@ const StartServiceDialog: React.FC<StartProps> = ({
             ) : (
               <select
                 id="start-bay" value={bayId} onChange={e => setBayId(e.target.value)} disabled={busy}
-                className="w-full bg-canvas border border-line rounded-xl px-4 py-2.5 text-sm text-strong focus:outline-none focus:border-brand disabled:opacity-50"
+                className="w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 dark:bg-input/30"
               >
                 {available.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
@@ -495,10 +478,10 @@ const StartServiceDialog: React.FC<StartProps> = ({
                   <button
                     key={op.id} onClick={() => toggle(op.id)} disabled={busy}
                     aria-pressed={selected.has(op.id)}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold border text-left transition-all disabled:opacity-50 ${
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-all disabled:opacity-50 ${
                       selected.has(op.id)
-                        ? 'bg-brand text-on-accent border-brand'
-                        : 'bg-canvas text-body border-line hover:border-line-strong'
+                        ? 'bg-primary text-primary-foreground border-transparent'
+                        : 'bg-transparent text-body border-line hover:bg-surface-2 hover:text-strong'
                     }`}
                   >
                     {op.full_name}
@@ -512,20 +495,15 @@ const StartServiceDialog: React.FC<StartProps> = ({
           </div>
 
           <div className="flex gap-2 pt-1">
-            <button onClick={onCancel} disabled={busy}
-              className="flex-1 py-2.5 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold text-xs rounded-xl disabled:opacity-50">
+            <Button variant="outline" className="flex-1" onClick={onCancel} disabled={busy}>
               Cancelar
-            </button>
-            <button
-              onClick={() => onConfirm(bayId, [...selected])}
-              disabled={busy || !bayId}
-              className="flex-1 py-2.5 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl flex items-center justify-center gap-2"
-            >
-              {busy && <Loader2 className="w-4 h-4 animate-spin" />} Iniciar
-            </button>
+            </Button>
+            <Button className="flex-1" onClick={() => onConfirm(bayId, [...selected])} disabled={busy || !bayId}>
+              {busy && <Loader2 className="animate-spin" />} Iniciar
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };

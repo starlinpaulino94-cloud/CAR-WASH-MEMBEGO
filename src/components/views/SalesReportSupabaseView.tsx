@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Download, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -74,28 +75,28 @@ const SimpleTable: React.FC<{
   <section className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
     <h3 className="font-bold text-strong text-sm px-4 pt-4">{title}</h3>
     <div className="overflow-x-auto p-2">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="text-muted text-xs">
+      <Table>
+        <TableHeader>
+          <TableRow className="text-muted text-xs">
             {headers.map((h, i) => (
-              <th key={h} className={`p-2 font-semibold ${i > 0 ? 'text-right' : ''}`}>{h.toUpperCase()}</th>
+              <TableHead key={h} className={`p-2 font-semibold ${i > 0 ? 'text-right' : ''}`}>{h.toUpperCase()}</TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line/60">
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.length === 0 ? (
-            <tr><td colSpan={headers.length} className="p-4 text-center text-faint italic">{empty}</td></tr>
+            <TableRow><TableCell colSpan={headers.length} className="p-4 text-center text-faint italic">{empty}</TableCell></TableRow>
           ) : rows.map((cells, ri) => (
-            <tr key={ri}>
+            <TableRow key={ri}>
               {cells.map((c, ci) => (
-                <td key={ci} className={`p-2 ${ci === 0 ? 'text-strong font-medium' : 'text-right text-body tabular-nums whitespace-nowrap'}`}>
+                <TableCell key={ci} className={`p-2 ${ci === 0 ? 'text-strong font-medium' : 'text-right text-body tabular-nums whitespace-nowrap'}`}>
                   {c}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   </section>
 );

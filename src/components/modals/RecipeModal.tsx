@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { X, Trash2, Loader2, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
@@ -107,11 +109,11 @@ export const RecipeModal: React.FC<{
         className="w-full max-w-2xl bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="font-bold text-strong text-sm flex items-center gap-2">
-            <FlaskConical className="w-4 h-4 text-accent" /> Receta — {serviceName}
+            <FlaskConical className="w-4 h-4 text-brand-2" /> Receta — {serviceName}
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
+          <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Cerrar" >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -131,51 +133,51 @@ export const RecipeModal: React.FC<{
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line text-muted text-xs">
-                    <th className="py-2 pr-3 font-semibold">INSUMO</th>
-                    <th className="py-2 pr-3 font-semibold">CATEGORÍA</th>
-                    <th className="py-2 pr-3 font-semibold text-right">CANTIDAD</th>
-                    <th className="py-2 pr-3 font-semibold text-right">COSTO</th>
-                    <th className="py-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted text-xs">
+                    <TableHead className="py-2 pr-3 font-semibold">INSUMO</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold">CATEGORÍA</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold text-right">CANTIDAD</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold text-right">COSTO</TableHead>
+                    <TableHead className="py-2" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {lines.map(l => (
-                    <tr key={l.id}>
-                      <td className="py-2 pr-3">
+                    <TableRow key={l.id}>
+                      <TableCell className="py-2 pr-3">
                         <div className="font-bold text-strong">{l.products?.name}</div>
                         <div className="text-xs text-faint">{l.products?.code}</div>
-                      </td>
-                      <td className="py-2 pr-3 text-body">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-body">
                         {l.vehicle_category
                           ? CATEGORIES.find(c => c.id === l.vehicle_category)?.label ?? l.vehicle_category
                           : <span className="text-faint">Todas</span>}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-strong">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-right tabular-nums text-strong">
                         {l.quantity} {l.products?.unit}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-body">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-right tabular-nums text-body">
                         {formatCents(Math.round(l.quantity * (l.products?.cost_cents ?? 0)), symbol)}
-                      </td>
-                      <td className="py-2 text-right">
-                        <button onClick={() => void remove(l.id)} aria-label="Quitar renglón"
-                          className="p-1.5 text-faint hover:text-danger">
+                      </TableCell>
+                      <TableCell className="py-2 text-right">
+                        <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(l.id)} aria-label="Quitar renglón"
+                          >
                           <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 
           {cost !== null && lines.length > 0 && (
             <p className="text-sm text-body bg-canvas/60 border border-line rounded-xl px-4 py-3">
               Costo estimado por ejecución (receta genérica):{' '}
-              <strong className="text-accent tabular-nums">{formatCents(cost, symbol)}</strong>
+              <strong className="text-brand-2 tabular-nums">{formatCents(cost, symbol)}</strong>
             </p>
           )}
 
@@ -202,11 +204,11 @@ export const RecipeModal: React.FC<{
                   value={qty} onChange={e => setQty(e.target.value)} placeholder="0.12" />
               </Field>
             </div>
-            <button onClick={() => void add()} disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button onClick={() => void add()} disabled={busy}
+              >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
               Agregar a la receta
-            </button>
+            </Button>
           </div>
         </div>
       </div>

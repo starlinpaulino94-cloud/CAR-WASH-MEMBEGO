@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import {
   CreditCard, Lock, Loader2, AlertCircle, RefreshCw, ArrowDownLeft,
   ArrowUpRight, History, EyeOff
@@ -162,9 +164,9 @@ export const CashSupabaseView: React.FC = () => {
             <AlertCircle className="w-5 h-5" /> No se pudo cargar la caja
           </div>
           <p className="text-xs text-body">{loadError}</p>
-          <button onClick={() => void load()} className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
+          <Button size="sm" onClick={() => void load()} >
             <RefreshCw className="w-4 h-4" /> Reintentar
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -234,13 +236,13 @@ export const CashSupabaseView: React.FC = () => {
                 className="w-full bg-canvas border border-line rounded-xl p-3 text-sm font-bold text-strong placeholder-faint focus:outline-none focus:border-brand disabled:opacity-50"
               />
             </div>
-            <button
+            <Button size="lg" className="w-full"
               onClick={() => void handleOpen()}
               disabled={!allowed || busy}
-              className="w-full py-3 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-all flex items-center justify-center gap-2"
+              
             >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Abrir caja
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -273,7 +275,7 @@ export const CashSupabaseView: React.FC = () => {
                 <div className="flex justify-between text-brand">
                   <dt>Transferencia</dt><dd className="font-bold">{formatCents(session.total_transfer_sales_cents, symbol)}</dd>
                 </div>
-                <div className="flex justify-between text-accent">
+                <div className="flex justify-between text-brand-2">
                   <dt>Beneficios Membego</dt><dd className="font-bold">{formatCents(session.total_membego_cents, symbol)}</dd>
                 </div>
                 <div className="flex justify-between text-danger">
@@ -390,13 +392,13 @@ export const CashSupabaseView: React.FC = () => {
                 placeholder="Motivo" disabled={!allowed || busy}
                 className="w-full bg-canvas border border-line rounded-lg p-2 text-xs text-strong placeholder-faint disabled:opacity-50"
               />
-              <button
+              <Button variant="outline" size="sm" className="w-full"
                 onClick={() => void handleMovement()}
                 disabled={!allowed || busy}
-                className="w-full py-2 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 border border-line-strong text-body font-bold text-xs rounded-lg transition-colors"
+                
               >
                 Registrar movimiento
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -409,32 +411,32 @@ export const CashSupabaseView: React.FC = () => {
               <p className="text-xs text-faint italic py-4 text-center">Sin movimientos todavía</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-muted border-b border-line">
-                      <th className="py-2 pr-3 font-semibold">HORA</th>
-                      <th className="py-2 pr-3 font-semibold">CONCEPTO</th>
-                      <th className="py-2 pr-3 font-semibold">MÉTODO</th>
-                      <th className="py-2 text-right font-semibold">IMPORTE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line/60">
+                <Table className="text-xs">
+                  <TableHeader>
+                    <TableRow className="text-muted border-b border-line">
+                      <TableHead className="py-2 pr-3 font-semibold">HORA</TableHead>
+                      <TableHead className="py-2 pr-3 font-semibold">CONCEPTO</TableHead>
+                      <TableHead className="py-2 pr-3 font-semibold">MÉTODO</TableHead>
+                      <TableHead className="py-2 text-right font-semibold">IMPORTE</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {movements.map(m => (
-                      <tr key={m.id}>
-                        <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                      <TableRow key={m.id}>
+                        <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                           {new Date(m.created_at).toLocaleTimeString('es-DO')}
-                        </td>
-                        <td className="py-2 pr-3 text-body">{m.reason}</td>
-                        <td className="py-2 pr-3 text-muted uppercase">{m.method}</td>
-                        <td className={`py-2 text-right font-bold whitespace-nowrap ${
+                        </TableCell>
+                        <TableCell className="py-2 pr-3 text-body">{m.reason}</TableCell>
+                        <TableCell className="py-2 pr-3 text-muted uppercase">{m.method}</TableCell>
+                        <TableCell className={`py-2 text-right font-bold whitespace-nowrap ${
                           m.type === 'inflow' ? 'text-success' : 'text-danger'
                         }`}>
                           {m.type === 'inflow' ? '+' : '−'}{formatCents(m.amount_cents, symbol)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -450,38 +452,38 @@ export const CashSupabaseView: React.FC = () => {
           <p className="text-xs text-faint italic py-4 text-center">Aún no hay turnos cerrados</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-muted border-b border-line">
-                  <th className="py-2 pr-3 font-semibold">APERTURA</th>
-                  <th className="py-2 pr-3 font-semibold">CIERRE</th>
-                  <th className="py-2 pr-3 font-semibold">ESPERADO</th>
-                  <th className="py-2 pr-3 font-semibold">CONTADO</th>
-                  <th className="py-2 text-right font-semibold">DIFERENCIA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="text-muted border-b border-line">
+                  <TableHead className="py-2 pr-3 font-semibold">APERTURA</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">CIERRE</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">ESPERADO</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">CONTADO</TableHead>
+                  <TableHead className="py-2 text-right font-semibold">DIFERENCIA</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {history.filter(h => h.status === 'closed').map(h => (
-                  <tr key={h.id}>
-                    <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                  <TableRow key={h.id}>
+                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                       {new Date(h.opened_at).toLocaleString('es-DO')}
-                    </td>
-                    <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                       {h.closed_at ? new Date(h.closed_at).toLocaleString('es-DO') : '—'}
-                    </td>
-                    <td className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</td>
-                    <td className="py-2 pr-3 text-body">
+                    </TableCell>
+                    <TableCell className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</TableCell>
+                    <TableCell className="py-2 pr-3 text-body">
                       {h.counted_cash_cents !== null ? formatCents(h.counted_cash_cents, symbol) : '—'}
-                    </td>
-                    <td className={`py-2 text-right font-bold ${
+                    </TableCell>
+                    <TableCell className={`py-2 text-right font-bold ${
                       (h.difference_cents ?? 0) === 0 ? 'text-success' : 'text-danger'
                     }`}>
                       {h.difference_cents !== null ? formatCents(h.difference_cents, symbol) : '—'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

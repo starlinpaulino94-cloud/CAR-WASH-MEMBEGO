@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
@@ -31,7 +32,7 @@ const KIND_STYLE: Record<InventoryMovementKind, string> = {
   compra: 'bg-success/20 text-success',
   venta: 'bg-brand/20 text-brand-hi',
   devolucion: 'bg-info/20 text-info',
-  consumo: 'bg-brand/20 text-accent',
+  consumo: 'bg-brand/20 text-brand-2',
   ajuste: 'bg-warning/20 text-warning',
   merma: 'bg-danger/20 text-danger',
   transferencia: 'bg-surface-3/20 text-body'
@@ -91,19 +92,19 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Movimientos de inventario</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">FECHA</th>
-                <th scope="col" className="p-3 font-semibold">PRODUCTO</th>
-                <th scope="col" className="p-3 font-semibold">CLASE</th>
-                <th scope="col" className="p-3 font-semibold text-right">CAMBIO</th>
-                <th scope="col" className="p-3 font-semibold text-right">EXISTENCIA</th>
-                <th scope="col" className="p-3 font-semibold">MOTIVO / DOCUMENTO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">FECHA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">PRODUCTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CLASE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">CAMBIO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">EXISTENCIA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">MOTIVO / DOCUMENTO</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={6} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={6}>
@@ -112,41 +113,41 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
                       : 'Todavía no hay movimientos: aparecerán con la primera venta, compra o ajuste.'}
                   </EmptyRow>
                 ) : q.rows.map(m => (
-                  <tr key={m.id} className="hover:bg-surface-2/40">
-                    <td className="p-3 text-muted whitespace-nowrap">
+                  <TableRow key={m.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3 text-muted whitespace-nowrap">
                       {new Date(m.created_at).toLocaleString('es-DO', {
                         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                       })}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="font-bold text-strong">{m.products?.name ?? '—'}</div>
                       <div className="text-xs text-faint">{m.products?.code}</div>
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <span className={`px-2 py-0.5 rounded font-bold text-xs ${KIND_STYLE[m.kind]}`}>
                         {KIND_LABEL[m.kind]}
                       </span>
-                    </td>
-                    <td className={`p-3 text-right font-extrabold tabular-nums whitespace-nowrap ${
+                    </TableCell>
+                    <TableCell className={`p-3 text-right font-extrabold tabular-nums whitespace-nowrap ${
                       m.qty_change > 0 ? 'text-success' : 'text-danger'
                     }`}>
                       {m.qty_change > 0
                         ? <><ArrowUpRight className="w-3.5 h-3.5 inline mr-0.5" />+{m.qty_change}</>
                         : <><ArrowDownRight className="w-3.5 h-3.5 inline mr-0.5" />{m.qty_change}</>}
                       {' '}{m.products?.unit}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums whitespace-nowrap">
                       {m.qty_before} → <strong className="text-strong">{m.qty_after}</strong>
-                    </td>
-                    <td className="p-3 text-muted">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">
                       {m.reason
                         ?? (m.invoice_id ? 'Comprobante vinculado'
                         : m.work_order_id ? 'Orden de servicio vinculada' : '—')}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

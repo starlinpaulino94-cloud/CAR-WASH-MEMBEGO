@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { RANGES, RangeId, rangeDates } from '../../lib/reportRanges';
@@ -129,10 +131,10 @@ export const AttendanceSupabaseView: React.FC = () => {
             <LogOut className="w-4 h-4" /> Marcar salida
           </button>
         ) : (
-          <button onClick={() => void marcar(true)} disabled={busy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+          <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void marcar(true)} disabled={busy}
+            >
             <LogIn className="w-4 h-4" /> Marcar entrada
-          </button>
+          </Button>
         )}
       </section>
 
@@ -153,44 +155,44 @@ export const AttendanceSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Marcajes del periodo</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">EMPLEADO</th>
-                <th scope="col" className="p-3 font-semibold">DÍA</th>
-                <th scope="col" className="p-3 font-semibold">ENTRADA</th>
-                <th scope="col" className="p-3 font-semibold">SALIDA</th>
-                <th scope="col" className="p-3 font-semibold text-right">JORNADA</th>
-                <th scope="col" className="p-3 font-semibold text-right">RETRASO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">EMPLEADO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">DÍA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ENTRADA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">SALIDA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">JORNADA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">RETRASO</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={6} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={6}>No hay marcajes en este periodo.</EmptyRow>
                 ) : rows.map(r => (
-                  <tr key={r.id} className="hover:bg-surface-2/40">
-                    <td className="p-3 font-bold text-strong">{r.full_name}</td>
-                    <td className="p-3 text-muted tabular-nums">{fecha(r.checked_in_at)}</td>
-                    <td className="p-3 text-body tabular-nums">{hhmm(r.checked_in_at)}</td>
-                    <td className="p-3 text-body tabular-nums">
+                  <TableRow key={r.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3 font-bold text-strong">{r.full_name}</TableCell>
+                    <TableCell className="p-3 text-muted tabular-nums">{fecha(r.checked_in_at)}</TableCell>
+                    <TableCell className="p-3 text-body tabular-nums">{hhmm(r.checked_in_at)}</TableCell>
+                    <TableCell className="p-3 text-body tabular-nums">
                       {r.checked_out_at
                         ? hhmm(r.checked_out_at)
                         : <span className="text-success font-bold">en curso</span>}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">
                       {duracion(r.worked_minutes)}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right tabular-nums">
                       {r.late_minutes > 0
                         ? <span className="text-warning font-bold">{r.late_minutes} min</span>
                         : <span className="text-faint">—</span>}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

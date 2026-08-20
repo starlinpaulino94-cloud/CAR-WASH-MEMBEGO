@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button } from '../ui/button';
+import { TableCell, TableRow } from '../ui/table';
 import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, HelpCircle } from 'lucide-react';
 
 /**
@@ -61,10 +63,9 @@ export const ErrorState: React.FC<{ message: string; onRetry: () => void; title?
         <AlertCircle className="w-5 h-5" /> {title}
       </div>
       <p className="text-sm text-body">{message}</p>
-      <button onClick={onRetry}
-        className="px-4 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl flex items-center gap-2">
-        <RefreshCw className="w-4 h-4" /> Reintentar
-      </button>
+      <Button size="sm" onClick={onRetry}>
+        <RefreshCw /> Reintentar
+      </Button>
     </div>
   </div>
 );
@@ -101,7 +102,7 @@ export const SearchBox: React.FC<{
     <input
       id={id} type="search" value={value} onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-2 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand"
+      className="w-full min-w-0 rounded-lg border border-input bg-transparent pl-9 pr-3 py-1.5 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
     />
   </div>
 );
@@ -122,10 +123,10 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
   <div className="flex gap-1.5 flex-wrap">
     {options.map(o => (
       <button key={o.id} onClick={() => onChange(o.id)} aria-pressed={value === o.id}
-        className={`px-3 py-2 rounded-xl text-sm font-bold border transition-all ${
+        className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
           value === o.id
-            ? 'bg-brand text-on-accent border-brand'
-            : 'bg-surface text-muted border-line hover:border-line-strong'
+            ? 'bg-primary text-primary-foreground border-transparent'
+            : 'bg-transparent text-muted border-line hover:bg-surface-2 hover:text-strong'
         }`}>
         {o.label}
       </button>
@@ -138,15 +139,15 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
 export const SkeletonRows: React.FC<{ rows?: number; cols: number }> = ({ rows = 6, cols }) => (
   <>
     {Array.from({ length: rows }).map((_, i) => (
-      <tr key={i} aria-hidden="true">
-        <td colSpan={cols} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
-      </tr>
+      <TableRow key={i} aria-hidden="true">
+        <TableCell colSpan={cols} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></TableCell>
+      </TableRow>
     ))}
   </>
 );
 
 export const EmptyRow: React.FC<{ cols: number; children: React.ReactNode }> = ({ cols, children }) => (
-  <tr><td colSpan={cols} className="p-10 text-center text-faint italic">{children}</td></tr>
+  <TableRow><TableCell colSpan={cols} className="p-10 text-center whitespace-normal text-faint italic">{children}</TableCell></TableRow>
 );
 
 export const Pagination: React.FC<{
@@ -159,17 +160,15 @@ export const Pagination: React.FC<{
         : <>Mostrando {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} de {total}</>}
     </span>
     <div className="flex items-center gap-2">
-      <button onClick={() => onPage(Math.max(0, page - 1))} disabled={page === 0 || loading}
-        aria-label="Página anterior"
-        className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
-        <ChevronLeft className="w-4 h-4" />
-      </button>
+      <Button variant="outline" size="icon-sm" aria-label="Página anterior"
+        onClick={() => onPage(Math.max(0, page - 1))} disabled={page === 0 || loading}>
+        <ChevronLeft />
+      </Button>
       <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
-      <button onClick={() => onPage(Math.min(pageCount - 1, page + 1))} disabled={page >= pageCount - 1 || loading}
-        aria-label="Página siguiente"
-        className="p-1.5 bg-surface-2 hover:bg-surface-3 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-body">
-        <ChevronRight className="w-4 h-4" />
-      </button>
+      <Button variant="outline" size="icon-sm" aria-label="Página siguiente"
+        onClick={() => onPage(Math.min(pageCount - 1, page + 1))} disabled={page >= pageCount - 1 || loading}>
+        <ChevronRight />
+      </Button>
       {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
     </div>
   </div>

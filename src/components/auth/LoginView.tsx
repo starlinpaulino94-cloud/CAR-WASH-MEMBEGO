@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../ui/button';
 import { LogIn, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { LogoLockup } from '../common/Logo';
@@ -92,14 +93,14 @@ export const LoginView: React.FC = () => {
             </div>
           )}
 
-          <button
+          <Button size="lg" className="w-full"
             type="submit"
             disabled={busy}
-            className="w-full py-3 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold text-xs rounded-xl shadow-lg shadow-brand/30 transition-colors flex items-center justify-center gap-2"
+            
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
             {busy ? 'Verificando…' : 'Entrar'}
-          </button>
+          </Button>
         </form>
 
         <p className="text-xs text-faint text-center leading-relaxed flex items-center justify-center gap-1.5">
@@ -126,12 +127,12 @@ export const UnprovisionedView: React.FC = () => {
           no está asignada a ninguna empresa ni tiene un rol. Un administrador debe habilitarla
           antes de que pueda operar.
         </p>
-        <button
+        <Button variant="outline" className="w-full"
           onClick={() => void signOut()}
-          className="w-full py-2.5 bg-surface-2 hover:bg-surface-3 border border-line-strong text-body font-bold text-xs rounded-xl transition-colors"
+          
         >
           Cerrar sesión
-        </button>
+        </Button>
       </div>
     </div>
   );

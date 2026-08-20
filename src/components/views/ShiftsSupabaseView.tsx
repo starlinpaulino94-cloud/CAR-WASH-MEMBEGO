@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -164,23 +165,23 @@ export const ShiftsSupabaseView: React.FC = () => {
       {error && !showForm && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
 
       <div className="flex items-center gap-2">
-        <button onClick={() => shiftWeek(-1)} aria-label="Semana anterior"
-          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        <Button variant="secondary" size="icon-sm" onClick={() => shiftWeek(-1)} aria-label="Semana anterior"
+          >
           <ChevronLeft className="w-4 h-4" />
-        </button>
+        </Button>
         <span className="text-sm font-bold text-strong tabular-nums">
           {weekStart.toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })}
           {' — '}
           {days[6].toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' })}
         </span>
-        <button onClick={() => shiftWeek(1)} aria-label="Semana siguiente"
-          className="p-2 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        <Button variant="secondary" size="icon-sm" onClick={() => shiftWeek(1)} aria-label="Semana siguiente"
+          >
           <ChevronRight className="w-4 h-4" />
-        </button>
-        <button onClick={() => setWeekStart(mondayOf(new Date()))}
-          className="ml-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        </Button>
+        <Button variant="secondary" size="sm" className="ml-1" onClick={() => setWeekStart(mondayOf(new Date()))}
+          >
           Esta semana
-        </button>
+        </Button>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -197,10 +198,10 @@ export const ShiftsSupabaseView: React.FC = () => {
                   </p>
                 </div>
                 {canManage && (
-                  <button onClick={() => openForm(day)} aria-label={`Programar turno el ${DAY_LABELS[i]}`}
-                    className="p-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="icon-sm" onClick={() => openForm(day)} aria-label={`Programar turno el ${DAY_LABELS[i]}`}
+                    >
                     <Plus className="w-4 h-4" />
-                  </button>
+                  </Button>
                 )}
               </header>
 
@@ -221,10 +222,10 @@ export const ShiftsSupabaseView: React.FC = () => {
                         {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
                       </div>
                       {canManage && (
-                        <button onClick={() => void remove(s)} aria-label={`Retirar turno de ${s.full_name}`}
-                          className="p-1.5 text-faint hover:text-danger rounded-lg hover:bg-surface-2">
+                        <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(s)} aria-label={`Retirar turno de ${s.full_name}`}
+                          >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       )}
                     </li>
                   ))}

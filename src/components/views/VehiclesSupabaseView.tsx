@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
@@ -103,64 +105,64 @@ export const VehiclesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Vehículos registrados</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">PLACA</th>
-                <th scope="col" className="p-3 font-semibold">MARCA Y MODELO</th>
-                <th scope="col" className="p-3 font-semibold">COLOR</th>
-                <th scope="col" className="p-3 font-semibold">CATEGORÍA</th>
-                <th scope="col" className="p-3 font-semibold">PROPIETARIO</th>
-                <th scope="col" className="p-3 font-semibold">ÚLTIMA VISITA</th>
-                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">PLACA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">MARCA Y MODELO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">COLOR</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CATEGORÍA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">PROPIETARIO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ÚLTIMA VISITA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={7} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={7}>
                     {q.searchInput ? 'Ningún vehículo coincide con la búsqueda.' : 'Todavía no hay vehículos registrados.'}
                   </EmptyRow>
                 ) : q.rows.map(v => (
-                  <tr key={v.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={v.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <span className="font-bold text-strong bg-canvas/60 px-2 py-0.5 rounded border border-line">
                         {v.plate}
                       </span>
-                    </td>
-                    <td className="p-3 font-bold text-body">
+                    </TableCell>
+                    <TableCell className="p-3 font-bold text-body">
                       {[v.make, v.model].filter(Boolean).join(' ') || '—'}
                       {v.year ? ` (${v.year})` : ''}
-                    </td>
-                    <td className="p-3 text-muted">{v.color || '—'}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">{v.color || '—'}</TableCell>
+                    <TableCell className="p-3">
                       <span className="bg-brand-soft text-brand-hi font-bold px-2 py-0.5 rounded text-xs uppercase">
                         {v.category}
                       </span>
-                    </td>
-                    <td className="p-3 text-body">{v.customer_name ?? 'Visitante'}</td>
-                    <td className="p-3 text-muted whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="p-3 text-body">{v.customer_name ?? 'Visitante'}</TableCell>
+                    <TableCell className="p-3 text-muted whitespace-nowrap">
                       {v.last_visit_at ? new Date(v.last_visit_at).toLocaleDateString('es-DO') : '—'}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => abrirEdicion(v)} aria-label={`Editar ${v.plate}`}
-                          className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                        <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicion(v)} aria-label={`Editar ${v.plate}`}
+                          >
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </Button>
                         {puedeBorrar && (
-                          <button onClick={() => setBorrando(v)} aria-label={`Eliminar ${v.plate}`}
-                            className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                          <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(v)} aria-label={`Eliminar ${v.plate}`}
+                            >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

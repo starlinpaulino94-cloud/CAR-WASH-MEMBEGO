@@ -1,13 +1,17 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
 import { InlineAlert } from './DataViewShell';
 
 /**
  * Diálogo modal para formularios de alta (servicio, producto, bahía).
  *
- * Accesible: role="dialog", aria-modal, cierre con Escape y foco llevado al
- * panel al abrir. El botón de guardar y el cierre se bloquean mientras hay una
- * operación en curso, para no lanzar dos altas por doble clic.
+ * Desde el reemplazo por b0 monta sobre el Dialog de shadcn (Base UI), que trae
+ * el foco, el Escape y el clic fuera resueltos y auditados. La API pública no
+ * cambió: las vistas siguen montándolo condicionalmente y pasándole onClose.
+ * El cierre sigue bloqueado mientras hay una operación en curso —el open es
+ * fijo y el onOpenChange lo ignora si busy—, para no perder un alta a medias.
  */
 export const FormModal: React.FC<{
   title: string;
@@ -20,73 +24,43 @@ export const FormModal: React.FC<{
   /** Diálogo ancho para formularios con renglones (compras, recetas). */
   wide?: boolean;
   children: React.ReactNode;
-}> = ({ title, submitLabel, busy = false, error, onSubmit, onClose, onDismissError, wide = false, children }) => {
-  const titleId = useId();
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onClose(); };
-    document.addEventListener('keydown', onKey);
-    panelRef.current?.focus();
-    return () => document.removeEventListener('keydown', onKey);
-  }, [busy, onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onMouseDown={e => { if (e.target === e.currentTarget && !busy) onClose(); }}
+}> = ({ title, submitLabel, busy = false, error, onSubmit, onClose, onDismissError, wide = false, children }) => (
+  <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
+    <DialogContent
+      showCloseButton={false}
+      className={`flex ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[90vh] flex-col gap-0 overflow-hidden p-0`}
     >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className={`w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} bg-surface border border-line-strong rounded-2xl shadow-2xl max-h-[90vh] flex flex-col focus:outline-none`}
+      <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+        <DialogTitle className="font-bold text-strong text-sm">{title}</DialogTitle>
+        <Button
+          type="button" variant="ghost" size="icon-sm" aria-label="Cerrar" disabled={busy}
+          onClick={() => { if (!busy) onClose(); }}
+        >
+          <X />
+        </Button>
+      </div>
+
+      <form
+        onSubmit={e => { e.preventDefault(); if (!busy) onSubmit(); }}
+        className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h2 id={titleId} className="font-bold text-strong text-sm">{title}</h2>
-          <button
-            onClick={() => { if (!busy) onClose(); }}
-            disabled={busy}
-            aria-label="Cerrar"
-            className="p-1 text-muted hover:text-strong disabled:opacity-40"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="space-y-4 overflow-y-auto p-5">
+          {error && <InlineAlert tone="error" onDismiss={onDismissError}>{error}</InlineAlert>}
+          {children}
         </div>
 
-        <form
-          onSubmit={e => { e.preventDefault(); if (!busy) onSubmit(); }}
-          className="flex flex-col min-h-0"
-        >
-          <div className="p-5 space-y-4 overflow-y-auto">
-            {error && <InlineAlert tone="error" onDismiss={onDismissError}>{error}</InlineAlert>}
-            {children}
-          </div>
-
-          <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
-            <button
-              type="button"
-              onClick={() => { if (!busy) onClose(); }}
-              disabled={busy}
-              className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 disabled:text-muted text-on-accent font-bold text-sm rounded-xl flex items-center gap-2"
-            >
-              {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando…</> : submitLabel}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+        <div className="flex items-center justify-end gap-2 border-t border-line bg-muted/50 px-5 py-3.5">
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => { if (!busy) onClose(); }}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? <><Loader2 className="animate-spin" /> Guardando…</> : submitLabel}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  </Dialog>
+);
 
 /** Campo de texto etiquetado, uniforme en los formularios de alta. */
 export const Field: React.FC<{
@@ -104,5 +78,9 @@ export const Field: React.FC<{
   </div>
 );
 
+/**
+ * La clase de campo de shadcn (ver src/components/ui/input.tsx), sin altura
+ * fija porque aquí también viste <select> y <textarea>.
+ */
 export const textInputClass =
-  'w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand';
+  'w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30';

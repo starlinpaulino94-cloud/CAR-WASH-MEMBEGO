@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -127,18 +129,18 @@ export const ExpensesSupabaseView: React.FC = () => {
 
           <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <Table className="text-xs">
                 <caption className="sr-only">Gastos registrados</caption>
-                <thead>
-                  <tr className="border-b border-line text-muted bg-canvas/50">
-                    <th scope="col" className="p-3 font-semibold">FECHA</th>
-                    <th scope="col" className="p-3 font-semibold">CONCEPTO</th>
-                    <th scope="col" className="p-3 font-semibold">CATEGORÍA</th>
-                    <th scope="col" className="p-3 font-semibold">PAGO</th>
-                    <th scope="col" className="p-3 font-semibold text-right">IMPORTE</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted bg-canvas/50">
+                    <TableHead scope="col" className="p-3 font-semibold">FECHA</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">CONCEPTO</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">CATEGORÍA</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">PAGO</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold text-right">IMPORTE</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {q.loading ? <SkeletonRows cols={5} />
                     : q.rows.length === 0 ? (
                       <EmptyRow cols={5}>
@@ -147,25 +149,25 @@ export const ExpensesSupabaseView: React.FC = () => {
                           : 'Todavía no hay gastos registrados.'}
                       </EmptyRow>
                     ) : q.rows.map(e => (
-                      <tr key={e.id} className="hover:bg-surface-2/40">
-                        <td className="p-3 text-muted whitespace-nowrap">
+                      <TableRow key={e.id} className="hover:bg-surface-2/40">
+                        <TableCell className="p-3 text-muted whitespace-nowrap">
                           {new Date(e.expense_date).toLocaleDateString('es-DO')}
-                        </td>
-                        <td className="p-3">
+                        </TableCell>
+                        <TableCell className="p-3">
                           <div className="font-bold text-strong">{e.description}</div>
                           {e.supplier_name && <div className="text-xs text-faint">{e.supplier_name}</div>}
-                        </td>
-                        <td className="p-3 text-muted">
+                        </TableCell>
+                        <TableCell className="p-3 text-muted">
                           {CATEGORY_FILTERS.find(c => c.id === e.category)?.label ?? e.category}
-                        </td>
-                        <td className="p-3 text-body uppercase text-xs">{e.payment_method}</td>
-                        <td className="p-3 font-extrabold text-danger text-right whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 text-body uppercase text-xs">{e.payment_method}</TableCell>
+                        <TableCell className="p-3 font-extrabold text-danger text-right whitespace-nowrap">
                           −{formatCents(e.amount_cents, symbol)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
             <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
               pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
@@ -227,10 +229,10 @@ export const ExpensesSupabaseView: React.FC = () => {
 
             {formError && <InlineAlert tone="error">{formError}</InlineAlert>}
 
-            <button onClick={() => void submit()} disabled={busy || !allowed}
-              className="w-full py-2.5 bg-danger hover:bg-danger disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-danger/30 flex items-center justify-center gap-2">
+            <Button className="w-full bg-danger hover:bg-danger/90 text-on-accent" onClick={() => void submit()} disabled={busy || !allowed}
+              >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Registrar gasto
-            </button>
+            </Button>
 
             <p className="text-xs text-faint">
               Un gasto en efectivo descuenta la gaveta en la misma operación: o se registran

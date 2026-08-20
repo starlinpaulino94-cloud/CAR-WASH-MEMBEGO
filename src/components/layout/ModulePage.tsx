@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../ui/button';
 import { ChevronRight, Home, Hammer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
@@ -118,12 +119,12 @@ export const ComingSoon: React.FC = () => {
             {sub.hint ?? 'Este submódulo está planificado y llegará en una próxima fase.'}
           </p>
         </div>
-        <button
+        <Button variant="secondary"
           onClick={() => navigate(`/${mod.pathId}`)}
-          className="px-4 py-2.5 bg-surface-2 hover:bg-surface-3 text-strong text-sm font-bold rounded-xl"
+          
         >
           Volver a {mod.label}
-        </button>
+        </Button>
       </div>
     </div>
   );

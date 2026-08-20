@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Loader2, Plus, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -143,10 +145,10 @@ export const TeamSupabaseView: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <FilterChips options={RANGES} value={range} onChange={setRange} />
             {canManageStaff && (
-              <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+              <Button size="sm" onClick={openCreate}
+                >
                 <Plus className="w-4 h-4" /> Nuevo empleado
-              </button>
+              </Button>
             )}
           </div>
         }
@@ -174,60 +176,60 @@ export const TeamSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Personal y comisiones</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">PERSONA</th>
-                <th scope="col" className="p-3 font-semibold">ROL</th>
-                <th scope="col" className="p-3 font-semibold text-right">TASA</th>
-                <th scope="col" className="p-3 font-semibold text-right">SERVICIOS</th>
-                <th scope="col" className="p-3 font-semibold text-right">COMISIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">POR PAGAR</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">PERSONA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ROL</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">TASA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">SERVICIOS</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">COMISIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">POR PAGAR</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} aria-hidden="true">
-                    <td colSpan={6} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
-                  </tr>
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell colSpan={6} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></TableCell>
+                  </TableRow>
                 ))
               ) : team.length === 0 ? (
-                <tr><td colSpan={6} className="p-10 text-center text-faint italic">
+                <TableRow><TableCell colSpan={6} className="p-10 text-center text-faint italic">
                   No hay personal registrado.
-                </td></tr>
+                </TableCell></TableRow>
               ) : team.map(person => {
                 const s = summary.get(person.id);
                 return (
-                  <tr key={person.id} className={`hover:bg-surface-2/40 ${person.is_active ? '' : 'opacity-50'}`}>
-                    <td className="p-3">
+                  <TableRow key={person.id} className={`hover:bg-surface-2/40 ${person.is_active ? '' : 'opacity-50'}`}>
+                    <TableCell className="p-3">
                       <div className="font-bold text-strong">{person.full_name || person.email}</div>
                       <div className="text-xs text-faint">{person.email}</div>
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <span className="bg-brand-soft text-brand-hi font-bold px-2 py-0.5 rounded text-xs uppercase">
                         {person.role ?? 'sin rol'}
                       </span>
                       {!person.is_active && <span className="ml-1 text-xs text-faint">inactivo</span>}
-                    </td>
-                    <td className="p-3 text-right text-success font-bold">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-success font-bold">
                       {person.commission_bps ? bpsToPercent(person.commission_bps) : '—'}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">{s?.count ?? 0}</td>
-                    <td className="p-3 text-right font-bold text-brand-hi whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">{s?.count ?? 0}</TableCell>
+                    <TableCell className="p-3 text-right font-bold text-brand-hi whitespace-nowrap">
                       {formatCents(s?.totalCents ?? 0, symbol)}
-                    </td>
-                    <td className={`p-3 text-right font-bold whitespace-nowrap ${
+                    </TableCell>
+                    <TableCell className={`p-3 text-right font-bold whitespace-nowrap ${
                       (s?.unpaidCents ?? 0) > 0 ? 'text-warning' : 'text-faint'
                     }`}>
                       {formatCents(s?.unpaidCents ?? 0, symbol)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

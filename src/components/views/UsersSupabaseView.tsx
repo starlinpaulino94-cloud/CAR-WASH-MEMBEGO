@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { KeyRound, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can, outranks } from '../../lib/auth';
@@ -163,24 +165,24 @@ export const UsersSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Usuarios de la empresa</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">PERSONA</th>
-                <th scope="col" className="p-3 font-semibold">CORREO</th>
-                <th scope="col" className="p-3 font-semibold">ROL</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">PERSONA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CORREO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ROL</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={cols} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={cols}>Todavía no hay usuarios.</EmptyRow>
                 ) : rows.map(p => (
-                  <tr key={p.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={p.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <div className="font-bold text-strong">
                         {p.full_name || '(sin nombre)'}
                         {p.id === profile?.id && (
@@ -190,9 +192,9 @@ export const UsersSupabaseView: React.FC = () => {
                       <div className="text-xs text-faint">
                         {ROLES.find(r => r.id === p.role)?.nota ?? ''}
                       </div>
-                    </td>
-                    <td className="p-3 text-muted">{p.email ?? '—'}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">{p.email ?? '—'}</TableCell>
+                    <TableCell className="p-3">
                       {editable(p) ? (
                         <select
                           aria-label={`Rol de ${p.full_name}`}
@@ -206,31 +208,29 @@ export const UsersSupabaseView: React.FC = () => {
                           {ROLES.find(r => r.id === p.role)?.label ?? p.role ?? '—'}
                         </span>
                       )}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       {p.is_active
                         ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activo</span>
                         : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Sin acceso</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
                         {editable(p) ? (
                           <>
-                            <button onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
-                              <KeyRound className="w-3.5 h-3.5" /> Clave
-                            </button>
-                            <button onClick={() => void alternarActivo(p)}
-                              className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                            <Button variant="secondary" size="xs" onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}>
+                              <KeyRound /> Clave
+                            </Button>
+                            <Button variant="secondary" size="xs" className="ml-1" onClick={() => void alternarActivo(p)}>
                               {p.is_active ? 'Quitar acceso' : 'Dar acceso'}
-                            </button>
+                            </Button>
                             {puedeBorrar && (
-                              <button onClick={() => setBorrando(p)}
+                              <Button variant="ghost" size="icon-xs" className="ml-1 text-muted hover:text-danger"
+                                onClick={() => setBorrando(p)}
                                 aria-label={`Eliminar la ficha de ${p.full_name}`}
-                                title="Solo se puede si nunca trabajó"
-                                className="ml-1 p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2 align-middle">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                                title="Solo se puede si nunca trabajó">
+                                <Trash2 />
+                              </Button>
                             )}
                           </>
                         ) : (
@@ -238,12 +238,12 @@ export const UsersSupabaseView: React.FC = () => {
                             {p.id === profile?.id ? 'usted mismo' : 'fuera de su alcance'}
                           </span>
                         )}
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

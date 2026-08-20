@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Plus, Star, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -149,10 +151,9 @@ export const BranchesSupabaseView: React.FC = () => {
         title="Sucursales"
         subtitle="Locales de la empresa y quién ve cada uno"
         actions={canManage ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
-            <Plus className="w-4 h-4" /> Nueva sucursal
-          </button>
+          <Button size="sm" onClick={openCreate}>
+            <Plus /> Nueva sucursal
+          </Button>
         ) : undefined}
       />
 
@@ -164,52 +165,50 @@ export const BranchesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Sucursales</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">SUCURSAL</th>
-                <th scope="col" className="p-3 font-semibold">DIRECCIÓN</th>
-                <th scope="col" className="p-3 font-semibold">TELÉFONO</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">SUCURSAL</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">DIRECCIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">TELÉFONO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={cols} />
                 : branches.length === 0 ? (
                   <EmptyRow cols={cols}>Todavía no hay sucursales registradas.</EmptyRow>
                 ) : branches.map(b => (
-                  <tr key={b.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={b.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <div className="flex items-center gap-1.5 font-bold text-strong">
                         {b.name}
                         {b.is_main && <Star className="w-3.5 h-3.5 text-warning" aria-label="Principal" />}
                       </div>
-                    </td>
-                    <td className="p-3 text-muted">{b.address ?? '—'}</td>
-                    <td className="p-3 text-muted">{b.phone ?? '—'}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">{b.address ?? '—'}</TableCell>
+                    <TableCell className="p-3 text-muted">{b.phone ?? '—'}</TableCell>
+                    <TableCell className="p-3">
                       {b.is_active
                         ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
                         : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
-                        <button onClick={() => openEdit(b)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
+                        <Button variant="secondary" size="xs" onClick={() => openEdit(b)}>
                           Editar
-                        </button>
-                        <button onClick={() => void toggleActive(b)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                        </Button>
+                        <Button variant="secondary" size="xs" className="ml-1" onClick={() => void toggleActive(b)}>
                           {b.is_active ? 'Desactivar' : 'Activar'}
-                        </button>
-                      </td>
+                        </Button>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -241,10 +240,9 @@ export const BranchesSupabaseView: React.FC = () => {
                   </div>
                 </div>
                 {p.id !== profile?.id && (
-                  <button onClick={() => openScope(p)}
-                    className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="xs" onClick={() => openScope(p)}>
                     Cambiar alcance
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}

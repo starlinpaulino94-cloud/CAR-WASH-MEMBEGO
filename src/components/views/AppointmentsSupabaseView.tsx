@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CarFront, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -192,10 +193,10 @@ export const AppointmentsSupabaseView: React.FC = () => {
         title="Agenda"
         subtitle="Reservas del día · la capacidad la marcan las bahías"
         actions={canBook ? (
-          <button onClick={() => { setBookDay(day); setError(null); setShowBook(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={() => { setBookDay(day); setError(null); setShowBook(true); }}
+            >
             <Plus className="w-4 h-4" /> Nueva cita
-          </button>
+          </Button>
         ) : undefined}
       />
 
@@ -205,21 +206,21 @@ export const AppointmentsSupabaseView: React.FC = () => {
 
       {/* Navegación del día */}
       <div className="flex items-center justify-between bg-surface border border-line rounded-2xl p-3">
-        <button onClick={() => shiftDay(-1)} aria-label="Día anterior"
-          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+        <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(-1)} aria-label="Día anterior"
+          >
           <ChevronLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="text-center">
           <div className="font-bold text-strong capitalize">{dayLabel}</div>
-          <button onClick={() => setDay(isoDay(new Date()))}
-            className="text-xs text-brand hover:text-brand-hi font-bold">
+          <Button variant="link" size="xs" onClick={() => setDay(isoDay(new Date()))}
+            >
             Ir a hoy
-          </button>
+          </Button>
         </div>
-        <button onClick={() => shiftDay(1)} aria-label="Día siguiente"
-          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+        <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(1)} aria-label="Día siguiente"
+          >
           <ChevronRight className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -269,25 +270,25 @@ export const AppointmentsSupabaseView: React.FC = () => {
                 {canBook && !done && (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {a.status === 'pendiente' && (
-                      <button onClick={() => void mark(a, 'confirmada')}
-                        className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-info inline-flex items-center gap-1">
+                      <Button variant="secondary" size="sm" className="text-info" onClick={() => void mark(a, 'confirmada')}
+                        >
                         <CheckCircle2 className="w-3.5 h-3.5" /> Confirmar
-                      </button>
+                      </Button>
                     )}
                     <button onClick={() => void toOrder(a)} disabled={busy || !a.vehicle_plate}
                       title={a.vehicle_plate ? 'Crear la orden de servicio' : 'La cita necesita placa'}
                       className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent inline-flex items-center gap-1">
                       <CarFront className="w-3.5 h-3.5" /> Llegó
                     </button>
-                    <button onClick={() => void mark(a, 'ausente')}
-                      className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-warning">
+                    <Button variant="secondary" size="sm" className="text-warning" onClick={() => void mark(a, 'ausente')}
+                      >
                       No asistió
-                    </button>
-                    <button onClick={() => { setCancelling(a); setCancelReason(''); setError(null); }}
+                    </Button>
+                    <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => { setCancelling(a); setCancelReason(''); setError(null); }}
                       aria-label={`Cancelar cita de ${a.customer_name}`}
-                      className="p-1.5 text-faint hover:text-danger">
+                      >
                       <XCircle className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </li>

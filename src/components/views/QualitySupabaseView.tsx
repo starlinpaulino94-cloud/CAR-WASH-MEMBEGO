@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -116,10 +117,10 @@ export const QualitySupabaseView: React.FC = () => {
                 </span>
                 <span className="flex-1 text-sm font-medium text-strong">{i.label}</span>
                 {editable && (
-                  <button onClick={() => void remove(i.id)} aria-label={`Quitar ${i.label}`}
-                    className="p-1.5 text-faint hover:text-danger">
+                  <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(i.id)} aria-label={`Quitar ${i.label}`}
+                    >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}
@@ -132,11 +133,11 @@ export const QualitySupabaseView: React.FC = () => {
               value={label} onChange={e => setLabel(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') void add(); }}
               placeholder="Ej.: Cristales sin marcas" />
-            <button onClick={() => void add()} disabled={busy || !label.trim()}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-strong font-bold text-sm rounded-xl flex items-center justify-center gap-2">
+            <Button onClick={() => void add()} disabled={busy || !label.trim()}
+              >
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               Agregar punto
-            </button>
+            </Button>
           </div>
         )}
       </section>

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { FileMinus, Search, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -140,10 +142,10 @@ export const CreditNotesSupabaseView: React.FC = () => {
         title="Notas de crédito"
         subtitle="Acredita renglones concretos; la factura solo se anula si se acredita entera"
         actions={canManage ? (
-          <button onClick={abrir}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={abrir}
+            >
             <FileMinus className="w-4 h-4" /> Emitir nota
-          </button>
+          </Button>
         ) : undefined}
       />
 
@@ -153,34 +155,34 @@ export const CreditNotesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Notas de crédito emitidas</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">NOTA</th>
-                <th scope="col" className="p-3 font-semibold">NCF</th>
-                <th scope="col" className="p-3 font-semibold">CLIENTE</th>
-                <th scope="col" className="p-3 font-semibold">FECHA</th>
-                <th scope="col" className="p-3 font-semibold text-right">IMPORTE</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">NOTA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">NCF</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">FECHA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">IMPORTE</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={5} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={5}>Todavía no se ha emitido ninguna nota de crédito.</EmptyRow>
                 ) : rows.map(n => (
-                  <tr key={n.id} className="hover:bg-surface-2/40">
-                    <td className="p-3 font-bold text-strong tabular-nums">{n.invoice_number}</td>
-                    <td className="p-3 text-muted tabular-nums">{n.ncf ?? '—'}</td>
-                    <td className="p-3 text-muted">{n.customer_name}</td>
-                    <td className="p-3 text-muted tabular-nums">{fecha(n.created_at)}</td>
-                    <td className="p-3 text-right font-bold text-danger tabular-nums">
+                  <TableRow key={n.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3 font-bold text-strong tabular-nums">{n.invoice_number}</TableCell>
+                    <TableCell className="p-3 text-muted tabular-nums">{n.ncf ?? '—'}</TableCell>
+                    <TableCell className="p-3 text-muted">{n.customer_name}</TableCell>
+                    <TableCell className="p-3 text-muted tabular-nums">{fecha(n.created_at)}</TableCell>
+                    <TableCell className="p-3 text-right font-bold text-danger tabular-nums">
                       −{formatCents(n.total_cents, symbol)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

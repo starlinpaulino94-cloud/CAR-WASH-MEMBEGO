@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Plus, Car, Tags, FileText, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput } from '../../lib/money';
@@ -288,10 +290,10 @@ export const FleetsSupabaseView: React.FC = () => {
         title="Flotillas"
         subtitle="Una empresa con varios vehículos no es varios clientes sueltos"
         actions={canManage ? (
-          <button onClick={openCreate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+          <Button size="sm" onClick={openCreate}
+            >
             <Plus className="w-4 h-4" /> Nueva flotilla
-          </button>
+          </Button>
         ) : undefined}
       />
 
@@ -310,58 +312,58 @@ export const FleetsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Flotillas</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">FLOTILLA</th>
-                <th scope="col" className="p-3 font-semibold">FACTURA A</th>
-                <th scope="col" className="p-3 font-semibold text-right">VEHÍCULOS</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">FLOTILLA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">FACTURA A</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">VEHÍCULOS</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={cols} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={cols}>
                     {q.searchInput ? 'Ninguna flotilla coincide.' : 'Todavía no hay flotillas registradas.'}
                   </EmptyRow>
                 ) : q.rows.map(f => (
-                  <tr key={f.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={f.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <button onClick={() => setDetail(f)}
                         className="font-bold text-strong hover:text-brand-hi text-left">
                         {f.name}
                       </button>
                       {f.code && <div className="text-xs text-faint">{f.code}</div>}
-                    </td>
-                    <td className="p-3 text-muted">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">
                       <div>{f.customer_name}</div>
                       {f.po_reference && <div className="text-xs text-faint">OC {f.po_reference}</div>}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">{f.vehicle_count}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">{f.vehicle_count}</TableCell>
+                    <TableCell className="p-3">
                       {f.is_active
                         ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
                         : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
-                        <button onClick={() => openEdit(f)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
+                        <Button variant="secondary" size="xs" onClick={() => openEdit(f)}
+                          >
                           Editar
-                        </button>
-                        <button onClick={() => void toggleActive(f)}
-                          className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                        </Button>
+                        <Button variant="secondary" size="xs" className="ml-1" onClick={() => void toggleActive(f)}
+                          >
                           {f.is_active ? 'Desactivar' : 'Activar'}
-                        </button>
-                      </td>
+                        </Button>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
@@ -379,10 +381,10 @@ export const FleetsSupabaseView: React.FC = () => {
                 {detail.po_reference && ` · orden de compra ${detail.po_reference}`}
               </p>
             </div>
-            <button onClick={() => setDetail(null)} aria-label="Cerrar detalle"
-              className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+            <Button variant="ghost" size="icon-sm" onClick={() => setDetail(null)} aria-label="Cerrar detalle"
+              >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </header>
 
           <FilterChips options={RANGES} value={range} onChange={setRange} />
@@ -401,11 +403,11 @@ export const FleetsSupabaseView: React.FC = () => {
           )}
 
           {canManage && statement && statement.totals.unbilled_cents > 0 && (
-            <button onClick={() => void consolidate()} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+            <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void consolidate()} disabled={busy}
+              >
               <FileText className="w-4 h-4" />
               Facturar el periodo — {formatCents(statement.totals.unbilled_cents, symbol)} a crédito
-            </button>
+            </Button>
           )}
 
           <div className="grid md:grid-cols-2 gap-5">
@@ -416,10 +418,10 @@ export const FleetsSupabaseView: React.FC = () => {
                   <Car className="w-4 h-4 text-brand" /> Vehículos ({vehicles.length})
                 </h3>
                 {canAssign && (
-                  <button onClick={() => { setShowAddVehicle(true); setPlateTerm(''); }}
-                    className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="xs" onClick={() => { setShowAddVehicle(true); setPlateTerm(''); }}
+                    >
                     Añadir
-                  </button>
+                  </Button>
                 )}
               </div>
               {vehicles.length === 0 ? (
@@ -435,10 +437,10 @@ export const FleetsSupabaseView: React.FC = () => {
                         </div>
                       </div>
                       {canAssign && (
-                        <button onClick={() => void removeVehicle(v)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
+                        <Button variant="secondary" size="xs" className="text-muted" onClick={() => void removeVehicle(v)}
+                          >
                           Sacar
-                        </button>
+                        </Button>
                       )}
                     </li>
                   ))}
@@ -453,10 +455,10 @@ export const FleetsSupabaseView: React.FC = () => {
                   <Tags className="w-4 h-4 text-brand" /> Tarifas pactadas ({rates.length})
                 </h3>
                 {canManage && (
-                  <button onClick={() => openRate()}
-                    className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="xs" onClick={() => openRate()}
+                    >
                     Pactar
-                  </button>
+                  </Button>
                 )}
               </div>
               <p className="text-xs text-faint">
@@ -477,14 +479,14 @@ export const FleetsSupabaseView: React.FC = () => {
                       </div>
                       {canManage && (
                         <div className="whitespace-nowrap">
-                          <button onClick={() => openRate(r)}
-                            className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                          <Button variant="secondary" size="xs" onClick={() => openRate(r)}
+                            >
                             Cambiar
-                          </button>
-                          <button onClick={() => void removeRate(r)}
-                            className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
+                          </Button>
+                          <Button variant="secondary" size="xs" className="ml-1 text-muted" onClick={() => void removeRate(r)}
+                            >
                             Retirar
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </li>
@@ -496,27 +498,27 @@ export const FleetsSupabaseView: React.FC = () => {
 
           {statement && statement.by_vehicle.length > 0 && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <Table className="text-xs">
                 <caption className="sr-only">Consumo por vehículo</caption>
-                <thead>
-                  <tr className="border-b border-line text-muted">
-                    <th scope="col" className="p-2 font-semibold">PLACA</th>
-                    <th scope="col" className="p-2 font-semibold text-right">SERVICIOS</th>
-                    <th scope="col" className="p-2 font-semibold text-right">CONSUMO</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted">
+                    <TableHead scope="col" className="p-2 font-semibold">PLACA</TableHead>
+                    <TableHead scope="col" className="p-2 font-semibold text-right">SERVICIOS</TableHead>
+                    <TableHead scope="col" className="p-2 font-semibold text-right">CONSUMO</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {statement.by_vehicle.map(v => (
-                    <tr key={v.plate}>
-                      <td className="p-2 font-bold text-strong">{v.plate}</td>
-                      <td className="p-2 text-right text-body tabular-nums">{v.services}</td>
-                      <td className="p-2 text-right text-body tabular-nums">
+                    <TableRow key={v.plate}>
+                      <TableCell className="p-2 font-bold text-strong">{v.plate}</TableCell>
+                      <TableCell className="p-2 text-right text-body tabular-nums">{v.services}</TableCell>
+                      <TableCell className="p-2 text-right text-body tabular-nums">
                         {formatCents(v.total_cents, symbol)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </section>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -197,11 +198,10 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
       )}
 
       {seccion !== 'membego' && editable && (
-        <button onClick={() => void save()} disabled={busy}
-          className="px-5 py-2.5 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-brand/30 flex items-center gap-2">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        <Button onClick={() => void save()} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : <Save />}
           Guardar cambios
-        </button>
+        </Button>
       )}
 
       {/* Los niveles van con Membego y no en una pantalla aparte: existen solo
@@ -237,12 +237,11 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               <input id="s-membego" type="text" value={membegoInput} disabled={membegoBusy}
                 onChange={e => setMembegoInput(e.target.value)}
                 placeholder="ej. cmre1hz570000jp04ad5i0roi"
-                className="flex-1 bg-canvas border border-line rounded-lg p-2.5 text-strong text-xs font-mono focus:outline-none focus:border-brand disabled:opacity-60" />
-              <button onClick={() => void linkMembego()} disabled={membegoBusy || !membegoInput.trim()}
-                className="px-4 py-2.5 bg-brand hover:bg-brand disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs flex items-center justify-center gap-2">
-                {membegoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                className="flex-1 p-2.5 text-xs font-mono rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30" />
+              <Button onClick={() => void linkMembego()} disabled={membegoBusy || !membegoInput.trim()}>
+                {membegoBusy ? <Loader2 className="animate-spin" /> : <Link2 />}
                 {membegoLink ? 'Actualizar vínculo' : 'Vincular'}
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-faint">
               El <span className="font-mono">companyId</span> te lo da Membego. Vincula esta empresa para que

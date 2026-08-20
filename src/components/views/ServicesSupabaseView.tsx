@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -200,10 +202,10 @@ export const ServicesSupabaseView: React.FC = () => {
               <ImportButton entity="servicios" onImported={() => void load()} />
             )}
             {editable && (
-              <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+              <Button size="sm" onClick={openCreate}
+                >
                 <Plus className="w-4 h-4" /> Nuevo servicio
-              </button>
+              </Button>
             )}
           </>
         }
@@ -223,49 +225,49 @@ export const ServicesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <Table className="text-xs">
             <caption className="sr-only">Matriz de precios por servicio y categoría</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">SERVICIO</th>
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">SERVICIO</TableHead>
                 {COLUMNS.map(c => (
-                  <th key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
+                  <TableHead key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
                     {c.label.toUpperCase()}
-                  </th>
+                  </TableHead>
                 ))}
-                <th scope="col" className="p-3 font-semibold text-right">COMISIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+                <TableHead scope="col" className="p-3 font-semibold text-right">COMISIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} aria-hidden="true">
-                    <td colSpan={COLUMNS.length + 3} className="p-3">
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell colSpan={COLUMNS.length + 3} className="p-3">
                       <div className="h-5 bg-surface-2/60 rounded animate-pulse" />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
+                <TableRow>
+                  <TableCell colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
                     Todavía no hay servicios en el catálogo.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : rows.map(s => (
-                <tr key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
-                  <td className="p-3">
+                <TableRow key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
+                  <TableCell className="p-3">
                     <div className="font-bold text-strong">{s.name}</div>
                     <div className="text-xs text-muted">
                       {s.code} · {s.estimated_minutes} min
                       {!s.is_active && ' · inactivo'}
                     </div>
-                  </td>
+                  </TableCell>
                   {COLUMNS.map(c => {
                     const price = s.prices[c.id];
                     const isEditing = editing?.serviceId === s.id && editing.category === c.id;
                     return (
-                      <td key={c.id} className="p-2 text-right">
+                      <TableCell key={c.id} className="p-2 text-right">
                         {isEditing ? (
                           <span className="flex items-center gap-1 justify-end">
                             <input
@@ -278,14 +280,14 @@ export const ServicesSupabaseView: React.FC = () => {
                               aria-label={`Precio de ${s.name} para ${c.label}`}
                               className="w-20 bg-canvas border border-brand rounded p-1 text-right text-strong"
                             />
-                            <button onClick={() => void commit()} disabled={busy} aria-label="Guardar"
-                              className="p-1 text-success hover:text-success">
+                            <Button variant="ghost" size="icon-xs" className="text-success hover:text-success" onClick={() => void commit()} disabled={busy} aria-label="Guardar"
+                              >
                               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            </button>
-                            <button onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
-                              className="p-1 text-faint hover:text-body">
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" className="text-faint" onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
+                              >
                               <X className="w-3.5 h-3.5" />
-                            </button>
+                            </Button>
                           </span>
                         ) : (
                           <button
@@ -300,48 +302,48 @@ export const ServicesSupabaseView: React.FC = () => {
                             {editable && price !== undefined && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
                           </button>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                  <td className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</td>
-                  <td className="p-3">
+                  <TableCell className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</TableCell>
+                  <TableCell className="p-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => setRecipeFor({ id: s.id, name: s.name })}
                         aria-label={`Receta de ${s.name}`}
                         title="Insumos que consume este servicio"
-                        className="p-1.5 text-accent hover:text-accent rounded-lg hover:bg-surface-2">
+                        className="p-1.5 text-brand-2 hover:text-brand-2 rounded-lg hover:bg-surface-2">
                         <FlaskConical className="w-4 h-4" />
                       </button>
                       {editable && (
-                        <button onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
+                        <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
                           title="Nombre, código, minutos y comisión"
-                          className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                          >
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                       {puedeBorrar && (
                         <>
-                          <button onClick={() => void alternarActivo(s)}
+                          <Button variant="ghost" size="icon-sm" onClick={() => void alternarActivo(s)}
                             aria-label={`${s.is_active ? 'Desactivar' : 'Activar'} ${s.name}`}
                             title={s.is_active
                               ? 'Deja de ofrecerse en caja y recepción'
                               : 'Vuelve a ofrecerse'}
-                            className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                            >
                             {s.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => setBorrando(s)} aria-label={`Eliminar ${s.name}`}
-                            className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(s)} aria-label={`Eliminar ${s.name}`}
+                            >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -76,7 +77,7 @@ export const ProfitReportSupabaseView: React.FC = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Ventas" tone="text-success"
               value={formatCents(report.sales.total_cents, symbol)} />
-            <StatCard label="Insumos consumidos" tone="text-accent"
+            <StatCard label="Insumos consumidos" tone="text-brand-2"
               value={formatCents(report.consumption_cents, symbol)}
               hint="Según las recetas aplicadas al entregar" />
             <StatCard label="Gastos" tone="text-warning"
@@ -106,52 +107,52 @@ export const ProfitReportSupabaseView: React.FC = () => {
           <section className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
             <h3 className="font-bold text-strong text-sm px-4 pt-4">Margen por servicio</h3>
             <div className="overflow-x-auto p-2">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="text-muted text-xs">
-                    <th className="p-2 font-semibold">SERVICIO</th>
-                    <th className="p-2 font-semibold text-right">VENTAS</th>
-                    <th className="p-2 font-semibold text-right">INSUMOS</th>
-                    <th className="p-2 font-semibold text-right">MARGEN</th>
-                    <th className="p-2 font-semibold text-right">%</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-muted text-xs">
+                    <TableHead className="p-2 font-semibold">SERVICIO</TableHead>
+                    <TableHead className="p-2 font-semibold text-right">VENTAS</TableHead>
+                    <TableHead className="p-2 font-semibold text-right">INSUMOS</TableHead>
+                    <TableHead className="p-2 font-semibold text-right">MARGEN</TableHead>
+                    <TableHead className="p-2 font-semibold text-right">%</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {margin.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="p-6 text-center text-faint italic">
+                    <TableRow>
+                      <TableCell colSpan={5} className="p-6 text-center text-faint italic">
                         Sin ventas de servicios en el periodo. El margen aparece cuando hay
                         ventas y las recetas registran consumo al entregar.
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ) : margin.map(m => {
                     const pct = m.sales_cents > 0
                       ? Math.round((m.margin_cents / m.sales_cents) * 100)
                       : null;
                     return (
-                      <tr key={m.service_id ?? m.name}>
-                        <td className="p-2 text-strong font-medium">{m.name}</td>
-                        <td className="p-2 text-right text-body tabular-nums whitespace-nowrap">
+                      <TableRow key={m.service_id ?? m.name}>
+                        <TableCell className="p-2 text-strong font-medium">{m.name}</TableCell>
+                        <TableCell className="p-2 text-right text-body tabular-nums whitespace-nowrap">
                           {formatCents(m.sales_cents, symbol)}
-                        </td>
-                        <td className="p-2 text-right text-accent tabular-nums whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-2 text-right text-brand-2 tabular-nums whitespace-nowrap">
                           {formatCents(m.consumption_cents, symbol)}
-                        </td>
-                        <td className={`p-2 text-right font-bold tabular-nums whitespace-nowrap ${
+                        </TableCell>
+                        <TableCell className={`p-2 text-right font-bold tabular-nums whitespace-nowrap ${
                           m.margin_cents >= 0 ? 'text-success' : 'text-danger'
                         }`}>
                           {formatCents(m.margin_cents, symbol)}
-                        </td>
-                        <td className={`p-2 text-right font-bold tabular-nums ${
+                        </TableCell>
+                        <TableCell className={`p-2 text-right font-bold tabular-nums ${
                           pct === null ? 'text-faint' : pct >= 0 ? 'text-success' : 'text-danger'
                         }`}>
                           {pct === null ? '—' : `${pct}%`}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </section>
 

@@ -1,4 +1,6 @@
 import React, { useId, useRef, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Upload, Loader2, X, FileSpreadsheet, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { parseCsv, csvToObjects, toCsv, downloadCsv } from '../../lib/csv';
 import {
@@ -166,10 +168,10 @@ export const ImportModal: React.FC<{
           <h2 id={titleId} className="font-bold text-strong text-sm flex items-center gap-2">
             <Upload className="w-4 h-4 text-brand" /> Importar {help.titulo.toLowerCase()}
           </h2>
-          <button onClick={() => { if (!busy) onClose(); }} disabled={busy} aria-label="Cerrar"
-            className="p-1 text-muted hover:text-strong disabled:opacity-40">
+          <Button variant="ghost" size="icon-xs" onClick={() => { if (!busy) onClose(); }} disabled={busy} aria-label="Cerrar"
+            >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -191,10 +193,10 @@ export const ImportModal: React.FC<{
                 <p className="text-xs text-faint">
                   Columnas que se leen: {help.columnas}
                 </p>
-                <button onClick={plantilla}
-                  className="text-xs font-bold text-brand hover:text-brand-hi inline-flex items-center gap-1">
+                <Button variant="link" size="xs" onClick={plantilla}
+                  >
                   <FileSpreadsheet className="w-3.5 h-3.5" /> Descargar plantilla de ejemplo
-                </button>
+                </Button>
               </div>
 
               <div>
@@ -240,56 +242,56 @@ export const ImportModal: React.FC<{
               )}
 
               <div className="border border-line rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-                <table className="w-full text-left text-xs">
+                <Table className="text-xs">
                   <caption className="sr-only">Detalle fila por fila de la importación</caption>
-                  <thead className="sticky top-0">
-                    <tr className="bg-canvas text-muted border-b border-line">
-                      <th scope="col" className="p-2 font-semibold w-12">FILA</th>
-                      <th scope="col" className="p-2 font-semibold w-28">ACCIÓN</th>
-                      <th scope="col" className="p-2 font-semibold">REGISTRO</th>
-                      <th scope="col" className="p-2 font-semibold">DETALLE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line/60">
+                  <TableHeader className="sticky top-0">
+                    <TableRow className="bg-canvas text-muted border-b border-line">
+                      <TableHead scope="col" className="p-2 font-semibold w-12">FILA</TableHead>
+                      <TableHead scope="col" className="p-2 font-semibold w-28">ACCIÓN</TableHead>
+                      <TableHead scope="col" className="p-2 font-semibold">REGISTRO</TableHead>
+                      <TableHead scope="col" className="p-2 font-semibold">DETALLE</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {resultado.detalle.map(d => (
-                      <tr key={d.fila} className="hover:bg-surface-2/40">
-                        <td className="p-2 text-faint tabular-nums">{d.fila}</td>
-                        <td className="p-2">
+                      <TableRow key={d.fila} className="hover:bg-surface-2/40">
+                        <TableCell className="p-2 text-faint tabular-nums">{d.fila}</TableCell>
+                        <TableCell className="p-2">
                           <span className={`px-1.5 py-0.5 rounded font-bold ${ACCION_ESTILO[d.accion]}`}>
                             {d.accion}
                           </span>
-                        </td>
-                        <td className="p-2 text-strong font-semibold">{d.clave ?? '—'}</td>
-                        <td className="p-2 text-muted">{d.nota ?? ''}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="p-2 text-strong font-semibold">{d.clave ?? '—'}</TableCell>
+                        <TableCell className="p-2 text-muted">{d.nota ?? ''}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
-          <button type="button" onClick={() => { if (!busy) onClose(); }} disabled={busy}
-            className="px-4 py-2 text-sm font-bold text-body hover:text-strong disabled:opacity-40">
+          <Button variant="ghost" type="button" onClick={() => { if (!busy) onClose(); }} disabled={busy}
+            >
             {applied ? 'Cerrar' : 'Cancelar'}
-          </button>
+          </Button>
 
           {!applied && !preview && (
-            <button type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}
-              className="px-4 py-2 bg-surface-3 hover:bg-surface-3 disabled:bg-surface-2 disabled:text-faint text-strong font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button variant="secondary" type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}
+              >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Revisando…</>
                     : <><AlertTriangle className="w-4 h-4" /> Previsualizar</>}
-            </button>
+            </Button>
           )}
 
           {!applied && preview && (
-            <button type="button" onClick={() => void aplicar()} disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button type="button" onClick={() => void aplicar()} disabled={busy}
+              >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando…</>
                     : <><CheckCircle2 className="w-4 h-4" /> Aplicar esta importación</>}
-            </button>
+            </Button>
           )}
         </div>
       </div>

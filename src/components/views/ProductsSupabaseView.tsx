@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Button } from '../ui/button';
 import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -203,10 +205,10 @@ export const ProductsSupabaseView: React.FC = () => {
               <ImportButton entity="productos" onImported={q.reload} />
             )}
             {editable && (
-              <button onClick={openCreate}
-                className="flex items-center gap-1.5 px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+              <Button size="sm" onClick={openCreate}
+                >
                 <Plus className="w-4 h-4" /> Nuevo producto
-              </button>
+              </Button>
             )}
           </>
         }
@@ -230,20 +232,20 @@ export const ProductsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Inventario de productos</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">PRODUCTO</th>
-                <th scope="col" className="p-3 font-semibold">CATEGORÍA</th>
-                <th scope="col" className="p-3 font-semibold text-right">COSTO</th>
-                <th scope="col" className="p-3 font-semibold text-right">PRECIO</th>
-                <th scope="col" className="p-3 font-semibold text-right">EXISTENCIA</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">PRODUCTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CATEGORÍA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">COSTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">PRECIO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">EXISTENCIA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={7} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={7}>
@@ -254,19 +256,19 @@ export const ProductsSupabaseView: React.FC = () => {
                 ) : q.rows.map(p => {
                   const low = p.stock <= p.min_stock;
                   return (
-                    <tr key={p.id} className="hover:bg-surface-2/40">
-                      <td className="p-3">
+                    <TableRow key={p.id} className="hover:bg-surface-2/40">
+                      <TableCell className="p-3">
                         <div className="font-bold text-strong">{p.name}</div>
                         <div className="text-xs text-faint">{p.code}</div>
-                      </td>
-                      <td className="p-3 text-muted">{p.category || '—'}</td>
-                      <td className="p-3 text-body text-right whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="p-3 text-muted">{p.category || '—'}</TableCell>
+                      <TableCell className="p-3 text-body text-right whitespace-nowrap">
                         {formatCents(p.cost_cents, symbol)}
-                      </td>
-                      <td className="p-3 font-bold text-brand-hi text-right whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="p-3 font-bold text-brand-hi text-right whitespace-nowrap">
                         {p.is_for_sale ? formatCents(p.price_cents, symbol) : 'Uso interno'}
-                      </td>
-                      <td className="p-3 text-right">
+                      </TableCell>
+                      <TableCell className="p-3 text-right">
                         <button
                           onClick={() => { if (editable) openAdjust(p); }}
                           disabled={!editable}
@@ -279,8 +281,8 @@ export const ProductsSupabaseView: React.FC = () => {
                           {p.stock} {p.unit}
                           {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
                         </button>
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="p-3">
                         {p.stock < 0 ? (
                           <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs inline-flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" /> Negativo
@@ -294,37 +296,37 @@ export const ProductsSupabaseView: React.FC = () => {
                             Normal
                           </span>
                         )}
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="p-3">
                         <div className="flex items-center justify-end gap-1">
                           {editable && (
-                            <button onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
+                            <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
                               title="Nombre, código, precio y unidad"
-                              className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                              >
                               <FileText className="w-4 h-4" />
-                            </button>
+                            </Button>
                           )}
                           {puedeBorrar && (
                             <>
-                              <button onClick={() => void alternarActivo(p)}
+                              <Button variant="ghost" size="icon-sm" onClick={() => void alternarActivo(p)}
                                 aria-label={`${p.is_active ? 'Desactivar' : 'Activar'} ${p.name}`}
                                 title={p.is_active ? 'Deja de ofrecerse en caja' : 'Vuelve a ofrecerse'}
-                                className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                                >
                                 {p.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
-                              </button>
-                              <button onClick={() => setBorrando(p)} aria-label={`Eliminar ${p.name}`}
-                                className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                              </Button>
+                              <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(p)} aria-label={`Eliminar ${p.name}`}
+                                >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
