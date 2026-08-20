@@ -325,10 +325,10 @@ export const ReceivablesSupabaseView: React.FC = () => {
               <ShieldCheck className="w-4 h-4 text-brand" />
               <h2 className="text-base font-bold text-strong">Clientes con crédito</h2>
             </div>
-            <button onClick={openCreditPicker}
-              className="px-3 py-2 bg-brand hover:bg-brand text-on-accent font-bold text-xs rounded-xl">
+            <Button size="sm" onClick={openCreditPicker}
+              >
               Autorizar crédito
-            </button>
+            </Button>
           </header>
           <HelpNote summary="Cómo funciona el cupo">
             Solo se cambia aquí: ningún otro camino puede tocarlo. Un cliente con

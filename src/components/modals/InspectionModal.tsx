@@ -96,10 +96,10 @@ const SignaturePad: React.FC<{ onChange: (dataUrl: string | null) => void }> = (
         aria-label="Firma del cliente"
         className="w-full h-32 bg-white rounded-xl border-2 border-dashed border-line-strong touch-none cursor-crosshair"
       />
-      <button type="button" onClick={clear}
-        className="text-xs font-bold text-muted hover:text-strong flex items-center gap-1">
+      <Button variant="ghost" size="xs" className="text-muted hover:text-strong" type="button" onClick={clear}
+        >
         <Eraser className="w-3.5 h-3.5" /> Borrar firma
-      </button>
+      </Button>
     </div>
   );
 };
@@ -378,10 +378,10 @@ export const InspectionModal: React.FC<{
                           </div>
                           <span className={`px-2 py-0.5 rounded text-xs font-bold ${sev.tone}`}>{sev.label}</span>
                           {!frozen && (
-                            <button onClick={() => void dropDamage(d.id)} aria-label={`Quitar daño en ${d.zone}`}
-                              className="p-1 text-faint hover:text-danger">
+                            <Button variant="ghost" size="icon-xs" className="text-faint hover:text-danger" onClick={() => void dropDamage(d.id)} aria-label={`Quitar daño en ${d.zone}`}
+                              >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </Button>
                           )}
                         </li>
                       );
@@ -408,10 +408,10 @@ export const InspectionModal: React.FC<{
                     <input aria-label="Detalle del daño" className={textInputClass}
                       value={damageNote} onChange={e => setDamageNote(e.target.value)}
                       placeholder="Detalle (opcional): tamaño, ubicación exacta…" />
-                    <button onClick={() => void submitDamage()} disabled={busy}
-                      className="px-4 py-2 bg-info hover:bg-info disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl">
+                    <Button className="bg-info hover:bg-info/90 text-on-accent" onClick={() => void submitDamage()} disabled={busy}
+                      >
                       Agregar daño
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

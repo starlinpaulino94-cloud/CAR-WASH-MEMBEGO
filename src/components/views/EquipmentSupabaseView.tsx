@@ -232,11 +232,11 @@ export const EquipmentSupabaseView: React.FC = () => {
                       </TableCell>
                       {canManage && (
                         <TableCell className="p-3 text-right">
-                          <button onClick={() => void openPanel(e)}
-                            className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body inline-flex items-center gap-1">
+                          <Button variant="secondary" size="xs" onClick={() => void openPanel(e)}
+                            >
                             <Wrench className="w-3.5 h-3.5" />
                             {e.status === 'mantenimiento' ? 'Cerrar' : 'Intervenir'}
-                          </button>
+                          </Button>
                         </TableCell>
                       )}
                     </TableRow>

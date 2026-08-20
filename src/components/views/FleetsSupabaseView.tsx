@@ -437,10 +437,10 @@ export const FleetsSupabaseView: React.FC = () => {
                         </div>
                       </div>
                       {canAssign && (
-                        <button onClick={() => void removeVehicle(v)}
-                          className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
+                        <Button variant="secondary" size="xs" className="text-muted" onClick={() => void removeVehicle(v)}
+                          >
                           Sacar
-                        </button>
+                        </Button>
                       )}
                     </li>
                   ))}
@@ -483,10 +483,10 @@ export const FleetsSupabaseView: React.FC = () => {
                             >
                             Cambiar
                           </Button>
-                          <button onClick={() => void removeRate(r)}
-                            className="ml-1 px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-muted">
+                          <Button variant="secondary" size="xs" className="ml-1 text-muted" onClick={() => void removeRate(r)}
+                            >
                             Retirar
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </li>

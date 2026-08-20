@@ -1021,11 +1021,11 @@ export const PosSupabaseView: React.FC = () => {
                 aria-label="Teléfono para buscar beneficios Membego"
                 className="flex-1 p-2 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
-              <button onClick={() => void checkMembego()} disabled={membegoBusy || !membegoPhone.trim()}
-                className="px-2.5 rounded-lg bg-warning/20 text-warning hover:bg-warning/30 disabled:opacity-40 text-xs font-bold flex items-center gap-1">
+              <Button variant="ghost" size="sm" className="bg-warning/20 text-warning hover:bg-warning/30 hover:text-warning" onClick={() => void checkMembego()} disabled={membegoBusy || !membegoPhone.trim()}
+                >
                 {membegoBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BadgeCheck className="w-3.5 h-3.5" />}
                 Membego
-              </button>
+              </Button>
             </div>
             {membegoSummary && (
               <div role="status" className="flex items-center gap-2 p-2 bg-warning/30 border border-warning/40 rounded-lg text-xs text-warning">

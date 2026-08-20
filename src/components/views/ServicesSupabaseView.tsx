@@ -280,14 +280,14 @@ export const ServicesSupabaseView: React.FC = () => {
                               aria-label={`Precio de ${s.name} para ${c.label}`}
                               className="w-20 bg-canvas border border-brand rounded p-1 text-right text-strong"
                             />
-                            <button onClick={() => void commit()} disabled={busy} aria-label="Guardar"
-                              className="p-1 text-success hover:text-success">
+                            <Button variant="ghost" size="icon-xs" className="text-success hover:text-success" onClick={() => void commit()} disabled={busy} aria-label="Guardar"
+                              >
                               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                            </button>
-                            <button onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
-                              className="p-1 text-faint hover:text-body">
+                            </Button>
+                            <Button variant="ghost" size="icon-xs" className="text-faint" onClick={() => setEditing(null)} disabled={busy} aria-label="Cancelar"
+                              >
                               <X className="w-3.5 h-3.5" />
-                            </button>
+                            </Button>
                           </span>
                         ) : (
                           <button

@@ -168,10 +168,10 @@ export const ImportModal: React.FC<{
           <h2 id={titleId} className="font-bold text-strong text-sm flex items-center gap-2">
             <Upload className="w-4 h-4 text-brand" /> Importar {help.titulo.toLowerCase()}
           </h2>
-          <button onClick={() => { if (!busy) onClose(); }} disabled={busy} aria-label="Cerrar"
-            className="p-1 text-muted hover:text-strong disabled:opacity-40">
+          <Button variant="ghost" size="icon-xs" onClick={() => { if (!busy) onClose(); }} disabled={busy} aria-label="Cerrar"
+            >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -287,11 +287,11 @@ export const ImportModal: React.FC<{
           )}
 
           {!applied && preview && (
-            <button type="button" onClick={() => void aplicar()} disabled={busy}
-              className="px-4 py-2 bg-brand hover:bg-brand disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button type="button" onClick={() => void aplicar()} disabled={busy}
+              >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Importando…</>
                     : <><CheckCircle2 className="w-4 h-4" /> Aplicar esta importación</>}
-            </button>
+            </Button>
           )}
         </div>
       </div>

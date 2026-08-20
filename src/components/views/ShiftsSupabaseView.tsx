@@ -178,10 +178,10 @@ export const ShiftsSupabaseView: React.FC = () => {
           >
           <ChevronRight className="w-4 h-4" />
         </Button>
-        <button onClick={() => setWeekStart(mondayOf(new Date()))}
-          className="ml-1 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+        <Button variant="secondary" size="sm" className="ml-1" onClick={() => setWeekStart(mondayOf(new Date()))}
+          >
           Esta semana
-        </button>
+        </Button>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -198,10 +198,10 @@ export const ShiftsSupabaseView: React.FC = () => {
                   </p>
                 </div>
                 {canManage && (
-                  <button onClick={() => openForm(day)} aria-label={`Programar turno el ${DAY_LABELS[i]}`}
-                    className="p-1.5 rounded-lg bg-surface-2 hover:bg-surface-3 text-body">
+                  <Button variant="secondary" size="icon-sm" onClick={() => openForm(day)} aria-label={`Programar turno el ${DAY_LABELS[i]}`}
+                    >
                     <Plus className="w-4 h-4" />
-                  </button>
+                  </Button>
                 )}
               </header>
 
@@ -222,10 +222,10 @@ export const ShiftsSupabaseView: React.FC = () => {
                         {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
                       </div>
                       {canManage && (
-                        <button onClick={() => void remove(s)} aria-label={`Retirar turno de ${s.full_name}`}
-                          className="p-1.5 text-faint hover:text-danger rounded-lg hover:bg-surface-2">
+                        <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(s)} aria-label={`Retirar turno de ${s.full_name}`}
+                          >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       )}
                     </li>
                   ))}
