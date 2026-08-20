@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -235,57 +236,57 @@ export const PromotionsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Promociones</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">CÓDIGO</th>
-                <th scope="col" className="p-3 font-semibold">DESCUENTO</th>
-                <th scope="col" className="p-3 font-semibold">APLICA A</th>
-                <th scope="col" className="p-3 font-semibold">VIGENCIA</th>
-                <th scope="col" className="p-3 font-semibold text-right">USOS</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">CÓDIGO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">DESCUENTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">APLICA A</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">VIGENCIA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">USOS</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={cols} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={cols}>Todavía no hay promociones.</EmptyRow>
                 ) : rows.map(p => (
-                  <tr key={p.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={p.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <div className="font-bold text-strong tabular-nums">{p.code}</div>
                       <div className="text-xs text-faint">{p.name}</div>
-                    </td>
-                    <td className="p-3 font-bold text-success tabular-nums">{valueOf(p)}</td>
-                    <td className="p-3 text-muted">
+                    </TableCell>
+                    <TableCell className="p-3 font-bold text-success tabular-nums">{valueOf(p)}</TableCell>
+                    <TableCell className="p-3 text-muted">
                       <div>{scopeOf(p)}</div>
                       {p.min_purchase_cents > 0 && (
                         <div className="text-xs text-faint">
                           desde {formatCents(p.min_purchase_cents, symbol)}
                         </div>
                       )}
-                    </td>
-                    <td className="p-3 text-muted tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted tabular-nums">
                       <div>{p.starts_on} {p.ends_on ? `→ ${p.ends_on}` : '→ sin fin'}</div>
                       <div className="text-xs text-faint">{daysOf(p)}</div>
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">
                       {p.uses_count}{p.max_uses ? ` / ${p.max_uses}` : ''}
                       {p.max_uses_per_customer && (
                         <div className="text-xs text-faint">
                           máx. {p.max_uses_per_customer} por cliente
                         </div>
                       )}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       {p.is_active
                         ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
                         : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
                         <Button variant="secondary" size="xs" onClick={() => openEdit(p)}
                           >
                           Editar
@@ -294,12 +295,12 @@ export const PromotionsSupabaseView: React.FC = () => {
                           >
                           {p.is_active ? 'Desactivar' : 'Activar'}
                         </Button>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

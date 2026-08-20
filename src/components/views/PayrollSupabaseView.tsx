@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Wallet, Plus, HandCoins, CheckCircle2, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -324,48 +325,48 @@ export const PayrollSupabaseView: React.FC = () => {
       {/* ------------------------------------------------------ Periodos */}
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Nóminas</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">PERIODO</th>
-                <th scope="col" className="p-3 font-semibold text-right">BRUTO</th>
-                <th scope="col" className="p-3 font-semibold text-right">DEDUCCIONES</th>
-                <th scope="col" className="p-3 font-semibold text-right">NETO</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">PERIODO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">BRUTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">DEDUCCIONES</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">NETO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={5} />
                 : periods.length === 0 ? (
                   <EmptyRow cols={5}>Todavía no se ha calculado ninguna nómina.</EmptyRow>
                 ) : periods.map(p => (
-                  <tr key={p.id}
+                  <TableRow key={p.id}
                     className={`hover:bg-surface-2/40 ${selected?.id === p.id ? 'bg-surface-2/60' : ''}`}>
-                    <td className="p-3">
+                    <TableCell className="p-3">
                       <button onClick={() => setSelected(p)}
                         className="font-bold text-strong hover:text-brand-hi tabular-nums">
                         {p.period_from} — {p.period_to}
                       </button>
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">
                       {formatCents(p.gross_cents, symbol)}
-                    </td>
-                    <td className="p-3 text-right text-muted tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-muted tabular-nums">
                       −{formatCents(p.deductions_cents, symbol)}
-                    </td>
-                    <td className="p-3 text-right font-bold text-strong tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right font-bold text-strong tabular-nums">
                       {formatCents(p.net_cents, symbol)}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <span className={`font-bold px-2 py-0.5 rounded text-xs ${ESTADO[p.status].clase}`}>
                         {ESTADO[p.status].label}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -416,58 +417,58 @@ export const PayrollSupabaseView: React.FC = () => {
           )}
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <Table className="text-xs">
               <caption className="sr-only">Partidas de la nómina</caption>
-              <thead>
-                <tr className="border-b border-line text-muted">
-                  <th scope="col" className="p-2 font-semibold">EMPLEADO</th>
-                  <th scope="col" className="p-2 font-semibold text-right">BASE</th>
-                  <th scope="col" className="p-2 font-semibold text-right">HORAS</th>
-                  <th scope="col" className="p-2 font-semibold text-right">COMISIONES</th>
-                  <th scope="col" className="p-2 font-semibold text-right">BONO</th>
-                  <th scope="col" className="p-2 font-semibold text-right">ADELANTOS</th>
-                  <th scope="col" className="p-2 font-semibold text-right">DESCUENTOS</th>
-                  <th scope="col" className="p-2 font-semibold text-right">NETO</th>
-                  {editable && <th scope="col" className="p-2 font-semibold" />}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
+              <TableHeader>
+                <TableRow className="border-b border-line text-muted">
+                  <TableHead scope="col" className="p-2 font-semibold">EMPLEADO</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">BASE</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">HORAS</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">COMISIONES</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">BONO</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">ADELANTOS</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">DESCUENTOS</TableHead>
+                  <TableHead scope="col" className="p-2 font-semibold text-right">NETO</TableHead>
+                  {editable && <TableHead scope="col" className="p-2 font-semibold" />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {items.map(it => (
-                  <tr key={it.id} className="hover:bg-surface-2/40">
-                    <td className="p-2 font-bold text-strong">{it.full_name}</td>
-                    <td className="p-2 text-right text-body tabular-nums">
+                  <TableRow key={it.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-2 font-bold text-strong">{it.full_name}</TableCell>
+                    <TableCell className="p-2 text-right text-body tabular-nums">
                       {formatCents(it.base_cents, symbol)}
-                    </td>
-                    <td className="p-2 text-right text-muted tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right text-muted tabular-nums">
                       {it.payroll_type === 'por_hora' ? horas(it.worked_minutes) : '—'}
-                    </td>
-                    <td className="p-2 text-right text-body tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right text-body tabular-nums">
                       {formatCents(it.commissions_cents, symbol)}
-                    </td>
-                    <td className="p-2 text-right text-success tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right text-success tabular-nums">
                       {it.bonus_cents > 0 ? formatCents(it.bonus_cents, symbol) : '—'}
-                    </td>
-                    <td className="p-2 text-right text-warning tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right text-warning tabular-nums">
                       {it.advances_cents > 0 ? `−${formatCents(it.advances_cents, symbol)}` : '—'}
-                    </td>
-                    <td className="p-2 text-right text-warning tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right text-warning tabular-nums">
                       {it.deductions_cents > 0 ? `−${formatCents(it.deductions_cents, symbol)}` : '—'}
-                    </td>
-                    <td className="p-2 text-right font-bold text-strong tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-2 text-right font-bold text-strong tabular-nums">
                       {formatCents(it.net_cents, symbol)}
-                    </td>
+                    </TableCell>
                     {editable && (
-                      <td className="p-2 text-right">
+                      <TableCell className="p-2 text-right">
                         <Button variant="secondary" size="xs" onClick={() => openAdjust(it)}
                           >
                           Ajustar
                         </Button>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </section>
       )}

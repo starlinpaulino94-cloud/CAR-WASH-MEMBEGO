@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Wrench, Plus, AlertTriangle, CheckCircle2, History, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -179,19 +180,19 @@ export const EquipmentSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Equipos</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">EQUIPO</th>
-                <th scope="col" className="p-3 font-semibold">SERIE</th>
-                <th scope="col" className="p-3 font-semibold">PRÓXIMA REVISIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">MANTENIMIENTO</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">EQUIPO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">SERIE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">PRÓXIMA REVISIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">MANTENIMIENTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={canManage ? 6 : 5} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 6 : 5}>
@@ -200,49 +201,49 @@ export const EquipmentSupabaseView: React.FC = () => {
                 ) : q.rows.map(e => {
                   const due = e.next_service_at !== null && e.next_service_at <= today;
                   return (
-                    <tr key={e.id} className="hover:bg-surface-2/40">
-                      <td className="p-3">
+                    <TableRow key={e.id} className="hover:bg-surface-2/40">
+                      <TableCell className="p-3">
                         <div className="font-bold text-strong">{e.name}</div>
                         <div className="text-xs text-faint">
                           {e.code}{e.brand && ` · ${e.brand}`}{e.model && ` ${e.model}`}
                         </div>
-                      </td>
-                      <td className="p-3 text-muted">{e.serial_number ?? '—'}</td>
-                      <td className="p-3 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="p-3 text-muted">{e.serial_number ?? '—'}</TableCell>
+                      <TableCell className="p-3 whitespace-nowrap">
                         {e.next_service_at ? (
                           <span className={due ? 'text-warning font-bold' : 'text-muted'}>
                             {due && <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />}
                             {new Date(e.next_service_at + 'T00:00:00').toLocaleDateString('es-DO')}
                           </span>
                         ) : <span className="text-faint">—</span>}
-                      </td>
-                      <td className="p-3 text-right text-body tabular-nums whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="p-3 text-right text-body tabular-nums whitespace-nowrap">
                         {formatCents(e.maintenance_cents, symbol)}
                         {e.downtime_minutes > 0 && (
                           <div className="text-xs text-faint">
                             {Math.round(e.downtime_minutes / 60)} h fuera
                           </div>
                         )}
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="p-3">
                         <span className={`px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap ${STATUS_TONE[e.status]}`}>
                           {STATUS_LABEL[e.status]}
                         </span>
-                      </td>
+                      </TableCell>
                       {canManage && (
-                        <td className="p-3 text-right">
+                        <TableCell className="p-3 text-right">
                           <button onClick={() => void openPanel(e)}
                             className="px-2 py-1 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-body inline-flex items-center gap-1">
                             <Wrench className="w-3.5 h-3.5" />
                             {e.status === 'mantenimiento' ? 'Cerrar' : 'Intervenir'}
                           </button>
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   );
                 })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

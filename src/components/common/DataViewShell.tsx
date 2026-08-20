@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '../ui/button';
+import { TableCell, TableRow } from '../ui/table';
 import { AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, HelpCircle } from 'lucide-react';
 
 /**
@@ -138,15 +139,15 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
 export const SkeletonRows: React.FC<{ rows?: number; cols: number }> = ({ rows = 6, cols }) => (
   <>
     {Array.from({ length: rows }).map((_, i) => (
-      <tr key={i} aria-hidden="true">
-        <td colSpan={cols} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></td>
-      </tr>
+      <TableRow key={i} aria-hidden="true">
+        <TableCell colSpan={cols} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></TableCell>
+      </TableRow>
     ))}
   </>
 );
 
 export const EmptyRow: React.FC<{ cols: number; children: React.ReactNode }> = ({ cols, children }) => (
-  <tr><td colSpan={cols} className="p-10 text-center text-faint italic">{children}</td></tr>
+  <TableRow><TableCell colSpan={cols} className="p-10 text-center whitespace-normal text-faint italic">{children}</TableCell></TableRow>
 );
 
 export const Pagination: React.FC<{

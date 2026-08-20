@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import {
   CreditCard, Lock, Loader2, AlertCircle, RefreshCw, ArrowDownLeft,
@@ -410,32 +411,32 @@ export const CashSupabaseView: React.FC = () => {
               <p className="text-xs text-faint italic py-4 text-center">Sin movimientos todavía</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-muted border-b border-line">
-                      <th className="py-2 pr-3 font-semibold">HORA</th>
-                      <th className="py-2 pr-3 font-semibold">CONCEPTO</th>
-                      <th className="py-2 pr-3 font-semibold">MÉTODO</th>
-                      <th className="py-2 text-right font-semibold">IMPORTE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line/60">
+                <Table className="text-xs">
+                  <TableHeader>
+                    <TableRow className="text-muted border-b border-line">
+                      <TableHead className="py-2 pr-3 font-semibold">HORA</TableHead>
+                      <TableHead className="py-2 pr-3 font-semibold">CONCEPTO</TableHead>
+                      <TableHead className="py-2 pr-3 font-semibold">MÉTODO</TableHead>
+                      <TableHead className="py-2 text-right font-semibold">IMPORTE</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {movements.map(m => (
-                      <tr key={m.id}>
-                        <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                      <TableRow key={m.id}>
+                        <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                           {new Date(m.created_at).toLocaleTimeString('es-DO')}
-                        </td>
-                        <td className="py-2 pr-3 text-body">{m.reason}</td>
-                        <td className="py-2 pr-3 text-muted uppercase">{m.method}</td>
-                        <td className={`py-2 text-right font-bold whitespace-nowrap ${
+                        </TableCell>
+                        <TableCell className="py-2 pr-3 text-body">{m.reason}</TableCell>
+                        <TableCell className="py-2 pr-3 text-muted uppercase">{m.method}</TableCell>
+                        <TableCell className={`py-2 text-right font-bold whitespace-nowrap ${
                           m.type === 'inflow' ? 'text-success' : 'text-danger'
                         }`}>
                           {m.type === 'inflow' ? '+' : '−'}{formatCents(m.amount_cents, symbol)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -451,38 +452,38 @@ export const CashSupabaseView: React.FC = () => {
           <p className="text-xs text-faint italic py-4 text-center">Aún no hay turnos cerrados</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-muted border-b border-line">
-                  <th className="py-2 pr-3 font-semibold">APERTURA</th>
-                  <th className="py-2 pr-3 font-semibold">CIERRE</th>
-                  <th className="py-2 pr-3 font-semibold">ESPERADO</th>
-                  <th className="py-2 pr-3 font-semibold">CONTADO</th>
-                  <th className="py-2 text-right font-semibold">DIFERENCIA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow className="text-muted border-b border-line">
+                  <TableHead className="py-2 pr-3 font-semibold">APERTURA</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">CIERRE</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">ESPERADO</TableHead>
+                  <TableHead className="py-2 pr-3 font-semibold">CONTADO</TableHead>
+                  <TableHead className="py-2 text-right font-semibold">DIFERENCIA</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {history.filter(h => h.status === 'closed').map(h => (
-                  <tr key={h.id}>
-                    <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                  <TableRow key={h.id}>
+                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                       {new Date(h.opened_at).toLocaleString('es-DO')}
-                    </td>
-                    <td className="py-2 pr-3 text-muted whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
                       {h.closed_at ? new Date(h.closed_at).toLocaleString('es-DO') : '—'}
-                    </td>
-                    <td className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</td>
-                    <td className="py-2 pr-3 text-body">
+                    </TableCell>
+                    <TableCell className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</TableCell>
+                    <TableCell className="py-2 pr-3 text-body">
                       {h.counted_cash_cents !== null ? formatCents(h.counted_cash_cents, symbol) : '—'}
-                    </td>
-                    <td className={`py-2 text-right font-bold ${
+                    </TableCell>
+                    <TableCell className={`py-2 text-right font-bold ${
                       (h.difference_cents ?? 0) === 0 ? 'text-success' : 'text-danger'
                     }`}>
                       {h.difference_cents !== null ? formatCents(h.difference_cents, symbol) : '—'}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

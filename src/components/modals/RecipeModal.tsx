@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { X, Trash2, Loader2, FlaskConical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -132,44 +133,44 @@ export const RecipeModal: React.FC<{
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line text-muted text-xs">
-                    <th className="py-2 pr-3 font-semibold">INSUMO</th>
-                    <th className="py-2 pr-3 font-semibold">CATEGORÍA</th>
-                    <th className="py-2 pr-3 font-semibold text-right">CANTIDAD</th>
-                    <th className="py-2 pr-3 font-semibold text-right">COSTO</th>
-                    <th className="py-2" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted text-xs">
+                    <TableHead className="py-2 pr-3 font-semibold">INSUMO</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold">CATEGORÍA</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold text-right">CANTIDAD</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold text-right">COSTO</TableHead>
+                    <TableHead className="py-2" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {lines.map(l => (
-                    <tr key={l.id}>
-                      <td className="py-2 pr-3">
+                    <TableRow key={l.id}>
+                      <TableCell className="py-2 pr-3">
                         <div className="font-bold text-strong">{l.products?.name}</div>
                         <div className="text-xs text-faint">{l.products?.code}</div>
-                      </td>
-                      <td className="py-2 pr-3 text-body">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-body">
                         {l.vehicle_category
                           ? CATEGORIES.find(c => c.id === l.vehicle_category)?.label ?? l.vehicle_category
                           : <span className="text-faint">Todas</span>}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-strong">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-right tabular-nums text-strong">
                         {l.quantity} {l.products?.unit}
-                      </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-body">
+                      </TableCell>
+                      <TableCell className="py-2 pr-3 text-right tabular-nums text-body">
                         {formatCents(Math.round(l.quantity * (l.products?.cost_cents ?? 0)), symbol)}
-                      </td>
-                      <td className="py-2 text-right">
+                      </TableCell>
+                      <TableCell className="py-2 text-right">
                         <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(l.id)} aria-label="Quitar renglón"
                           >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 

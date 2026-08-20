@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, Loader2, Car, BadgeCheck, Store, Network, Pencil, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -252,20 +253,20 @@ export const CustomersSupabaseView: React.FC = () => {
 
           <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <Table className="text-xs">
                 <caption className="sr-only">Clientes registrados</caption>
-                <thead>
-                  <tr className="border-b border-line text-muted bg-canvas/50">
-                    <th scope="col" className="p-3 font-semibold">NOMBRE</th>
-                    <th scope="col" className="p-3 font-semibold">CONTACTO</th>
-                    <th scope="col" className="p-3 font-semibold">PROCEDENCIA</th>
-                    <th scope="col" className="p-3 font-semibold">MEMBEGO</th>
-                    <th scope="col" className="p-3 font-semibold text-right">VISITAS</th>
-                    <th scope="col" className="p-3 font-semibold text-right">CONSUMO</th>
-                    <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted bg-canvas/50">
+                    <TableHead scope="col" className="p-3 font-semibold">NOMBRE</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">CONTACTO</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">PROCEDENCIA</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold">MEMBEGO</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold text-right">VISITAS</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold text-right">CONSUMO</TableHead>
+                    <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {q.loading ? <SkeletonRows cols={7} />
                     : q.rows.length === 0 ? (
                       <EmptyRow cols={7}>
@@ -276,8 +277,8 @@ export const CustomersSupabaseView: React.FC = () => {
                           : 'Todavía no hay clientes registrados.'}
                       </EmptyRow>
                     ) : q.rows.map(c => (
-                      <tr key={c.id} className="hover:bg-surface-2/40">
-                        <td className="p-3">
+                      <TableRow key={c.id} className="hover:bg-surface-2/40">
+                        <TableCell className="p-3">
                           <div className="font-bold text-strong flex items-center gap-1.5">
                             {c.name}
                             {/* Archivado se dice, no se insinúa: si no, alguien
@@ -289,12 +290,12 @@ export const CustomersSupabaseView: React.FC = () => {
                             )}
                           </div>
                           {c.tax_id && <div className="text-xs text-faint">RNC {c.tax_id}</div>}
-                        </td>
-                        <td className="p-3 text-muted">
+                        </TableCell>
+                        <TableCell className="p-3 text-muted">
                           <div>{c.phone || '—'}</div>
                           {c.email && <div className="text-xs truncate max-w-[180px]">{c.email}</div>}
-                        </td>
-                        <td className="p-3">
+                        </TableCell>
+                        <TableCell className="p-3">
                           {c.origin === 'membego'
                             ? <span className="inline-flex items-center gap-1 text-xs bg-warning/15 text-warning px-2 py-0.5 rounded font-bold">
                                 <Network className="w-3 h-3" /> Membego
@@ -302,8 +303,8 @@ export const CustomersSupabaseView: React.FC = () => {
                             : <span className="inline-flex items-center gap-1 text-xs bg-success/15 text-success px-2 py-0.5 rounded font-bold">
                                 <Store className="w-3 h-3" /> Car wash
                               </span>}
-                        </td>
-                        <td className="p-3">
+                        </TableCell>
+                        <TableCell className="p-3">
                           {c.membego_customer_id ? (
                             <button onClick={() => void openMembego(c)}
                               className="inline-flex items-center gap-1 text-xs bg-warning/20 text-warning hover:bg-warning/30 px-2 py-0.5 rounded font-bold">
@@ -311,12 +312,12 @@ export const CustomersSupabaseView: React.FC = () => {
                               {c.membego_tier || 'Membego'}
                             </button>
                           ) : <span className="text-faint">Local</span>}
-                        </td>
-                        <td className="p-3 text-body font-bold text-right tabular-nums">{c.total_visits}</td>
-                        <td className="p-3 text-brand-hi font-bold text-right whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="p-3 text-body font-bold text-right tabular-nums">{c.total_visits}</TableCell>
+                        <TableCell className="p-3 text-brand-hi font-bold text-right whitespace-nowrap">
                           {formatCents(c.total_spent_cents, symbol)}
-                        </td>
-                        <td className="p-3">
+                        </TableCell>
+                        <TableCell className="p-3">
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicion(c)} aria-label={`Editar ${c.name}`}
                               >
@@ -338,11 +339,11 @@ export const CustomersSupabaseView: React.FC = () => {
                               </>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
             <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
               pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

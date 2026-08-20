@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { HandCoins, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -244,19 +245,19 @@ export const ReceivablesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Cuentas por cobrar</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">CLIENTE</th>
-                <th scope="col" className="p-3 font-semibold">FACTURA</th>
-                <th scope="col" className="p-3 font-semibold">VENCE</th>
-                <th scope="col" className="p-3 font-semibold text-right">SALDO</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canCollect && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">FACTURA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">VENCE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">SALDO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canCollect && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={cols} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={cols}>
@@ -267,26 +268,26 @@ export const ReceivablesSupabaseView: React.FC = () => {
                   const late = daysLate(r.due_on);
                   const overdue = r.status === 'pendiente' && late > 0;
                   return (
-                    <tr key={r.id} className="hover:bg-surface-2/40">
-                      <td className="p-3 font-bold text-strong">{r.customer_name}</td>
-                      <td className="p-3 text-muted">{r.invoice_number}</td>
-                      <td className="p-3">
+                    <TableRow key={r.id} className="hover:bg-surface-2/40">
+                      <TableCell className="p-3 font-bold text-strong">{r.customer_name}</TableCell>
+                      <TableCell className="p-3 text-muted">{r.invoice_number}</TableCell>
+                      <TableCell className="p-3">
                         <div className={overdue ? 'text-danger font-bold' : 'text-muted'}>{r.due_on}</div>
                         {r.status === 'pendiente' && (
                           <div className="text-xs text-faint">
                             {late > 0 ? `${late} día(s) de atraso` : `faltan ${-late} día(s)`}
                           </div>
                         )}
-                      </td>
-                      <td className="p-3 text-right">
+                      </TableCell>
+                      <TableCell className="p-3 text-right">
                         <div className="font-bold text-strong">{formatCents(balance, symbol)}</div>
                         {r.paid_cents > 0 && (
                           <div className="text-xs text-faint">
                             abonado {formatCents(r.paid_cents, symbol)} de {formatCents(r.total_cents, symbol)}
                           </div>
                         )}
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="p-3">
                         {r.status === 'pagada'
                           ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Saldada</span>
                           : r.status === 'anulada'
@@ -294,22 +295,22 @@ export const ReceivablesSupabaseView: React.FC = () => {
                             : overdue
                               ? <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Vencida</span>
                               : <span className="bg-warning/20 text-warning font-bold px-2 py-0.5 rounded text-xs">Pendiente</span>}
-                      </td>
+                      </TableCell>
                       {canCollect && (
-                        <td className="p-3 text-right">
+                        <TableCell className="p-3 text-right">
                           {r.status === 'pendiente' && (
                             <button onClick={() => openPay(r)}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-lg">
                               <HandCoins className="w-3.5 h-3.5" /> Cobrar
                             </button>
                           )}
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   );
                 })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

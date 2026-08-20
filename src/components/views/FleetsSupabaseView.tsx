@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, Car, Tags, FileText, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -311,44 +312,44 @@ export const FleetsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Flotillas</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">FLOTILLA</th>
-                <th scope="col" className="p-3 font-semibold">FACTURA A</th>
-                <th scope="col" className="p-3 font-semibold text-right">VEHÍCULOS</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">FLOTILLA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">FACTURA A</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">VEHÍCULOS</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={cols} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={cols}>
                     {q.searchInput ? 'Ninguna flotilla coincide.' : 'Todavía no hay flotillas registradas.'}
                   </EmptyRow>
                 ) : q.rows.map(f => (
-                  <tr key={f.id} className="hover:bg-surface-2/40">
-                    <td className="p-3">
+                  <TableRow key={f.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3">
                       <button onClick={() => setDetail(f)}
                         className="font-bold text-strong hover:text-brand-hi text-left">
                         {f.name}
                       </button>
                       {f.code && <div className="text-xs text-faint">{f.code}</div>}
-                    </td>
-                    <td className="p-3 text-muted">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted">
                       <div>{f.customer_name}</div>
                       {f.po_reference && <div className="text-xs text-faint">OC {f.po_reference}</div>}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">{f.vehicle_count}</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">{f.vehicle_count}</TableCell>
+                    <TableCell className="p-3">
                       {f.is_active
                         ? <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Activa</span>
                         : <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactiva</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
                         <Button variant="secondary" size="xs" onClick={() => openEdit(f)}
                           >
                           Editar
@@ -357,12 +358,12 @@ export const FleetsSupabaseView: React.FC = () => {
                           >
                           {f.is_active ? 'Desactivar' : 'Activar'}
                         </Button>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />
@@ -497,27 +498,27 @@ export const FleetsSupabaseView: React.FC = () => {
 
           {statement && statement.by_vehicle.length > 0 && (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <Table className="text-xs">
                 <caption className="sr-only">Consumo por vehículo</caption>
-                <thead>
-                  <tr className="border-b border-line text-muted">
-                    <th scope="col" className="p-2 font-semibold">PLACA</th>
-                    <th scope="col" className="p-2 font-semibold text-right">SERVICIOS</th>
-                    <th scope="col" className="p-2 font-semibold text-right">CONSUMO</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line/60">
+                <TableHeader>
+                  <TableRow className="border-b border-line text-muted">
+                    <TableHead scope="col" className="p-2 font-semibold">PLACA</TableHead>
+                    <TableHead scope="col" className="p-2 font-semibold text-right">SERVICIOS</TableHead>
+                    <TableHead scope="col" className="p-2 font-semibold text-right">CONSUMO</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {statement.by_vehicle.map(v => (
-                    <tr key={v.plate}>
-                      <td className="p-2 font-bold text-strong">{v.plate}</td>
-                      <td className="p-2 text-right text-body tabular-nums">{v.services}</td>
-                      <td className="p-2 text-right text-body tabular-nums">
+                    <TableRow key={v.plate}>
+                      <TableCell className="p-2 font-bold text-strong">{v.plate}</TableCell>
+                      <TableCell className="p-2 text-right text-body tabular-nums">{v.services}</TableCell>
+                      <TableCell className="p-2 text-right text-body tabular-nums">
                         {formatCents(v.total_cents, symbol)}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </section>

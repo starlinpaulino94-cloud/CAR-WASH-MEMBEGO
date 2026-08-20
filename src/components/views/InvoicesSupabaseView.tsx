@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import {
   Receipt, Search, Printer, Ban, AlertCircle, RefreshCw, Loader2,
@@ -254,40 +255,40 @@ export const InvoicesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <Table className="text-xs">
             <caption className="sr-only">Historial de comprobantes emitidos</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">COMPROBANTE</th>
-                <th scope="col" className="p-3 font-semibold">FECHA</th>
-                <th scope="col" className="p-3 font-semibold">CLIENTE</th>
-                <th scope="col" className="p-3 font-semibold">NCF</th>
-                <th scope="col" className="p-3 font-semibold text-right">TOTAL</th>
-                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">COMPROBANTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">FECHA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">NCF</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">TOTAL</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} aria-hidden="true">
-                    <td colSpan={6} className="p-3">
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell colSpan={6} className="p-3">
                       <div className="h-5 bg-surface-2/60 rounded animate-pulse" />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-10 text-center text-faint italic">
+                <TableRow>
+                  <TableCell colSpan={6} className="p-10 text-center text-faint italic">
                     {search || kind !== 'all'
                       ? 'Ningún comprobante coincide con el filtro.'
                       : 'Todavía no se ha emitido ningún comprobante.'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : rows.map(inv => {
                 const isCredit = Boolean(inv.credits_invoice_id);
                 return (
-                  <tr key={inv.id} className={`hover:bg-surface-2/40 transition-colors ${inv.is_annulled ? 'opacity-60' : ''}`}>
-                    <td className="p-3">
+                  <TableRow key={inv.id} className={`hover:bg-surface-2/40 transition-colors ${inv.is_annulled ? 'opacity-60' : ''}`}>
+                    <TableCell className="p-3">
                       <div className="font-bold text-brand-hi">{inv.invoice_number}</div>
                       {isCredit && (
                         <span className="text-xs bg-warning/20 text-warning border border-warning/30 px-1.5 py-0.5 rounded font-bold">
@@ -299,23 +300,23 @@ export const InvoicesSupabaseView: React.FC = () => {
                           ANULADA
                         </span>
                       )}
-                    </td>
-                    <td className="p-3 text-muted whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted whitespace-nowrap">
                       {new Date(inv.created_at).toLocaleString('es-DO')}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="text-strong font-medium">{inv.customer_name}</div>
                       {inv.vehicle_plate && (
                         <div className="text-xs text-faint">{inv.vehicle_plate}</div>
                       )}
-                    </td>
-                    <td className="p-3 text-body font-mono text-xs">
+                    </TableCell>
+                    <TableCell className="p-3 text-body font-mono text-xs">
                       {inv.ncf ?? <span className="text-faint">Sin NCF</span>}
-                    </td>
-                    <td className={`p-3 font-bold text-right whitespace-nowrap ${isCredit ? 'text-warning' : 'text-strong'}`}>
+                    </TableCell>
+                    <TableCell className={`p-3 font-bold text-right whitespace-nowrap ${isCredit ? 'text-warning' : 'text-strong'}`}>
                       {isCredit ? '−' : ''}{formatCents(inv.total_cents, symbol)}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => setTicket(inv)}
@@ -334,12 +335,12 @@ export const InvoicesSupabaseView: React.FC = () => {
                           </button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-line text-xs">

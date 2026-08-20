@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { ShieldCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -110,40 +111,40 @@ export const ReportsSupabaseView: React.FC = () => {
 
         <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <Table className="text-xs">
               <caption className="sr-only">Eventos auditados</caption>
-              <thead>
-                <tr className="border-b border-line text-muted bg-canvas/50">
-                  <th scope="col" className="p-3 font-semibold">CUÁNDO</th>
-                  <th scope="col" className="p-3 font-semibold">ACCIÓN</th>
-                  <th scope="col" className="p-3 font-semibold">DETALLE</th>
-                  <th scope="col" className="p-3 font-semibold">QUIÉN</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line/60">
+              <TableHeader>
+                <TableRow className="border-b border-line text-muted bg-canvas/50">
+                  <TableHead scope="col" className="p-3 font-semibold">CUÁNDO</TableHead>
+                  <TableHead scope="col" className="p-3 font-semibold">ACCIÓN</TableHead>
+                  <TableHead scope="col" className="p-3 font-semibold">DETALLE</TableHead>
+                  <TableHead scope="col" className="p-3 font-semibold">QUIÉN</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {q.loading ? <SkeletonRows cols={4} />
                   : q.rows.length === 0 ? (
                     <EmptyRow cols={4}>
                       {q.searchInput ? 'Ningún evento coincide con la búsqueda.' : 'Todavía no hay eventos registrados.'}
                     </EmptyRow>
                   ) : q.rows.map(log => (
-                    <tr key={log.id} className="hover:bg-surface-2/40 align-top">
-                      <td className="p-3 text-faint whitespace-nowrap">
+                    <TableRow key={log.id} className="hover:bg-surface-2/40 align-top">
+                      <TableCell className="p-3 text-faint whitespace-nowrap">
                         {new Date(log.occurred_at).toLocaleString('es-DO')}
-                      </td>
-                      <td className="p-3">
+                      </TableCell>
+                      <TableCell className="p-3">
                         <span className="font-bold text-brand-hi whitespace-nowrap">{log.action}</span>
                         <div className="text-xs text-faint">{log.entity}</div>
-                      </td>
-                      <td className="p-3 text-body">{log.details}</td>
-                      <td className="p-3 text-muted whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="p-3 text-body">{log.details}</TableCell>
+                      <TableCell className="p-3 text-muted whitespace-nowrap">
                         {log.actor_name || '—'}
                         {log.actor_role && <div className="text-xs text-faint uppercase">{log.actor_role}</div>}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
             pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

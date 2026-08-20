@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { X, BookOpen, Layers, GitBranch, Database, Shield, Cpu, AlertTriangle, CheckCircle, FileText, Server } from 'lucide-react';
 
@@ -200,24 +201,24 @@ export const PhaseArchitectureReportModal: React.FC<Props> = ({ isOpen, onClose 
             <div className="space-y-4">
               <h3 className="text-base font-bold text-strong border-b border-line pb-2">6. Matriz de Roles y Permisos</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-line-strong text-muted bg-surface-2/80">
-                      <th className="p-2">Rol</th>
-                      <th className="p-2">Llegada & Órdenes</th>
-                      <th className="p-2">POS & Cobro</th>
-                      <th className="p-2">Caja</th>
-                      <th className="p-2">Reportes</th>
-                      <th className="p-2">Configuración</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    <tr><td className="p-2 font-bold text-brand">Propietario</td><td className="p-2">Full</td><td className="p-2">Full</td><td className="p-2">Full</td><td className="p-2">Full</td><td className="p-2">Full</td></tr>
-                    <tr><td className="p-2 font-bold text-success">Administrador</td><td className="p-2">Full</td><td className="p-2">Full</td><td className="p-2">Full</td><td className="p-2">Operativo</td><td className="p-2">Limitado</td></tr>
-                    <tr><td className="p-2 font-bold text-warning">Cajero</td><td className="p-2">Ver / Crear</td><td className="p-2">Full</td><td className="p-2">Turno Propio</td><td className="p-2">Sin Acceso</td><td className="p-2">Sin Acceso</td></tr>
-                    <tr><td className="p-2 font-bold text-info">Operario/Lavador</td><td className="p-2">Asignados</td><td className="p-2">Sin Acceso</td><td className="p-2">Sin Acceso</td><td className="p-2">Sin Acceso</td><td className="p-2">Sin Acceso</td></tr>
-                  </tbody>
-                </table>
+                <Table className="text-xs">
+                  <TableHeader>
+                    <TableRow className="border-b border-line-strong text-muted bg-surface-2/80">
+                      <TableHead className="p-2">Rol</TableHead>
+                      <TableHead className="p-2">Llegada & Órdenes</TableHead>
+                      <TableHead className="p-2">POS & Cobro</TableHead>
+                      <TableHead className="p-2">Caja</TableHead>
+                      <TableHead className="p-2">Reportes</TableHead>
+                      <TableHead className="p-2">Configuración</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow><TableCell className="p-2 font-bold text-brand">Propietario</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell></TableRow>
+                    <TableRow><TableCell className="p-2 font-bold text-success">Administrador</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Operativo</TableCell><TableCell className="p-2">Limitado</TableCell></TableRow>
+                    <TableRow><TableCell className="p-2 font-bold text-warning">Cajero</TableCell><TableCell className="p-2">Ver / Crear</TableCell><TableCell className="p-2">Full</TableCell><TableCell className="p-2">Turno Propio</TableCell><TableCell className="p-2">Sin Acceso</TableCell><TableCell className="p-2">Sin Acceso</TableCell></TableRow>
+                    <TableRow><TableCell className="p-2 font-bold text-info">Operario/Lavador</TableCell><TableCell className="p-2">Asignados</TableCell><TableCell className="p-2">Sin Acceso</TableCell><TableCell className="p-2">Sin Acceso</TableCell><TableCell className="p-2">Sin Acceso</TableCell><TableCell className="p-2">Sin Acceso</TableCell></TableRow>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )}

@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, Loader2, CheckCircle2, XCircle, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -187,50 +188,50 @@ export const ClaimsSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Reclamos</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">FECHA</th>
-                <th scope="col" className="p-3 font-semibold">CLIENTE</th>
-                <th scope="col" className="p-3 font-semibold">TIPO</th>
-                <th scope="col" className="p-3 font-semibold">DESCRIPCIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">COSTO</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">FECHA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">TIPO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">DESCRIPCIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">COSTO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {q.loading ? <SkeletonRows cols={6} />
                 : q.rows.length === 0 ? (
                   <EmptyRow cols={6}>
                     {filter === 'open' ? 'No hay reclamos abiertos.' : 'Todavía no hay reclamos registrados.'}
                   </EmptyRow>
                 ) : q.rows.map(c => (
-                  <tr key={c.id} className="hover:bg-surface-2/40 cursor-pointer"
+                  <TableRow key={c.id} className="hover:bg-surface-2/40 cursor-pointer"
                     onClick={() => void openDetail(c)}>
-                    <td className="p-3 text-muted whitespace-nowrap">
+                    <TableCell className="p-3 text-muted whitespace-nowrap">
                       {new Date(c.created_at).toLocaleDateString('es-DO', { day: '2-digit', month: 'short' })}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="font-bold text-strong">{c.customer_name}</div>
                       {c.customer_phone && <div className="text-xs text-faint">{c.customer_phone}</div>}
-                    </td>
-                    <td className="p-3 text-body whitespace-nowrap">
+                    </TableCell>
+                    <TableCell className="p-3 text-body whitespace-nowrap">
                       {KINDS.find(k => k.id === c.kind)?.label ?? c.kind}
-                    </td>
-                    <td className="p-3 text-muted max-w-md truncate">{c.description}</td>
-                    <td className="p-3 text-right tabular-nums whitespace-nowrap text-body">
+                    </TableCell>
+                    <TableCell className="p-3 text-muted max-w-md truncate">{c.description}</TableCell>
+                    <TableCell className="p-3 text-right tabular-nums whitespace-nowrap text-body">
                       {c.cost_cents > 0 ? formatCents(c.cost_cents, symbol) : '—'}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <span className={`px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap ${STATUS_TONE[c.status]}`}>
                         {STATUS_LABEL[c.status]}
                       </span>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         <Pagination page={q.page} pageCount={q.pageCount} total={q.total}
           pageSize={PAGE_SIZE} loading={q.loading} onPage={q.setPage} />

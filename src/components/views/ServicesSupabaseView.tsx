@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -224,49 +225,49 @@ export const ServicesSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <Table className="text-xs">
             <caption className="sr-only">Matriz de precios por servicio y categoría</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">SERVICIO</th>
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">SERVICIO</TableHead>
                 {COLUMNS.map(c => (
-                  <th key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
+                  <TableHead key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
                     {c.label.toUpperCase()}
-                  </th>
+                  </TableHead>
                 ))}
-                <th scope="col" className="p-3 font-semibold text-right">COMISIÓN</th>
-                <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+                <TableHead scope="col" className="p-3 font-semibold text-right">COMISIÓN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} aria-hidden="true">
-                    <td colSpan={COLUMNS.length + 3} className="p-3">
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell colSpan={COLUMNS.length + 3} className="p-3">
                       <div className="h-5 bg-surface-2/60 rounded animate-pulse" />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
+                <TableRow>
+                  <TableCell colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
                     Todavía no hay servicios en el catálogo.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : rows.map(s => (
-                <tr key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
-                  <td className="p-3">
+                <TableRow key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
+                  <TableCell className="p-3">
                     <div className="font-bold text-strong">{s.name}</div>
                     <div className="text-xs text-muted">
                       {s.code} · {s.estimated_minutes} min
                       {!s.is_active && ' · inactivo'}
                     </div>
-                  </td>
+                  </TableCell>
                   {COLUMNS.map(c => {
                     const price = s.prices[c.id];
                     const isEditing = editing?.serviceId === s.id && editing.category === c.id;
                     return (
-                      <td key={c.id} className="p-2 text-right">
+                      <TableCell key={c.id} className="p-2 text-right">
                         {isEditing ? (
                           <span className="flex items-center gap-1 justify-end">
                             <input
@@ -301,11 +302,11 @@ export const ServicesSupabaseView: React.FC = () => {
                             {editable && price !== undefined && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
                           </button>
                         )}
-                      </td>
+                      </TableCell>
                     );
                   })}
-                  <td className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</td>
-                  <td className="p-3">
+                  <TableCell className="p-3 font-bold text-brand text-right">{bpsToPercent(s.commission_bps)}</TableCell>
+                  <TableCell className="p-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => setRecipeFor({ id: s.id, name: s.name })}
@@ -338,11 +339,11 @@ export const ServicesSupabaseView: React.FC = () => {
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

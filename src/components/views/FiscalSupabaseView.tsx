@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -186,43 +187,43 @@ export const FiscalSupabaseView: React.FC = () => {
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <Table className="text-xs">
             <caption className="sr-only">Rangos NCF</caption>
-            <thead>
-              <tr className="border-b border-line text-muted bg-canvas/50">
-                <th scope="col" className="p-3 font-semibold">TIPO</th>
-                <th scope="col" className="p-3 font-semibold">RANGO</th>
-                <th scope="col" className="p-3 font-semibold text-right">USADOS</th>
-                <th scope="col" className="p-3 font-semibold text-right">QUEDAN</th>
-                <th scope="col" className="p-3 font-semibold">AUTORIZADO HASTA</th>
-                <th scope="col" className="p-3 font-semibold">ESTADO</th>
-                {canManage && <th scope="col" className="p-3 font-semibold text-right">ACCIONES</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line/60">
+            <TableHeader>
+              <TableRow className="border-b border-line text-muted bg-canvas/50">
+                <TableHead scope="col" className="p-3 font-semibold">TIPO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">RANGO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">USADOS</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right">QUEDAN</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">AUTORIZADO HASTA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
+                {canManage && <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading ? <SkeletonRows cols={canManage ? 7 : 6} />
                 : rows.length === 0 ? (
                   <EmptyRow cols={canManage ? 7 : 6}>
                     Sin rangos cargados: el cobro emite recibo interno, no comprobante fiscal.
                   </EmptyRow>
                 ) : rows.map(s => (
-                  <tr key={s.id} className="hover:bg-surface-2/40">
-                    <td className="p-3 font-bold text-strong">{s.ncf_type}</td>
-                    <td className="p-3 text-muted tabular-nums">
+                  <TableRow key={s.id} className="hover:bg-surface-2/40">
+                    <TableCell className="p-3 font-bold text-strong">{s.ncf_type}</TableCell>
+                    <TableCell className="p-3 text-muted tabular-nums">
                       {s.series}{String(s.range_start).padStart(8, '0')} — {s.series}{String(s.range_end).padStart(8, '0')}
-                    </td>
-                    <td className="p-3 text-right text-body tabular-nums">
+                    </TableCell>
+                    <TableCell className="p-3 text-right text-body tabular-nums">
                       {s.next_value - s.range_start}
-                    </td>
-                    <td className={`p-3 text-right font-bold tabular-nums ${
+                    </TableCell>
+                    <TableCell className={`p-3 text-right font-bold tabular-nums ${
                       restante(s) === 0 ? 'text-danger'
                         : restante(s) <= 50 ? 'text-warning' : 'text-body'}`}>
                       {restante(s)}
-                    </td>
-                    <td className={`p-3 tabular-nums ${vencido(s) ? 'text-danger' : 'text-muted'}`}>
+                    </TableCell>
+                    <TableCell className={`p-3 tabular-nums ${vencido(s) ? 'text-danger' : 'text-muted'}`}>
                       {s.authorized_until}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       {!s.is_active
                         ? <span className="bg-surface-3/50 text-muted font-bold px-2 py-0.5 rounded text-xs">Inactivo</span>
                         : vencido(s)
@@ -230,9 +231,9 @@ export const FiscalSupabaseView: React.FC = () => {
                           : agotado(s)
                             ? <span className="bg-danger/20 text-danger font-bold px-2 py-0.5 rounded text-xs">Agotado</span>
                             : <span className="bg-success/20 text-success font-bold px-2 py-0.5 rounded text-xs">Vigente</span>}
-                    </td>
+                    </TableCell>
                     {canManage && (
-                      <td className="p-3 text-right whitespace-nowrap">
+                      <TableCell className="p-3 text-right whitespace-nowrap">
                         <Button variant="secondary" size="xs" onClick={() => openEdit(s)}
                           >
                           Editar
@@ -241,12 +242,12 @@ export const FiscalSupabaseView: React.FC = () => {
                           >
                           {s.is_active ? 'Desactivar' : 'Activar'}
                         </Button>
-                      </td>
+                      </TableCell>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
