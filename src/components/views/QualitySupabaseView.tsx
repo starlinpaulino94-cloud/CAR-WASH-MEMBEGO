@@ -117,10 +117,10 @@ export const QualitySupabaseView: React.FC = () => {
                 </span>
                 <span className="flex-1 text-sm font-medium text-strong">{i.label}</span>
                 {editable && (
-                  <button onClick={() => void remove(i.id)} aria-label={`Quitar ${i.label}`}
-                    className="p-1.5 text-faint hover:text-danger">
+                  <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(i.id)} aria-label={`Quitar ${i.label}`}
+                    >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 )}
               </li>
             ))}

@@ -206,21 +206,21 @@ export const AppointmentsSupabaseView: React.FC = () => {
 
       {/* Navegación del día */}
       <div className="flex items-center justify-between bg-surface border border-line rounded-2xl p-3">
-        <button onClick={() => shiftDay(-1)} aria-label="Día anterior"
-          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+        <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(-1)} aria-label="Día anterior"
+          >
           <ChevronLeft className="w-5 h-5" />
-        </button>
+        </Button>
         <div className="text-center">
           <div className="font-bold text-strong capitalize">{dayLabel}</div>
-          <button onClick={() => setDay(isoDay(new Date()))}
-            className="text-xs text-brand hover:text-brand-hi font-bold">
+          <Button variant="link" size="xs" onClick={() => setDay(isoDay(new Date()))}
+            >
             Ir a hoy
-          </button>
+          </Button>
         </div>
-        <button onClick={() => shiftDay(1)} aria-label="Día siguiente"
-          className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+        <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(1)} aria-label="Día siguiente"
+          >
           <ChevronRight className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {loading ? (
@@ -284,11 +284,11 @@ export const AppointmentsSupabaseView: React.FC = () => {
                       className="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-surface-2 hover:bg-surface-3 text-warning">
                       No asistió
                     </button>
-                    <button onClick={() => { setCancelling(a); setCancelReason(''); setError(null); }}
+                    <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => { setCancelling(a); setCancelReason(''); setError(null); }}
                       aria-label={`Cancelar cita de ${a.customer_name}`}
-                      className="p-1.5 text-faint hover:text-danger">
+                      >
                       <XCircle className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </li>

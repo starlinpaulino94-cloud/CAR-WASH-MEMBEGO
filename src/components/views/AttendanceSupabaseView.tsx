@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { LogIn, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { RANGES, RangeId, rangeDates } from '../../lib/reportRanges';
@@ -129,10 +130,10 @@ export const AttendanceSupabaseView: React.FC = () => {
             <LogOut className="w-4 h-4" /> Marcar salida
           </button>
         ) : (
-          <button onClick={() => void marcar(true)} disabled={busy}
-            className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+          <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void marcar(true)} disabled={busy}
+            >
             <LogIn className="w-4 h-4" /> Marcar entrada
-          </button>
+          </Button>
         )}
       </section>
 

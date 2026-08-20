@@ -164,10 +164,10 @@ export const SuppliersSupabaseView: React.FC = () => {
                     </td>
                     {canManage && (
                       <td className="p-3 text-right whitespace-nowrap">
-                        <button onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}
-                          className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+                        <Button variant="ghost" size="icon-sm" onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}
+                          >
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </Button>
                         <Button variant="secondary" size="xs" className="ml-1" onClick={() => void toggleActive(s)}
                           >
                           {s.is_active ? 'Desactivar' : 'Activar'}

@@ -383,10 +383,10 @@ export const PayrollSupabaseView: React.FC = () => {
                 {selected.paid_at && ` · pagada el ${new Date(selected.paid_at).toLocaleDateString('es-DO')}`}
               </p>
             </div>
-            <button onClick={() => setSelected(null)} aria-label="Cerrar detalle"
-              className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+            <Button variant="ghost" size="icon-sm" onClick={() => setSelected(null)} aria-label="Cerrar detalle"
+              >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </header>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -398,10 +398,10 @@ export const PayrollSupabaseView: React.FC = () => {
 
           {canApprove && selected.status === 'borrador' && (
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => void aprobar()} disabled={busy}
-                className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+              <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void aprobar()} disabled={busy}
+                >
                 <CheckCircle2 className="w-4 h-4" /> Aprobar nómina
-              </button>
+              </Button>
               <button onClick={() => void descartar()} disabled={busy}
                 className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 hover:bg-surface-3 text-body font-bold text-xs rounded-xl disabled:opacity-50">
                 <Trash2 className="w-4 h-4" /> Descartar borrador
@@ -409,10 +409,10 @@ export const PayrollSupabaseView: React.FC = () => {
             </div>
           )}
           {canApprove && selected.status === 'aprobada' && (
-            <button onClick={() => setShowPay(true)} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+            <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => setShowPay(true)} disabled={busy}
+              >
               <Wallet className="w-4 h-4" /> Pagar {formatCents(selected.net_cents, symbol)}
-            </button>
+            </Button>
           )}
 
           <div className="overflow-x-auto">

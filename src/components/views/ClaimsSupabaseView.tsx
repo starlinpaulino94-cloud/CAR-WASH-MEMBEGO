@@ -358,15 +358,15 @@ export const ClaimsSupabaseView: React.FC = () => {
                     </Field>
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => void close('resuelto')} disabled={busy}
-                      className="px-4 py-2 bg-success hover:bg-success disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+                    <Button className="bg-success hover:bg-success/90 text-on-accent" type="button" onClick={() => void close('resuelto')} disabled={busy}
+                      >
                       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                       Resuelto
-                    </button>
-                    <button type="button" onClick={() => void close('rechazado')} disabled={busy}
-                      className="px-4 py-2 bg-surface-2 hover:bg-surface-3 disabled:opacity-50 text-body font-bold text-sm rounded-xl flex items-center gap-2">
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={() => void close('rechazado')} disabled={busy}
+                      >
                       <XCircle className="w-4 h-4" /> Rechazar
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

@@ -192,10 +192,10 @@ export const ImportModal: React.FC<{
                 <p className="text-xs text-faint">
                   Columnas que se leen: {help.columnas}
                 </p>
-                <button onClick={plantilla}
-                  className="text-xs font-bold text-brand hover:text-brand-hi inline-flex items-center gap-1">
+                <Button variant="link" size="xs" onClick={plantilla}
+                  >
                   <FileSpreadsheet className="w-3.5 h-3.5" /> Descargar plantilla de ejemplo
-                </button>
+                </Button>
               </div>
 
               <div>
@@ -278,11 +278,11 @@ export const ImportModal: React.FC<{
           </Button>
 
           {!applied && !preview && (
-            <button type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}
-              className="px-4 py-2 bg-surface-3 hover:bg-surface-3 disabled:bg-surface-2 disabled:text-faint text-strong font-bold text-sm rounded-xl flex items-center gap-2">
+            <Button variant="secondary" type="button" onClick={() => void ensayar()} disabled={busy || rows.length === 0}
+              >
               {busy ? <><Loader2 className="w-4 h-4 animate-spin" /> Revisando…</>
                     : <><AlertTriangle className="w-4 h-4" /> Previsualizar</>}
-            </button>
+            </Button>
           )}
 
           {!applied && preview && (

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '../ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
@@ -145,15 +146,15 @@ export const VehiclesSupabaseView: React.FC = () => {
                     </td>
                     <td className="p-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => abrirEdicion(v)} aria-label={`Editar ${v.plate}`}
-                          className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                        <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicion(v)} aria-label={`Editar ${v.plate}`}
+                          >
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </Button>
                         {puedeBorrar && (
-                          <button onClick={() => setBorrando(v)} aria-label={`Eliminar ${v.plate}`}
-                            className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                          <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(v)} aria-label={`Eliminar ${v.plate}`}
+                            >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>

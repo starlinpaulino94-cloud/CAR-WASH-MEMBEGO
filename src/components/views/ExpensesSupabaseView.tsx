@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -227,10 +228,10 @@ export const ExpensesSupabaseView: React.FC = () => {
 
             {formError && <InlineAlert tone="error">{formError}</InlineAlert>}
 
-            <button onClick={() => void submit()} disabled={busy || !allowed}
-              className="w-full py-2.5 bg-danger hover:bg-danger disabled:bg-surface-2 disabled:text-faint text-on-accent font-bold rounded-xl text-xs shadow-lg shadow-danger/30 flex items-center justify-center gap-2">
+            <Button className="w-full bg-danger hover:bg-danger/90 text-on-accent" onClick={() => void submit()} disabled={busy || !allowed}
+              >
               {busy && <Loader2 className="w-4 h-4 animate-spin" />} Registrar gasto
-            </button>
+            </Button>
 
             <p className="text-xs text-faint">
               Un gasto en efectivo descuenta la gaveta en la misma operación: o se registran

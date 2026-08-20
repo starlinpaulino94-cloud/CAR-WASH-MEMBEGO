@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef } from 'react';
+import { Button } from '../ui/button';
 import { X, Loader2, BadgeCheck, Gift, AlertCircle } from 'lucide-react';
 import { formatCents } from '../../lib/money';
 import { CustomerMembego } from '../../data/adminRepository';
@@ -59,9 +60,9 @@ export const MembegoCustomerModal: React.FC<{
               {customerName}{tier && <> · <span className="text-warning font-semibold">{tier}</span></>}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
+          <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Cerrar" >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-5 overflow-y-auto">

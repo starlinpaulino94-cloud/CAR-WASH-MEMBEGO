@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../ui/button';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
@@ -116,13 +117,13 @@ export const Sidebar: React.FC = () => {
           <aside className="relative w-72 max-w-[85vw] h-full bg-surface border-r border-line flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-4 border-b border-line">
               <span className="font-bold text-strong">Menú</span>
-              <button
+              <Button variant="ghost" size="icon-sm"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Cerrar menú"
-                className="p-2 text-muted hover:text-strong rounded-lg hover:bg-surface-2"
+                
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
             <NavList />
           </aside>

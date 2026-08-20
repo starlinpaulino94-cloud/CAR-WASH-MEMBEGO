@@ -272,9 +272,9 @@ export const InspectionModal: React.FC<{
             <ClipboardCheck className="w-4 h-4 text-info" />
             Inspección — {plate} <span className="text-faint font-normal">· {orderNumber}</span>
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
+          <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Cerrar" >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Momento: recepción o entrega */}
@@ -431,11 +431,11 @@ export const InspectionModal: React.FC<{
                     <input id="insp-signer" className={textInputClass} value={signedBy}
                       onChange={e => setSignedBy(e.target.value)} placeholder="Nombre y apellido" />
                   </Field>
-                  <button onClick={() => void sign()} disabled={busy || !signature || !signedBy.trim()}
-                    className="px-4 py-2.5 bg-success hover:bg-success disabled:bg-surface-3 disabled:text-faint text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+                  <Button className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void sign()} disabled={busy || !signature || !signedBy.trim()}
+                    >
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />}
                     Firmar y cerrar inspección
-                  </button>
+                  </Button>
                 </div>
               ) : current?.signature && (
                 <div className="border-t border-line pt-4 space-y-2">

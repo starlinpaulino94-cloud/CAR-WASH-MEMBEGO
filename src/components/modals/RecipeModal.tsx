@@ -110,9 +110,9 @@ export const RecipeModal: React.FC<{
           <h2 className="font-bold text-strong text-sm flex items-center gap-2">
             <FlaskConical className="w-4 h-4 text-brand-2" /> Receta — {serviceName}
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
+          <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Cerrar" >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -161,10 +161,10 @@ export const RecipeModal: React.FC<{
                         {formatCents(Math.round(l.quantity * (l.products?.cost_cents ?? 0)), symbol)}
                       </td>
                       <td className="py-2 text-right">
-                        <button onClick={() => void remove(l.id)} aria-label="Quitar renglón"
-                          className="p-1.5 text-faint hover:text-danger">
+                        <Button variant="ghost" size="icon-sm" className="text-faint hover:text-danger" onClick={() => void remove(l.id)} aria-label="Quitar renglón"
+                          >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}

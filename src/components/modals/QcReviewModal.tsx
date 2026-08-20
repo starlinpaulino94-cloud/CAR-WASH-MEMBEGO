@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../ui/button';
 import { X, ShieldCheck, Loader2, ThumbsUp, ThumbsDown, RotateCcw } from 'lucide-react';
 import {
   fetchChecklist, fetchOrderReviews, submitQcReview,
@@ -88,9 +89,9 @@ export const QcReviewModal: React.FC<{
             Control de calidad — {plate}
             <span className="text-faint font-normal">· {orderNumber}</span>
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="p-1 text-muted hover:text-strong">
+          <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Cerrar" >
             <X className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
@@ -162,16 +163,16 @@ export const QcReviewModal: React.FC<{
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3.5">
-          <button onClick={() => void send('rechazado')} disabled={busy}
-            className="px-4 py-2.5 bg-danger hover:bg-danger disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+          <Button className="bg-danger hover:bg-danger/90 text-on-accent" onClick={() => void send('rechazado')} disabled={busy}
+            >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
             Rechazar y reprocesar
-          </button>
-          <button onClick={() => void send('aprobado')} disabled={busy}
-            className="px-4 py-2.5 bg-success hover:bg-success disabled:bg-surface-3 text-on-accent font-bold text-sm rounded-xl flex items-center gap-2">
+          </Button>
+          <Button className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void send('aprobado')} disabled={busy}
+            >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
             Aprobar
-          </button>
+          </Button>
         </div>
       </div>
     </div>

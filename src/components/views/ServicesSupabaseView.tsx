@@ -315,26 +315,26 @@ export const ServicesSupabaseView: React.FC = () => {
                         <FlaskConical className="w-4 h-4" />
                       </button>
                       {editable && (
-                        <button onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
+                        <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
                           title="Nombre, código, minutos y comisión"
-                          className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                          >
                           <Pencil className="w-4 h-4" />
-                        </button>
+                        </Button>
                       )}
                       {puedeBorrar && (
                         <>
-                          <button onClick={() => void alternarActivo(s)}
+                          <Button variant="ghost" size="icon-sm" onClick={() => void alternarActivo(s)}
                             aria-label={`${s.is_active ? 'Desactivar' : 'Activar'} ${s.name}`}
                             title={s.is_active
                               ? 'Deja de ofrecerse en caja y recepción'
                               : 'Vuelve a ofrecerse'}
-                            className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                            >
                             {s.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => setBorrando(s)} aria-label={`Eliminar ${s.name}`}
-                            className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                          </Button>
+                          <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(s)} aria-label={`Eliminar ${s.name}`}
+                            >
                             <Trash2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </>
                       )}
                     </div>

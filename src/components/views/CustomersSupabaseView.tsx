@@ -318,23 +318,23 @@ export const CustomersSupabaseView: React.FC = () => {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => abrirEdicion(c)} aria-label={`Editar ${c.name}`}
-                              className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                            <Button variant="ghost" size="icon-sm" onClick={() => abrirEdicion(c)} aria-label={`Editar ${c.name}`}
+                              >
                               <Pencil className="w-4 h-4" />
-                            </button>
+                            </Button>
                             {puedeBorrar && (
                               <>
-                                <button onClick={() => void alternarArchivo(c)}
+                                <Button variant="ghost" size="icon-sm" onClick={() => void alternarArchivo(c)}
                                   aria-label={`${c.is_active === false ? 'Reactivar' : 'Archivar'} ${c.name}`}
-                                  className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                                  >
                                   {c.is_active === false
                                     ? <ArchiveRestore className="w-4 h-4" />
                                     : <Archive className="w-4 h-4" />}
-                                </button>
-                                <button onClick={() => setBorrando(c)} aria-label={`Eliminar ${c.name}`}
-                                  className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                                </Button>
+                                <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(c)} aria-label={`Eliminar ${c.name}`}
+                                  >
                                   <Trash2 className="w-4 h-4" />
-                                </button>
+                                </Button>
                               </>
                             )}
                           </div>

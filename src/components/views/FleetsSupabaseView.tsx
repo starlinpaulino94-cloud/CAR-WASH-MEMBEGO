@@ -380,10 +380,10 @@ export const FleetsSupabaseView: React.FC = () => {
                 {detail.po_reference && ` · orden de compra ${detail.po_reference}`}
               </p>
             </div>
-            <button onClick={() => setDetail(null)} aria-label="Cerrar detalle"
-              className="p-1.5 text-muted hover:text-strong rounded-lg hover:bg-surface-2">
+            <Button variant="ghost" size="icon-sm" onClick={() => setDetail(null)} aria-label="Cerrar detalle"
+              >
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </header>
 
           <FilterChips options={RANGES} value={range} onChange={setRange} />
@@ -402,11 +402,11 @@ export const FleetsSupabaseView: React.FC = () => {
           )}
 
           {canManage && statement && statement.totals.unbilled_cents > 0 && (
-            <button onClick={() => void consolidate()} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-success hover:bg-success text-on-accent font-bold text-xs rounded-xl disabled:opacity-50">
+            <Button size="sm" className="bg-success hover:bg-success/90 text-on-accent" onClick={() => void consolidate()} disabled={busy}
+              >
               <FileText className="w-4 h-4" />
               Facturar el periodo — {formatCents(statement.totals.unbilled_cents, symbol)} a crédito
-            </button>
+            </Button>
           )}
 
           <div className="grid md:grid-cols-2 gap-5">

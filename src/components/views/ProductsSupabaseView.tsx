@@ -299,24 +299,24 @@ export const ProductsSupabaseView: React.FC = () => {
                       <td className="p-3">
                         <div className="flex items-center justify-end gap-1">
                           {editable && (
-                            <button onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
+                            <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
                               title="Nombre, código, precio y unidad"
-                              className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                              >
                               <FileText className="w-4 h-4" />
-                            </button>
+                            </Button>
                           )}
                           {puedeBorrar && (
                             <>
-                              <button onClick={() => void alternarActivo(p)}
+                              <Button variant="ghost" size="icon-sm" onClick={() => void alternarActivo(p)}
                                 aria-label={`${p.is_active ? 'Desactivar' : 'Activar'} ${p.name}`}
                                 title={p.is_active ? 'Deja de ofrecerse en caja' : 'Vuelve a ofrecerse'}
-                                className="p-1.5 text-muted hover:text-brand-hi rounded-lg hover:bg-surface-2">
+                                >
                                 {p.is_active ? <Archive className="w-4 h-4" /> : <ArchiveRestore className="w-4 h-4" />}
-                              </button>
-                              <button onClick={() => setBorrando(p)} aria-label={`Eliminar ${p.name}`}
-                                className="p-1.5 text-muted hover:text-danger rounded-lg hover:bg-surface-2">
+                              </Button>
+                              <Button variant="ghost" size="icon-sm" className="text-muted hover:text-danger" onClick={() => setBorrando(p)} aria-label={`Eliminar ${p.name}`}
+                                >
                                 <Trash2 className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </>
                           )}
                         </div>

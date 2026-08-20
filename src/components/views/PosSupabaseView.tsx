@@ -839,10 +839,10 @@ export const PosSupabaseView: React.FC = () => {
                     {orden.vehicle_plate} · {orden.customer_name || 'Sin cliente'}
                   </div>
                 </div>
-                <button onClick={soltarOrden} aria-label="Quitar la orden y cobrar una venta suelta"
-                  className="p-1 text-muted hover:text-strong flex-shrink-0">
+                <Button variant="ghost" size="icon-xs" className="flex-shrink-0" onClick={soltarOrden} aria-label="Quitar la orden y cobrar una venta suelta"
+                  >
                   <XIcon className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
               <p className="text-xs text-muted">
                 Las líneas del lavado vienen de la orden y no se editan. Puede
@@ -922,10 +922,10 @@ export const PosSupabaseView: React.FC = () => {
                   </div>
                 )}
               </div>
-              <button onClick={soltarCliente} aria-label="Quitar el cliente y cobrar sin ficha"
-                className="p-1 text-muted hover:text-strong flex-shrink-0">
+              <Button variant="ghost" size="icon-xs" className="flex-shrink-0" onClick={soltarCliente} aria-label="Quitar el cliente y cobrar sin ficha"
+                >
                 <XIcon className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           ) : !orden && (
             <div className="space-y-1.5">
@@ -1068,13 +1068,13 @@ export const PosSupabaseView: React.FC = () => {
                     <span className="px-2 font-bold text-strong tabular-nums">×{l.quantity}</span>
                   ) : (
                     <div className="flex items-center bg-surface border border-line rounded-lg">
-                      <button onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                      <Button variant="ghost" size="icon-xs" onClick={() => changeQty(l.key, -1)} aria-label={`Quitar uno de ${l.name}`} >
                         <Minus className="w-3 h-3" />
-                      </button>
+                      </Button>
                       <span className="px-2 font-bold text-strong">{l.quantity}</span>
-                      <button onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} className="p-1 text-muted hover:text-strong">
+                      <Button variant="ghost" size="icon-xs" onClick={() => changeQty(l.key, 1)} aria-label={`Añadir uno de ${l.name}`} >
                         <Plus className="w-3 h-3" />
-                      </button>
+                      </Button>
                     </div>
                   )}
                   <span className="font-bold text-brand-hi w-20 text-right">
@@ -1083,9 +1083,9 @@ export const PosSupabaseView: React.FC = () => {
                   {deLaOrden ? (
                     <span className="w-6" aria-hidden="true" />
                   ) : (
-                    <button onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} className="text-faint hover:text-danger p-1">
+                    <Button variant="ghost" size="icon-xs" className="text-faint hover:text-danger" onClick={() => removeLine(l.key)} aria-label={`Eliminar ${l.name}`} >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
