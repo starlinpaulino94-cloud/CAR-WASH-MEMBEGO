@@ -44,8 +44,8 @@ demostración de por qué el ciclo exige un auditor que no sea el autor.
 ## Consecuencias
 - (+) El agujero se cierra en UN lugar reutilizado (causa raíz única).
 - (+) `operario` y anónimos quedan fuera; el POS (cajero+) sigue funcionando.
-- (−) Dos round-trips a Supabase por llamada (validar token + leer perfil).
-  Aceptable: estos bordes no son ruta caliente.
+- (−) Tres round-trips a Supabase por llamada (validar token + leer perfil +
+  leer vínculo). Aceptable: estos bordes no son ruta caliente.
 - (−) Requiere una variable nueva en Vercel: `SUPABASE_ANON_KEY` (no secreta).
 
 ## Validación
