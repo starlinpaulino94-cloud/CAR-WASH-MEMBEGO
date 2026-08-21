@@ -39,14 +39,22 @@
      PostgREST/GoTrue, que poolea del lado de Supabase. El modo de fallo temido
      (agotar conexiones) no aplica. Queda medir con carga real (Phase 5).
 
-## Phase 2 — Lógica crítica y datos (P2)
+## Phase 2 — Lógica crítica y datos (P2) · ✅ HECHO
 
-5. **BL-001/TEST-003 — Pruebas de concurrencia:** NCF, stock, última bahía (2
-   sesiones simultáneas). Corregir el candado si alguna falla.
-6. **DB-001 — Indexar las FK de las ~8 tablas calientes** (invoice_items,
-   inventory_movements, cash_movements, commissions, work_order_items,
-   audit_logs…), justificadas por EXPLAIN. Una migración. NO las 98.
-7. **DB-002 — Verificar snapshots históricos** (precio/ITBIS/comisión/tasa/término).
+5. **BL-001/TEST-003 — Pruebas de concurrencia.** ✅ `supabase/tests/concurrency.sh`:
+   abre transacciones solapadas reales. Los candados YA eran correctos (NCF y
+   bahía con FOR UPDATE, stock serializado por row-lock); ahora está demostrado.
+   4/4: NCF distintos, secuencia +2 exacta, una sola orden por bahía, stock sin
+   lost update. Cableado a `npm run test:concurrency` y CI.
+6. **DB-001 — Indexar las FK de las tablas calientes.** ✅ Migración
+   `20260821120000_indices_fk_calientes.sql`: 15 índices sobre
+   inventory_movements, invoice_items, commissions, work_order_items,
+   payroll_items, audit_logs y appointments. Justificación estructural (JOIN de
+   vista + borrado de padre), no las 98. Reejecutable (IF NOT EXISTS).
+7. **DB-002 — Snapshots históricos.** ✅ Verificado: invoice_items congela
+   nombre+precio, commissions congela tasa(bps)+importe, work_order_items
+   congela precio, invoices congela ITBIS. Prueba nueva en 20_billing_tests.sql:
+   cambiar el catálogo tras facturar NO altera la línea emitida (703/703).
 
 ## Phase 3 — Fiabilidad de integraciones (P2)
 

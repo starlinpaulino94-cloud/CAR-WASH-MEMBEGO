@@ -15,9 +15,13 @@ en PostgreSQL es atómica por defecto (todo o nada):
 No hay patrón de "3 inserts sueltos desde el cliente" que pueda quedar a medias.
 **Esto está bien resuelto.**
 
-## Concurrencia / race conditions (Fase 8 — PARCIAL)
+## Concurrencia / race conditions (Fase 8 — ✅ PASS, probado)
 
-**BL-001 — Race conditions no probadas explícitamente · P2 / UNVERIFIED**
+**BL-001 — Race conditions probadas · ✅ CERRADO** (Phase 2)
+
+`supabase/tests/concurrency.sh` abre transacciones solapadas reales y demuestra: NCF distintos bajo concurrencia (FOR UPDATE en la secuencia), una sola orden por bahía (FOR UPDATE en la bahía), stock sin lost update. Los candados ya existían; ahora hay prueba. 4/4.
+
+> Texto original abajo como registro.
 
 La lógica vive en RPC dentro de la base, lo que da un candado natural por fila
 en muchos casos, pero **no hay ninguna prueba de concurrencia** en la suite (la

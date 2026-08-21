@@ -29,7 +29,11 @@
   autoridad del borrado, no el trigger.
 - **Dinero**: 0 columnas monetarias en tipo flotante. Todo `bigint` centavos.
 
-## DB-001 — 98 foreign keys sin índice en su columna líder · **P2**
+## DB-001 — FKs sin índice en tablas calientes · **P2** · ✅ REMEDIADO (Phase 2)
+
+> Migración `20260821120000_indices_fk_calientes.sql`: 15 índices en las tablas
+> que crecen sin techo. Las FK de tablas de bajo volumen se dejan a propósito.
+> Texto original abajo.
 
 **Evidencia:** de 186 FKs analizadas, **98 no tienen un índice cuyo primer campo
 sea la columna de la FK.** Ejemplos: `appointments.service_id`,
@@ -62,7 +66,12 @@ demás se dejan.
 - **Paginación**: `fetchCustomerPage` y las demás usan `.range()` — hay límite,
   no hay `SELECT *` sin tope en las rutas de listado.
 
-## DB-002 — Snapshots históricos: verificar cobertura · **P2 / UNVERIFIED**
+## DB-002 — Snapshots históricos · ✅ VERIFICADO (Phase 2)
+
+> invoice_items congela nombre+precio, commissions congela tasa+importe,
+> work_order_items congela precio, invoices congela ITBIS. Prueba en
+> 20_billing_tests.sql demuestra que cambiar el catálogo no altera lo facturado.
+> Texto original abajo.
 
 Precio vendido, ITBIS y comisión **deben** congelarse en el momento de la venta
 (no seguir al catálogo). `invoice_items` guarda importes propios (evidencia: la

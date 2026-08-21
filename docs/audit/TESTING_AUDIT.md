@@ -38,7 +38,9 @@ build del POS llega a producción.
 **Solución:** workflow que corra lint + `tsc --noEmit` + build + e2e + SQL +
 `npm audit` en cada PR. Gate de merge.
 
-## TEST-003 — Faltan pruebas de concurrencia · **P2**
+## TEST-003 — Pruebas de concurrencia · ✅ HECHO (Phase 2)
+
+> `supabase/tests/concurrency.sh`, 4/4, en CI. Ver BL-001.
 
 La Fase 8 las declara obligatorias. No existen. Ver BL-001 (NCF, stock, bahía).
 

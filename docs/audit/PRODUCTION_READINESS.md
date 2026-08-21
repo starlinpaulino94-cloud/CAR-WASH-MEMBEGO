@@ -10,20 +10,20 @@
 | Architecture | 85/100 | Monolito modular coherente; lógica en base bien elegida |
 | Code Quality | 82/100 | Limpio, comentado, sin mocks; 5 supresiones de tipo |
 | Maintainability | 78/100 | Repos bien separados; conocimiento en el código, no en chats |
-| Database | 80/100 | RLS+constraints excelentes; 98 FKs sin índice |
-| Data Integrity | 88/100 | FK RESTRICT, CHECK, centavos, snapshots (1 sin verificar) |
+| Database | 88/100 | RLS+constraints excelentes; FKs calientes indexadas (Phase 2) |
+| Data Integrity | 92/100 | FK RESTRICT, CHECK, centavos, snapshots probados (Phase 2) |
 | Security | 82/100 | SEC-001 remediado (Phase 0, guard + binding de empresa); base fuerte |
 | Authentication | 75/100 | Supabase Auth; no verificado en producción |
 | Authorization | 90/100 | RLS FORCE completa; gates de UI espejo |
 | Performance | 70/100 | Consultas calientes indexadas; sin load test |
 | Scalability | 62/100 | Sin conexiones pg crudas (poolea PostgREST); falta load test |
 | Reliability | 68/100 | Errores manejados + logs estructurados; falta backup test |
-| Testing | 82/100 | 250 e2e + 28 SQL + 15 api, cableadas a `npm test` y CI (Phase 1) |
+| Testing | 86/100 | 250 e2e + 703 SQL + 4 concurrencia + 15 api, en CI (Phase 1-2) |
 | Observability | 55/100 | Logs estructurados en bordes + reporte de errores front (Phase 1); falta tracing/alertas |
 | DevOps | 70/100 | CI en cada push/PR (Phase 1); falta rollback probado |
 | Disaster Recovery | 30/100 | Backups de Supabase asumidos; **restore no probado** |
 | Documentation | 65/100 | Comentarios densos; ADRs recién creados |
-| **Production Readiness** | **72/100** | Tras Phase 0 (SEC-001) y Phase 1 (CI+obs) |
+| **Production Readiness** | **76/100** | Tras Phase 0-2 (SEC-001, CI+obs, concurrencia+índices) |
 
 ## Nivel de madurez
 

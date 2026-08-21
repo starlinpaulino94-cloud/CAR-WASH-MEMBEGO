@@ -58,12 +58,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar cliente psql
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Correr la suite SQL
-        # El runner crea la base, aplica las 45 migraciones y ejecuta las
-        # pruebas. Habla por TCP (127.0.0.1:5433), no por socket.
+      - name: Correr la suite SQL + concurrencia
+        # El runner crea la base, aplica las 46 migraciones y ejecuta las
+        # pruebas. Habla por TCP (127.0.0.1:5433), no por socket. La suite de
+        # concurrencia abre transacciones solapadas reales (NCF, bahía, stock).
         env:
           PGHOST: 127.0.0.1
           PGPORT: '5433'
           PGUSER: postgres
           PGPASSWORD: postgres
-        run: bash supabase/tests/run.sh
+        run: bash supabase/tests/run.sh && bash supabase/tests/concurrency.sh

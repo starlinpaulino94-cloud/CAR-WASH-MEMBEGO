@@ -96,6 +96,36 @@ select test.check('la caja recibe el efectivo NETO del cambio, no el bruto',
   (select expected_cash_cents = 477000 from public.cash_sessions where id = test.var('sess')::uuid),
   (select expected_cash_cents::text from public.cash_sessions where id = test.var('sess')::uuid));
 
+-- ============================================================ DB-002 · Snapshot
+-- Lo vendido no puede cambiar retroactivamente. Se cambia el precio Y el nombre
+-- del producto EN EL CATÁLOGO después de facturar, y la línea de la factura ya
+-- emitida debe seguir con el precio y el nombre de cuando se vendió.
+set role postgres;
+update public.products
+   set price_cents = 999999, name = 'Aromatizante RENOMBRADO'
+ where id = test.var('prod')::uuid;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('el precio vendido queda congelado en la factura, no sigue al catálogo',
+  (select unit_price_cents = 25000 from public.invoice_items
+    where invoice_id = test.var('inv1')::uuid and product_id = test.var('prod')::uuid),
+  (select unit_price_cents::text from public.invoice_items
+    where invoice_id = test.var('inv1')::uuid and product_id = test.var('prod')::uuid));
+
+select test.check('el nombre vendido queda congelado en la factura',
+  (select name = 'Aromatizante' from public.invoice_items
+    where invoice_id = test.var('inv1')::uuid and product_id = test.var('prod')::uuid),
+  (select name from public.invoice_items
+    where invoice_id = test.var('inv1')::uuid and product_id = test.var('prod')::uuid));
+
+-- Se restaura el catálogo para no ensuciar las pruebas siguientes.
+set role postgres;
+update public.products set price_cents = 25000, name = 'Aromatizante'
+ where id = test.var('prod')::uuid;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
 -- =============================================================== Idempotencia
 
 do $$
