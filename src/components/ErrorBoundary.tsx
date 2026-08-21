@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportarError } from '../lib/observabilidad';
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { resetAppStorage } from '../lib/storage';
 
@@ -30,10 +31,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    // Punto de enganche para el seguimiento de errores (Sentry o equivalente),
-    // pendiente según la sección 12 de la auditoría. Hoy no hay observabilidad,
-    // así que al menos queda en la consola del dispositivo.
-    console.error('[ErrorBoundary] Fallo no capturado:', error, info.componentStack);
+    // Reporte estructurado (OBS-001): a consola siempre, y al destino de
+    // monitoreo si VITE_ERROR_REPORT_URL está definida. El componentStack se
+    // recorta: da la pista de dónde sin volcar el árbol entero.
+    reportarError(error, {
+      origen: 'ErrorBoundary',
+      detalle: (info.componentStack ?? '').split('\n').slice(0, 6).join('\n'),
+    });
   }
 
   private handleReload = (): void => {

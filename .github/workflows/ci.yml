@@ -1,0 +1,69 @@
+name: CI
+
+# Gate de calidad en cada push y cada PR. Antes NO existía: los merges a main,
+# que Vercel despliega solos, iban a producción sin correr ni una prueba ni el
+# typecheck (hallazgo TEST-002 de la auditoría).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un push nuevo cancela la corrida anterior de la misma rama.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Núcleo: siempre runnable, sin servicios externos ───────────────────────
+  core:
+    name: typecheck · build · api tests · audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+        env:
+          # Valores de marcador: el build no contacta a Supabase, solo necesita
+          # que las variables existan para no romper el arranque.
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: clave-de-marcador-para-el-build
+      - name: Pruebas de los bordes (guard de Membego, SEC-001)
+        run: npm run test:api
+      - name: Auditoría de dependencias (no bloquea; informa)
+        run: npm audit --omit=dev || true
+
+  # ── Reglas de negocio en SQL contra PostgreSQL 16 real ─────────────────────
+  sql:
+    name: pruebas SQL (RLS, dinero, permisos)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Correr la suite SQL
+        # El runner crea la base, aplica las 45 migraciones y ejecuta las
+        # pruebas. Habla por TCP (127.0.0.1:5433), no por socket.
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5433'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash supabase/tests/run.sh

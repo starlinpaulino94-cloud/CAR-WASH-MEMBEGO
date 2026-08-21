@@ -18,19 +18,26 @@
      Las 250 e2e siguen verdes. Ver ADR-004.
    - Revisión independiente: security-review sobre el diff (segundo agente).
 
-## Phase 1 — Infraestructura de confianza (P1)
+## Phase 1 — Infraestructura de confianza (P1) · ✅ HECHO
 
-2. **TEST-001/002 — Cablear pruebas + CI.**
-   - `npm test` → lint + `tsc --noEmit` + build + e2e + sql.
-   - Workflow GitHub Actions en cada PR; gate de merge a `main`.
-   - Incluir `npm audit` (cierra DEP-002 y SEC-002).
-3. **OBS-001 — Observabilidad mínima.**
-   - Error monitoring (p. ej. Sentry) en la SPA y en las funciones `api/`.
-   - Logs estructurados con `request_id`, `user_id`, `company_id`, operación,
-     duración, resultado — sin PII.
-4. **SCALE-001 — Verificar pooling.**
-   - Confirmar que las funciones usan el pooler de Supabase (6543). Corregir la
-     cadena de conexión si van directas.
+2. **TEST-001/002 — Cablear pruebas + CI.** ✅
+   - `npm test` = `typecheck` + `test:api` (rápido, sin dependencias externas);
+     además `test:sql` y `test:e2e` (con `tests/e2e/run-all.sh`). `tsx` añadido
+     como devDep.
+   - Workflow `.github/workflows/ci.yml`: job **core** (typecheck+build+api+audit)
+     y job **sql** (Postgres 16 de servicio, 45 migraciones + 701 pruebas). En
+     cada push y PR. `npm audit` incluido (cubre DEP-002/SEC-002).
+   - `run.sh` ahora respeta `PGHOST` (socket local / TCP en CI).
+3. **OBS-001 — Observabilidad mínima.** ✅ (parcial, ver OBSERVABILITY.md)
+   - Logger estructurado JSON en los bordes (`api/_lib/log.ts`), conectado en el
+     manejo de fallos. `src/lib/observabilidad.ts` + enganche global en
+     `main.tsx` + ErrorBoundary. Destino de monitoreo por `VITE_ERROR_REPORT_URL`
+     (enganche listo; sin añadir el SDK de Sentry). Sin PII.
+   - Follow-up: correlación de petición extremo a extremo, métricas, alertas.
+4. **SCALE-001 — Verificar pooling.** ✅ → **informativo.**
+   - Evidencia: 0 clientes `pg` crudos; todo el acceso va por HTTP a
+     PostgREST/GoTrue, que poolea del lado de Supabase. El modo de fallo temido
+     (agotar conexiones) no aplica. Queda medir con carga real (Phase 5).
 
 ## Phase 2 — Lógica crítica y datos (P2)
 

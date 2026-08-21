@@ -12,18 +12,18 @@
 | Maintainability | 78/100 | Repos bien separados; conocimiento en el código, no en chats |
 | Database | 80/100 | RLS+constraints excelentes; 98 FKs sin índice |
 | Data Integrity | 88/100 | FK RESTRICT, CHECK, centavos, snapshots (1 sin verificar) |
-| Security | 60/100 | Base fuerte, pero **SEC-001 P0** abierto |
+| Security | 82/100 | SEC-001 remediado (Phase 0, guard + binding de empresa); base fuerte |
 | Authentication | 75/100 | Supabase Auth; no verificado en producción |
 | Authorization | 90/100 | RLS FORCE completa; gates de UI espejo |
 | Performance | 70/100 | Consultas calientes indexadas; sin load test |
-| Scalability | 55/100 | Perfil bajo OK; pooling sin verificar; sin load test |
-| Reliability | 60/100 | Errores manejados; sin observabilidad ni backup test |
-| Testing | 68/100 | Buena base (250+28) pero sin CI ni cableado |
-| Observability | 20/100 | **Ninguna** (sin logs estructurados/errores/tracing) |
-| DevOps | 45/100 | Deploy reproducible por Vercel; **sin CI, sin rollback probado** |
+| Scalability | 62/100 | Sin conexiones pg crudas (poolea PostgREST); falta load test |
+| Reliability | 68/100 | Errores manejados + logs estructurados; falta backup test |
+| Testing | 82/100 | 250 e2e + 28 SQL + 15 api, cableadas a `npm test` y CI (Phase 1) |
+| Observability | 55/100 | Logs estructurados en bordes + reporte de errores front (Phase 1); falta tracing/alertas |
+| DevOps | 70/100 | CI en cada push/PR (Phase 1); falta rollback probado |
 | Disaster Recovery | 30/100 | Backups de Supabase asumidos; **restore no probado** |
 | Documentation | 65/100 | Comentarios densos; ADRs recién creados |
-| **Production Readiness** | **62/100** | Ver veredicto |
+| **Production Readiness** | **72/100** | Tras Phase 0 (SEC-001) y Phase 1 (CI+obs) |
 
 ## Nivel de madurez
 
@@ -31,8 +31,9 @@
 
 Justificación: el sistema tiene usuarios reales posibles con límites conocidos.
 La lógica de negocio, la integridad de datos y el aislamiento multi-tenant son de
-calidad de producción. **No es LEVEL 4** porque hay un P0 de seguridad abierto,
-cero observabilidad y sin CI. **No es LEVEL 5** porque no hay pruebas de carga.
+calidad de producción. **No es LEVEL 4 todavía** porque falta el resto del plan (backup/restore
+probado, pruebas de concurrencia); el P0 de seguridad, la observabilidad
+mínima y el CI ya están hechos (Phase 0-1). **No es LEVEL 5** porque no hay pruebas de carga.
 
 ## ¿Puede ir a producción?
 
@@ -45,9 +46,8 @@ los endpoints de MembeGo** hay que cerrar SEC-001, porque hoy cualquiera con la
 URL puede leer fichas de clientes.
 
 Concretamente:
-- **Bloqueante duro (hacer YA):** SEC-001. Es una tarde de trabajo.
-- **Bloqueante de operación (antes de crecer):** CI + observabilidad — sin ellos,
-  un fallo en producción a las 3 AM es invisible y un merge roto llega solo.
+- **Bloqueante duro:** SEC-001 ✅ cerrado (Phase 0).
+- **Bloqueante de operación:** CI + observabilidad ✅ hechos (Phase 1).
 - **Bloqueante de escala (antes de M/L):** verificar pooling, indexar FK
   calientes, load test.
 

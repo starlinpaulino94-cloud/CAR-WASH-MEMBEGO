@@ -1,3 +1,4 @@
+import { log, nuevoRequestId } from '../_lib/log.js';
 /**
  * Cliente de la Platform API de Membego. SOLO SERVIDOR.
  *
@@ -166,12 +167,17 @@ export function json(body: unknown, status: number): Response {
   });
 }
 
-/** Traduce un fallo a la respuesta que el mostrador puede entender. */
-export function respuestaDeError(e: unknown): Response {
+/**
+ * Traduce un fallo a la respuesta que el mostrador puede entender, y lo deja
+ * registrado en JSON estructurado (OBS-001). `ruta` da contexto para poder
+ * filtrar por borde en el recolector; nunca se registran datos del cliente.
+ */
+export function respuestaDeError(e: unknown, ruta = 'membego'): Response {
+  const requestId = nuevoRequestId();
   if (e instanceof ErrorMembego) {
-    console.warn('[membego]', e.codigo, e.message);
+    log('warn', { requestId, ruta, evento: 'membego_error', status: e.status, detalle: `${e.codigo}: ${e.message}` });
     return json({ error: e.codigo, message: e.message }, e.status);
   }
-  console.error('[membego] inesperado', e);
+  log('error', { requestId, ruta, evento: 'membego_inesperado', status: 503, detalle: e instanceof Error ? e.message : String(e) });
   return json({ error: 'NO_DISPONIBLE', message: 'No se pudo contactar con Membego.' }, 503);
 }

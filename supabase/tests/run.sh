@@ -8,7 +8,7 @@ set -euo pipefail
 PORT="${1:-5433}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
-PSQL=(psql -h /tmp -p "$PORT" -U postgres)
+PSQL=(psql -h "${PGHOST:-/tmp}" -p "$PORT" -U postgres)
 
 command -v psql >/dev/null || { echo "psql no está instalado"; exit 1; }
 "${PSQL[@]}" -tAc "select 1" >/dev/null 2>&1 || {
