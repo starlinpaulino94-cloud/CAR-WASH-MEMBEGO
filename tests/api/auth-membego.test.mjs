@@ -17,11 +17,19 @@ import { readFileSync } from 'node:fs'
 // El módulo lee las variables al importarse, así que se ponen ANTES.
 process.env.SUPABASE_URL = 'https://proyecto.supabase.co'
 process.env.SUPABASE_ANON_KEY = 'anon-de-prueba'
+process.env.MEMBEGO_COMPANY_ID = 'cmre-esta-empresa'
 
 const { exigirEmpleado, ErrorAuth } = await import('../../api/_membego/auth.ts')
 
-/** Simula las dos llamadas del guard: /auth/v1/user y /rest/v1/profiles. */
-function fingirSupabase({ userOk = true, userId = 'u-1', perfil = { role: 'cajero', is_active: true } } = {}) {
+const VINCULO_OK = { membego_company_id: 'cmre-esta-empresa', is_active: true }
+
+/** Simula las tres llamadas del guard: /auth/v1/user, /profiles y /membego_company_links. */
+function fingirSupabase({
+  userOk = true,
+  userId = 'u-1',
+  perfil = { role: 'cajero', is_active: true },
+  vinculo = VINCULO_OK,
+} = {}) {
   globalThis.fetch = async (url) => {
     const u = String(url)
     if (u.includes('/auth/v1/user')) {
@@ -31,6 +39,9 @@ function fingirSupabase({ userOk = true, userId = 'u-1', perfil = { role: 'cajer
     }
     if (u.includes('/rest/v1/profiles')) {
       return new Response(JSON.stringify(perfil ? [perfil] : []), { status: 200 })
+    }
+    if (u.includes('/rest/v1/membego_company_links')) {
+      return new Response(JSON.stringify(vinculo ? [vinculo] : []), { status: 200 })
     }
     throw new Error('URL inesperada en la prueba: ' + u)
   }
@@ -83,17 +94,37 @@ test('usuario sin fila de perfil (no es de esta empresa) → 403', async () => {
   )
 })
 
-test('cajero activo → pasa y devuelve userId y rol', async () => {
+test('cajero activo Y de esta empresa → pasa y devuelve userId y rol', async () => {
   fingirSupabase({ userId: 'u-9', perfil: { role: 'cajero', is_active: true } })
   const r = await exigirEmpleado(pet({ Authorization: 'Bearer ok' }))
   assert.equal(r.userId, 'u-9')
   assert.equal(r.rol, 'cajero')
 })
 
-test('superadmin activo → pasa', async () => {
+test('superadmin activo de esta empresa → pasa', async () => {
   fingirSupabase({ perfil: { role: 'superadmin', is_active: true } })
   const r = await exigirEmpleado(pet({ Authorization: 'Bearer ok' }))
   assert.equal(r.rol, 'superadmin')
+})
+
+// ── El candado de empresa (H1 de la revisión independiente) ──────────────────
+
+test('cajero de OTRA empresa del mismo Supabase → 403 (su vínculo no coincide)', async () => {
+  fingirSupabase({ vinculo: { membego_company_id: 'cmre-otra-empresa', is_active: true } })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' })),
+    (e) => e.status === 403 && e.codigo === 'SIN_PERMISO'
+  )
+})
+
+test('empresa sin vínculo con Membego → 403', async () => {
+  fingirSupabase({ vinculo: null })
+  await assert.rejects(exigirEmpleado(pet({ Authorization: 'Bearer ok' })), (e) => e.status === 403)
+})
+
+test('vínculo a esta empresa pero DESACTIVADO → 403', async () => {
+  fingirSupabase({ vinculo: { membego_company_id: 'cmre-esta-empresa', is_active: false } })
+  await assert.rejects(exigirEmpleado(pet({ Authorization: 'Bearer ok' })), (e) => e.status === 403)
 })
 
 // ── Los cuatro bordes tienen que llamar al guard ANTES de tocar Membego ──────

@@ -15,15 +15,25 @@
  * sea de VERDAD un empleado de ESTA empresa. Eso es lo que se comprueba aquí.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * CÓMO SE VALIDA
+ * CÓMO SE VALIDA — TRES PREGUNTAS
  *
  * El navegador manda el token de sesión de Supabase (`Authorization: Bearer`).
  * No se verifica la firma a mano —eso obliga a traer las claves y a acertar con
- * el algoritmo—: se le pregunta a Supabase, que es la autoridad, con
- * `GET /auth/v1/user`. Si el token vale, Supabase devuelve el usuario; si no,
- * responde 401 y aquí se traduce a 401. Después se consulta `profiles` CON EL
- * TOKEN DEL USUARIO —la RLS le deja ver solo su fila— para exigir que esté
- * activo y con rol de mostrador o superior. Un operario, que no cobra, no entra.
+ * el algoritmo—: se le pregunta a Supabase, que es la autoridad.
+ *
+ *   1. ¿El token vale?  `GET /auth/v1/user`. Si no, 401.
+ *   2. ¿Es un empleado activo con rol de mostrador?  Se lee `profiles` con SU
+ *      token (la RLS le deja ver solo su fila). Un operario, que no cobra, no
+ *      entra.
+ *   3. ¿Es de ESTA empresa?  Este es el candado que faltaba. La base es
+ *      multi-tenant en UN solo Supabase: muchas empresas conviven en `profiles`.
+ *      Sin esta comprobación, un cajero de OTRO car wash del mismo Supabase
+ *      pasaría los pasos 1 y 2 y podría pedir la ficha de un cliente de este
+ *      local o gastarle un beneficio. Se exige que la empresa del que llama sea
+ *      la que está VINCULADA a la empresa de Membego de este despliegue
+ *      (`membego_company_links.membego_company_id == MEMBEGO_COMPANY_ID`),
+ *      leído también con su token bajo RLS. El `companyId` fijo del servidor
+ *      dice a QUÉ empresa de Membego se llama; esto dice QUIÉN puede llamar.
  *
  * Se usa la `anon key`, que no es secreta (viaja en el bundle del navegador);
  * la `service_role` NO se trae aquí a propósito: ampliar su superficie a cuatro
@@ -32,6 +42,8 @@
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
+/** La empresa de Membego que este despliegue atiende. El candado del paso 3. */
+const MEMBEGO_COMPANY_ID = process.env.MEMBEGO_COMPANY_ID ?? '';
 
 /** Roles que pueden operar el mostrador. `operario` no cobra, así que no entra. */
 const ROLES_MOSTRADOR = new Set([
@@ -57,6 +69,9 @@ export function faltaConfiguracionAuth(): string[] {
   const faltan: string[] = [];
   if (!SUPABASE_URL) faltan.push('SUPABASE_URL');
   if (!ANON_KEY) faltan.push('SUPABASE_ANON_KEY');
+  // Sin esto el paso 3 no tiene contra qué comparar. Se exige aquí para FALLAR
+  // CERRADO: mejor 503 que dejar entrar a cualquier empresa por un env vacío.
+  if (!MEMBEGO_COMPANY_ID) faltan.push('MEMBEGO_COMPANY_ID');
   return faltan;
 }
 
@@ -108,6 +123,7 @@ export async function exigirEmpleado(request: Request): Promise<UsuarioAutentica
   // 2) ¿Es un empleado activo con rol de mostrador? La RLS deja al usuario ver
   //    solo su propia fila de `profiles`, así que esta consulta con SU token no
   //    puede leer la de nadie más.
+  let rolDelPaso2: string;
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role,is_active`,
@@ -121,10 +137,33 @@ export async function exigirEmpleado(request: Request): Promise<UsuarioAutentica
     if (!perfil || perfil.is_active === false || !perfil.role || !ROLES_MOSTRADOR.has(perfil.role)) {
       throw new ErrorAuth('SIN_PERMISO', 'Su usuario no puede operar el mostrador.', 403);
     }
-    return { userId, rol: perfil.role };
+    rolDelPaso2 = perfil.role;
   } catch (e) {
     if (e instanceof ErrorAuth) throw e;
     throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el perfil.', 403);
+  }
+
+  // 3) ¿Es de ESTA empresa? La RLS deja al usuario ver solo el vínculo de SU
+  //    empresa; se exige que ese vínculo apunte a la empresa de Membego de este
+  //    despliegue y esté activo. Así un empleado de otro inquilino del mismo
+  //    Supabase —que sí pasa los pasos 1 y 2— no alcanza a este local.
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/membego_company_links?select=membego_company_id,is_active`,
+      { headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) {
+      throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el vínculo con Membego.', 403);
+    }
+    const filas = (await res.json()) as Array<{ membego_company_id?: string; is_active?: boolean }>;
+    const vinculo = filas.find((f) => f.is_active !== false && f.membego_company_id === MEMBEGO_COMPANY_ID);
+    if (!vinculo) {
+      throw new ErrorAuth('SIN_PERMISO', 'Su empresa no es la vinculada a este local.', 403);
+    }
+    return { userId, rol: rolDelPaso2 };
+  } catch (e) {
+    if (e instanceof ErrorAuth) throw e;
+    throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el vínculo con Membego.', 403);
   }
 }
 
