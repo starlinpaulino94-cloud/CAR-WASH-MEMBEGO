@@ -17,13 +17,13 @@
 | Authorization | 90/100 | RLS FORCE completa; gates de UI espejo |
 | Performance | 70/100 | Consultas calientes indexadas; sin load test |
 | Scalability | 62/100 | Sin conexiones pg crudas (poolea PostgREST); falta load test |
-| Reliability | 68/100 | Errores manejados + logs estructurados; falta backup test |
-| Testing | 86/100 | 250 e2e + 703 SQL + 4 concurrencia + 15 api, en CI (Phase 1-2) |
+| Reliability | 78/100 | Timeout externo + retry acotado + failure tests (Phase 3); falta backup test |
+| Testing | 88/100 | 250 e2e + 705 SQL + 4 concurrencia + 21 api, en CI (Phase 1-3) |
 | Observability | 55/100 | Logs estructurados en bordes + reporte de errores front (Phase 1); falta tracing/alertas |
 | DevOps | 70/100 | CI en cada push/PR (Phase 1); falta rollback probado |
 | Disaster Recovery | 30/100 | Backups de Supabase asumidos; **restore no probado** |
 | Documentation | 65/100 | Comentarios densos; ADRs recién creados |
-| **Production Readiness** | **76/100** | Tras Phase 0-2 (SEC-001, CI+obs, concurrencia+índices) |
+| **Production Readiness** | **78/100** | Tras Phase 0-3 (+ fiabilidad de integración) |
 
 ## Nivel de madurez
 

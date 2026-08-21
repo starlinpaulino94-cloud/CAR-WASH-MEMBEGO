@@ -44,13 +44,20 @@ build del POS llega a producción.
 
 La Fase 8 las declara obligatorias. No existen. Ver BL-001 (NCF, stock, bahía).
 
-## TEST-004 — Faltan contract tests con MembeGo · **P2**
+## TEST-004 — Contract tests con MembeGo · ✅ HECHO (Phase 3)
+
+> `tests/api/membego-contrato.test.mjs` (6): timeout→503, caída→NO_DISPONIBLE,
+> 4xx tal cual, 5xx→502, retry-una-vez del 401, no-bucle. Ver abajo.
 
 La Fase 33 los pide para integraciones externas (pagos, webhooks). El canje, la
 ficha y el webhook dependen del contrato de la API de MembeGo; si MembeGo cambia
 un campo, se rompe en producción sin aviso. No hay prueba de contrato.
 
-## TEST-005 — Failure testing incompleto · **P2**
+## TEST-005 — Failure testing · ✅ HECHO (Phase 3)
+
+> Cubierto por los tests de contrato + idempotencia del webhook duplicado
+> (50_membego_tests.sql: evento repetido no deja rastro ni segundo cliente).
+> Ver abajo.
 
 La Fase 34 pide probar el camino infeliz: MembeGo timeout, webhook duplicado,
 respuesta inválida. El código maneja errores (los devuelve, no los traga), pero

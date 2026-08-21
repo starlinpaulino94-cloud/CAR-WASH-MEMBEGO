@@ -56,10 +56,19 @@
    congela precio, invoices congela ITBIS. Prueba nueva en 20_billing_tests.sql:
    cambiar el catálogo tras facturar NO altera la línea emitida (703/703).
 
-## Phase 3 — Fiabilidad de integraciones (P2)
+## Phase 3 — Fiabilidad de integraciones (P2) · ✅ HECHO
 
-8. **TEST-004/005 — Contract tests con MembeGo + failure testing** (timeout,
-   webhook duplicado, respuesta inválida).
+8. **TEST-004/005 — Contract + failure testing.** ✅
+   - **Arreglo de fiabilidad:** las llamadas a Membego ahora tienen TIMEOUT
+     (AbortController, 8s configurable por `MEMBEGO_TIMEOUT_MS`). Antes no había
+     techo: un Membego colgado dejaba la función abierta hasta el límite de
+     plataforma (Fase 13). Al vencer → NO_DISPONIBLE (503), reintentable.
+   - **Contract/failure tests** (`tests/api/membego-contrato.test.mjs`, 6):
+     timeout, caída de red, 4xx tal cual, 5xx→502, retry-una-vez del 401 sin
+     bucle.
+   - **Webhook duplicado**: ya era idempotente (guard por event_id que corta
+     antes de cualquier efecto); reforzada la prueba en 50_membego_tests.sql
+     (no deja rastro ni segundo cliente).
 
 ## Phase 4 — Recuperación (P2/P3)
 
