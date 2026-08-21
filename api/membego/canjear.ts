@@ -1,4 +1,5 @@
 import { llamar, json, respuestaDeError, COMPANY_ID, faltaConfiguracion, ErrorMembego } from '../_membego/cliente.js';
+import { exigirEmpleado, respuestaDeAuth } from '../_membego/auth.js';
 
 /**
  * Consumir el beneficio en Membego, DESPUÉS de haber facturado.
@@ -62,6 +63,14 @@ interface RespuestaCanje {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  try {
+    await exigirEmpleado(request);
+  } catch (e) {
+    const r = respuestaDeAuth(e);
+    if (r) return r;
+    return respuestaDeError(e);
+  }
+
   const faltan = faltaConfiguracion();
   if (faltan.length > 0) {
     return json(

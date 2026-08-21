@@ -12,7 +12,11 @@ en comentarios de advertencia (0 exposiciones reales). El problema grave está e
 
 ---
 
-## SEC-001 — Endpoints serverless de MembeGo sin autenticación de usuario · **P0**
+## SEC-001 — Endpoints serverless de MembeGo sin autenticación de usuario · **P0** · ✅ REMEDIADO
+
+> Cerrado en Phase 0. Guard `api/_membego/auth.ts` (`exigirEmpleado`) en los 4
+> bordes; el cliente envía el JWT de sesión. 12/12 pruebas + 250 e2e verdes.
+> Ver ADR-004. El texto original del hallazgo se conserva abajo como registro.
 
 **Archivos:** `api/membego/ficha.ts`, `api/membego/canjear.ts`,
 `api/membego/revertir.ts`, `api/membego/tipos-vehiculo.ts`

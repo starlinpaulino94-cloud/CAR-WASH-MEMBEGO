@@ -62,3 +62,25 @@ export function requireSupabase(): SupabaseClient<Database> {
   }
   return supabase;
 }
+
+/**
+ * Encabezados para llamar a nuestros bordes `/api/membego/*`, con el token de
+ * sesión del usuario puesto.
+ *
+ * Esos bordes actúan con la credencial de Membego del negocio, así que exigen
+ * saber que quien llama es un empleado (ver `api/_membego/auth.ts`). El token va
+ * en `Authorization: Bearer`; el servidor se lo pregunta a Supabase. Sin sesión
+ * se manda sin el encabezado y el borde responde 401 — que es exactamente lo que
+ * debe pasar.
+ */
+export async function encabezadosMembego(
+  extra: Record<string, string> = {}
+): Promise<Record<string, string>> {
+  const cabeceras: Record<string, string> = { ...extra };
+  if (supabase) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) cabeceras.Authorization = `Bearer ${token}`;
+  }
+  return cabeceras;
+}

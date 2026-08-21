@@ -1,4 +1,4 @@
-import { requireSupabase } from '../lib/supabase';
+import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
 
 /**
@@ -643,7 +643,7 @@ export async function canjearEnMembego(params: {
   try {
     const res = await fetch('/api/membego/canjear', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await encabezadosMembego({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         invoiceId: params.invoiceId,
         membershipId: params.membershipId,
@@ -695,7 +695,7 @@ export async function revertirEnMembego(
   try {
     const res = await fetch('/api/membego/revertir', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await encabezadosMembego({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ visitId, reason: motivo })
     });
     const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };

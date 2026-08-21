@@ -5,14 +5,18 @@
 > prueba → revisión independiente. No hay big-bang rewrite (no hace falta: la
 > arquitectura es sana).
 
-## Phase 0 — Bloqueadores de seguridad / datos (P0)
+## Phase 0 — Bloqueadores de seguridad / datos (P0) · ✅ HECHO
 
-1. **SEC-001 — Autenticar los 4 endpoints de MembeGo.**
-   - Spec: exigir `Authorization: Bearer <jwt supabase>`; validar y comprobar
-     rol ≥ cajero; 401 si falta o no es válido.
-   - Test: `POST` sin token → 401; con token de cajero → 200; e2e del POS sigue verde.
-   - Revisión independiente: `/security-review` o segundo modelo sobre el diff.
-   - Esfuerzo: ~medio día.
+1. **SEC-001 — Autenticar los 4 endpoints de MembeGo.** ✅ **Remediado.**
+   - Guard único `api/_membego/auth.ts` (`exigirEmpleado`) invocado por los 4
+     bordes antes de tocar Membego. Valida el JWT de Supabase vía `/auth/v1/user`
+     y exige rol de mostrador + `is_active` leyendo `profiles` bajo RLS.
+   - El cliente envía el token de sesión (`encabezadosMembego` en
+     `src/lib/supabase.ts`), cableado en los 4 call sites.
+   - Nueva variable en Vercel: `SUPABASE_ANON_KEY` (no secreta).
+   - Test: `tests/api/auth-membego.test.mjs` — 8 unidad + 4 source-check = 12/12.
+     Las 250 e2e siguen verdes. Ver ADR-004.
+   - Revisión independiente: security-review sobre el diff (segundo agente).
 
 ## Phase 1 — Infraestructura de confianza (P1)
 
