@@ -50,6 +50,12 @@ hueco.
 No se modeló el costo por escala (Supabase + Vercel + MembeGo API). Para escala S
 es trivial; a M/L habría que estimar. Pendiente.
 
+## Estado tras Phase 5
+
+Herramientas de carga y plan listos (`tests/load/`, SCALABILITY_PLAN.md,
+LOAD_TEST_REPORT.md); presupuesto p95<800/p99<1500/err<1%. Falta correr contra
+staging para números reales — hasta entonces la escala es UNVERIFIED.
+
 ## Veredicto de escala
 
 **Hasta qué carga opera con SLO razonables: no medido (no hay load test).** Por

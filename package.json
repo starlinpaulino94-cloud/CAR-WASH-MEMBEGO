@@ -18,7 +18,8 @@
     "test:e2e": "bash tests/e2e/run-all.sh",
     "test": "npm run typecheck && npm run test:api",
     "test:concurrency": "bash supabase/tests/concurrency.sh",
-    "test:restore": "bash supabase/tests/restore.sh"
+    "test:restore": "bash supabase/tests/restore.sh",
+    "test:load": "node tests/load/carga.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

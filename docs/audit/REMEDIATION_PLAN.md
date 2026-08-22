@@ -80,10 +80,14 @@
    Vercel + `git revert`. El CI (Phase 1) hace raro que un build roto llegue a
    main. Un simulacro real lo hace el dueño.
 
-## Phase 5 — Rendimiento a escala (cuando se acerque M)
+## Phase 5 — Rendimiento a escala · ✅ HERRAMIENTAS LISTAS
 
-11. Load / stress / spike / soak tests con presupuesto de performance definido
-    (p50/p95/p99, error rate). Requisito para declarar LEVEL 5.
+11. **Load/stress/spike/soak.** ✅ Herramientas y plan listos: `tests/load/`
+    (runner Node sin deps + script k6), presupuesto de performance definido
+    (p95<800, p99<1500, err<1%), SCALABILITY_PLAN.md y LOAD_TEST_REPORT.md. El
+    humo local prueba que el runner mide. **Los números reales salen de correr
+    contra staging** (Supabase+Vercel) — eso lo dispara el dueño; hasta entonces
+    la capacidad de escala queda UNVERIFIED y no se declara LEVEL 5.
 
 ## Phase 6 — Limpieza (P3/P4)
 

@@ -15,15 +15,15 @@
 | Security | 82/100 | SEC-001 remediado (Phase 0, guard + binding de empresa); base fuerte |
 | Authentication | 75/100 | Supabase Auth; no verificado en producción |
 | Authorization | 90/100 | RLS FORCE completa; gates de UI espejo |
-| Performance | 70/100 | Consultas calientes indexadas; sin load test |
-| Scalability | 62/100 | Sin conexiones pg crudas (poolea PostgREST); falta load test |
+| Performance | 74/100 | Consultas indexadas + presupuesto y herramientas de carga (Phase 5); falta correr en staging |
+| Scalability | 66/100 | Poolea PostgREST; plan de escala + herramientas (Phase 5); falta medir en staging |
 | Reliability | 78/100 | Timeout externo + retry acotado + failure tests (Phase 3); falta backup test |
 | Testing | 88/100 | 250 e2e + 705 SQL + 4 concurrencia + 21 api, en CI (Phase 1-3) |
 | Observability | 55/100 | Logs estructurados en bordes + reporte de errores front (Phase 1); falta tracing/alertas |
 | DevOps | 70/100 | CI en cada push/PR (Phase 1); falta rollback probado |
 | Disaster Recovery | 62/100 | Mecanismo de restore probado + runbook (Phase 4); falta simulacro en prod |
 | Documentation | 65/100 | Comentarios densos; ADRs recién creados |
-| **Production Readiness** | **80/100** | Tras Phase 0-4 (+ recuperación probada) |
+| **Production Readiness** | **82/100** | Tras Phase 0-5 (auditoría y remediación completas salvo simulacros en prod) |
 
 ## Nivel de madurez
 
