@@ -21,9 +21,9 @@
 | Testing | 88/100 | 250 e2e + 705 SQL + 4 concurrencia + 21 api, en CI (Phase 1-3) |
 | Observability | 55/100 | Logs estructurados en bordes + reporte de errores front (Phase 1); falta tracing/alertas |
 | DevOps | 70/100 | CI en cada push/PR (Phase 1); falta rollback probado |
-| Disaster Recovery | 30/100 | Backups de Supabase asumidos; **restore no probado** |
+| Disaster Recovery | 62/100 | Mecanismo de restore probado + runbook (Phase 4); falta simulacro en prod |
 | Documentation | 65/100 | Comentarios densos; ADRs recién creados |
-| **Production Readiness** | **78/100** | Tras Phase 0-3 (+ fiabilidad de integración) |
+| **Production Readiness** | **80/100** | Tras Phase 0-4 (+ recuperación probada) |
 
 ## Nivel de madurez
 

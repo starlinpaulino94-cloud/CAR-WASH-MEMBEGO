@@ -79,7 +79,11 @@ columna de dinero existe por línea), lo que sugiere que sí se hace snapshot. *
 verificado exhaustivamente** que TODA condición histórica (tasa, término de
 crédito de flotilla) se congele. → revisar en la fase de remediación P2.
 
-## Backups / restore (UNVERIFIED)
+## Backups / restore · ✅ MECANISMO PROBADO (Phase 4)
+
+> `supabase/tests/restore.sh` prueba el ciclo pg_dump→pg_restore (7/7). Runbook,
+> RPO/RTO y escenarios en DISASTER_RECOVERY.md. El simulacro contra el backup
+> real de producción queda para el dueño. Texto original abajo.
 
 Supabase gestiona backups automáticos según el plan. **No hay evidencia en el
 repo de**: frecuencia configurada, política de retención, ni un restore test

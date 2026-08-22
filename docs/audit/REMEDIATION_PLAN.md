@@ -70,11 +70,15 @@
      antes de cualquier efecto); reforzada la prueba en 50_membego_tests.sql
      (no deja rastro ni segundo cliente).
 
-## Phase 4 — Recuperación (P2/P3)
+## Phase 4 — Recuperación (P2/P3) · ✅ MECANISMO PROBADO
 
-9. **Restore test** de Supabase; documentar RPO/RTO, frecuencia, retención
-   (DATABASE_AUDIT / Fase 25). Un backup sin restore probado no cuenta.
-10. **Rollback probado** en Vercel (Fase 29).
+9. **Restore test.** ✅ `supabase/tests/restore.sh`: ciclo pg_dump→pg_restore
+   verificado (56 tablas, 124 políticas, 196 funciones, 217 índices, datos, y
+   RLS FORCE preservada). Runbook completo en DISASTER_RECOVERY.md. El simulacro
+   contra el backup REAL de producción queda para el dueño (staging).
+10. **Rollback.** ✅ Documentado en DISASTER_RECOVERY.md: Instant Rollback de
+   Vercel + `git revert`. El CI (Phase 1) hace raro que un build roto llegue a
+   main. Un simulacro real lo hace el dueño.
 
 ## Phase 5 — Rendimiento a escala (cuando se acerque M)
 
