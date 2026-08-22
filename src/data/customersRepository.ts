@@ -1,4 +1,4 @@
-import { requireSupabase } from '../lib/supabase';
+import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Enums } from '../lib/database.types';
 
 /**
@@ -174,7 +174,7 @@ export async function fetchFichaMembego(
 ): Promise<FichaMembego> {
   const res = await fetch('/api/membego/ficha', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await encabezadosMembego({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       membegoCustomerId,
       plate: opciones.placa ?? null,

@@ -1,3 +1,4 @@
+import { log, nuevoRequestId } from '../_lib/log.js';
 /**
  * Cliente de la Platform API de Membego. SOLO SERVIDOR.
  *
@@ -27,8 +28,39 @@ const CLIENT_SECRET = process.env.MEMBEGO_CLIENT_SECRET ?? '';
 /** Empresa de Membego con la que está vinculado este car wash. */
 export const COMPANY_ID = process.env.MEMBEGO_COMPANY_ID ?? '';
 
+/**
+ * Tope de espera para una llamada a Membego, en ms (auditoría, Fase 13).
+ *
+ * Toda llamada externa necesita un techo: sin él, un Membego que se cuelga deja
+ * la función serverless abierta hasta el límite de la plataforma —diez o más
+ * segundos— y el cajero se queda mirando una rueda sin saber si cobró. 8 s es
+ * holgado para una API sana y corta en seco una caída. Configurable.
+ */
+const TIMEOUT_MS = Number(process.env.MEMBEGO_TIMEOUT_MS ?? '8000');
+
 /** Qué se pide al autenticar. Menos que esto no alcanza; más, sobra. */
 const SCOPES = 'customers:read vehicles:read memberships:read benefits:read benefits:redeem';
+
+/**
+ * `fetch` con corte por tiempo. Al vencer, aborta y lo traduce a un error de
+ * Membego «no disponible», igual que una caída de red: reintentable y con un
+ * mensaje que el mostrador entiende. `ErrorMembego` se declara más abajo pero
+ * solo se referencia al ejecutarse, cuando ya existe.
+ */
+async function fetchConTope(url: string, init: RequestInit): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new ErrorMembego('NO_DISPONIBLE', `Membego no respondió en ${TIMEOUT_MS} ms.`, 503);
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 export function faltaConfiguracion(): string[] {
   const faltan: string[] = [];
@@ -43,7 +75,7 @@ let tokenEnCurso: { valor: string; venceEn: number } | null = null;
 let pidiendo: Promise<string> | null = null;
 
 async function pedirToken(): Promise<string> {
-  const res = await fetch(`${BASE}/oauth/token`, {
+  const res = await fetchConTope(`${BASE}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -124,7 +156,7 @@ export async function llamar<T>(ruta: string, opciones: OpcionesLlamada = {}): P
     };
     if (opciones.claveIdempotencia) cabeceras['Idempotency-Key'] = opciones.claveIdempotencia;
 
-    return fetch(`${BASE}${ruta}`, {
+    return fetchConTope(`${BASE}${ruta}`, {
       method: opciones.metodo ?? 'GET',
       headers: cabeceras,
       body: opciones.cuerpo !== undefined ? JSON.stringify(opciones.cuerpo) : undefined,
@@ -166,12 +198,17 @@ export function json(body: unknown, status: number): Response {
   });
 }
 
-/** Traduce un fallo a la respuesta que el mostrador puede entender. */
-export function respuestaDeError(e: unknown): Response {
+/**
+ * Traduce un fallo a la respuesta que el mostrador puede entender, y lo deja
+ * registrado en JSON estructurado (OBS-001). `ruta` da contexto para poder
+ * filtrar por borde en el recolector; nunca se registran datos del cliente.
+ */
+export function respuestaDeError(e: unknown, ruta = 'membego'): Response {
+  const requestId = nuevoRequestId();
   if (e instanceof ErrorMembego) {
-    console.warn('[membego]', e.codigo, e.message);
+    log('warn', { requestId, ruta, evento: 'membego_error', status: e.status, detalle: `${e.codigo}: ${e.message}` });
     return json({ error: e.codigo, message: e.message }, e.status);
   }
-  console.error('[membego] inesperado', e);
+  log('error', { requestId, ruta, evento: 'membego_inesperado', status: 503, detalle: e instanceof Error ? e.message : String(e) });
   return json({ error: 'NO_DISPONIBLE', message: 'No se pudo contactar con Membego.' }, 503);
 }

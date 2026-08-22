@@ -1,4 +1,4 @@
-import { requireSupabase } from '../lib/supabase';
+import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Tables, Enums, Json, UpdateDto } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
 
@@ -1051,7 +1051,7 @@ export interface NivelesDeMembego {
  */
 export async function fetchNivelesDeMembego(): Promise<NivelesDeMembego | null> {
   try {
-    const res = await fetch('/api/membego/tipos-vehiculo');
+    const res = await fetch('/api/membego/tipos-vehiculo', { headers: await encabezadosMembego() });
     if (!res.ok) return null;
     const body = (await res.json()) as {
       vehicleTypes?: TipoVehiculoMembego[];

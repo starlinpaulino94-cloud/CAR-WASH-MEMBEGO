@@ -11,7 +11,15 @@
     "lint": "tsc --noEmit",
     "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > src/lib/database.types.ts",
     "db:push": "supabase db push",
-    "db:diff": "supabase db diff"
+    "db:diff": "supabase db diff",
+    "typecheck": "tsc --noEmit",
+    "test:api": "node --import tsx --test tests/api/*.test.mjs",
+    "test:sql": "bash supabase/tests/run.sh && bash supabase/tests/concurrency.sh && bash supabase/tests/restore.sh",
+    "test:e2e": "bash tests/e2e/run-all.sh",
+    "test": "npm run typecheck && npm run test:api",
+    "test:concurrency": "bash supabase/tests/concurrency.sh",
+    "test:restore": "bash supabase/tests/restore.sh",
+    "test:load": "node tests/load/carga.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -42,7 +50,7 @@
     "esbuild": "^0.25.0",
     "playwright": "^1.62.0",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.12",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
   }

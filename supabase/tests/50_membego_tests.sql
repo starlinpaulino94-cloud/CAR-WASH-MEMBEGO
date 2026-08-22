@@ -28,6 +28,22 @@ select test.check('evento repetido (mismo id) es idempotente',
   (public.membego_ingest_event('EV-1', 'cliente.registrado', 'MG-A',
     '{"clienteId":"MG-CLI-1","cliente":{"nombre":"Ana Membego"}}'::jsonb) ->> 'reason') = 'duplicate');
 
+-- TEST-005 · el evento duplicado no deja rastro repetido: el guard corta ANTES
+-- de cualquier efecto, así que solo hay UNA fila para ese id y UN cliente. Se
+-- comprueba como postgres: `service_role` no puede leer estas tablas de frente
+-- (solo la función SECURITY DEFINER escribe), y aquí queremos ver la verdad.
+set role postgres;
+select test.check('el webhook duplicado no registra el evento dos veces',
+  (select count(*) = 1 from public.membego_webhook_events where event_id = 'EV-1'),
+  (select count(*)::text from public.membego_webhook_events where event_id = 'EV-1'));
+
+select test.check('el webhook duplicado no crea un segundo cliente',
+  (select count(*) = 1 from public.customers
+    where membego_customer_id = 'MG-CLI-1' and company_id = app.membego_company('MG-A')),
+  (select count(*)::text from public.customers
+    where membego_customer_id = 'MG-CLI-1' and company_id = app.membego_company('MG-A')));
+set role service_role;
+
 select test.check('evento para una empresa no vinculada se ignora',
   (public.membego_ingest_event('EV-X', 'cliente.registrado', 'MG-DESCONOCIDA',
     '{"clienteId":"Z"}'::jsonb) ->> 'reason') = 'unknown_company');
