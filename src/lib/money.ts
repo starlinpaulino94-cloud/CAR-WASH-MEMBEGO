@@ -80,6 +80,29 @@ export function taxFromBps(taxableCents: number, taxRateBps: number): number {
   return Math.round((taxableCents * taxRateBps) / 10000);
 }
 
+/**
+ * Desglose del ITBIS respetando si el precio ya lo incluye.
+ *
+ * Es el ESPEJO en el cliente de lo que hace la base (migración 20260821130000).
+ * Solo previsualiza; al emitir, create_invoice recalcula y esa es la cifra que
+ * vale. Debe dar lo mismo para que el cajero no vea un total y cobre otro.
+ *
+ *   incluido=false → el 18% se suma encima:  total = monto + monto·18%
+ *   incluido=true  → el precio YA lo trae:    total = monto; ITBIS extraído
+ */
+export function desglosarItbis(
+  montoCents: number,
+  taxRateBps: number,
+  incluido: boolean
+): { base: number; tax: number; total: number } {
+  if (incluido) {
+    const base = Math.round((montoCents * 10000) / (10000 + taxRateBps));
+    return { base, tax: montoCents - base, total: montoCents };
+  }
+  const tax = taxFromBps(montoCents, taxRateBps);
+  return { base: montoCents, tax, total: montoCents + tax };
+}
+
 /** Puntos base a porcentaje legible: 1800 -> "18%". */
 export function bpsToPercent(bps: number): string {
   const pct = bps / 100;

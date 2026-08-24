@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
-import { formatCents, parseAmountToCents, centsToInput, taxFromBps, bpsToPercent } from '../../lib/money';
+import { formatCents, parseAmountToCents, centsToInput, desglosarItbis, bpsToPercent } from '../../lib/money';
 import { validatePromotion, PromotionPreview } from '../../data/promotionRepository';
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
@@ -211,6 +211,7 @@ export const PosSupabaseView: React.FC = () => {
   };
 
   const taxRateBps = company?.tax_rate_bps ?? 1800;
+  const itbisIncluido = company?.prices_include_tax ?? false;
   const symbol = company?.currency_symbol ?? 'RD$';
 
   const load = useCallback(async () => {
@@ -524,9 +525,10 @@ export const PosSupabaseView: React.FC = () => {
     const promo = promoPreview?.valid ? (promoPreview.discount_cents ?? 0) : 0;
     const discount = manual + promo;
     const taxable = Math.max(0, subtotal - discount - membego);
-    const tax = taxFromBps(taxable, taxRateBps);
-    return { subtotal, discount, manual, promo, membego, tax, total: taxable + tax };
-  }, [lineasEfectivas, cubiertoComoImporte, taxRateBps, promoPreview]);
+    // Respeta si la empresa vende con ITBIS incluido en el precio.
+    const { tax, total } = desglosarItbis(taxable, taxRateBps, itbisIncluido);
+    return { subtotal, discount, manual, promo, membego, tax, total };
+  }, [lineasEfectivas, cubiertoComoImporte, taxRateBps, itbisIncluido, promoPreview]);
 
   const tenderedCents = parseAmountToCents(tenderedInput);
   const effectiveTendered = method === 'efectivo'
