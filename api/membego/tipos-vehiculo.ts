@@ -1,4 +1,5 @@
 import { llamar, json, respuestaDeError, COMPANY_ID, faltaConfiguracion } from '../_membego/cliente.js';
+import { exigirEmpleado, respuestaDeAuth } from '../_membego/auth.js';
 
 /**
  * Los tipos de vehículo de Membego con su nivel tarifario.
@@ -34,7 +35,15 @@ interface TipoVehiculoMembego {
   nivelTarifario: number;
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
+  try {
+    await exigirEmpleado(request);
+  } catch (e) {
+    const r = respuestaDeAuth(e);
+    if (r) return r;
+    return respuestaDeError(e);
+  }
+
   const faltan = faltaConfiguracion();
   if (faltan.length > 0) {
     return json(

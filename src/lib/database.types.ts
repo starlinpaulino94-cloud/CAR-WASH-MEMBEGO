@@ -620,6 +620,7 @@ export interface Database {
           currency_symbol: string;
           timezone: string;
           tax_rate_bps: number;
+          prices_include_tax: boolean;
           // Techo del descuento manual (0032). 10000 = 100 %, sin límite.
           max_manual_discount_bps: number;
           allow_guest_checkout: boolean;
@@ -640,6 +641,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          prices_include_tax?: boolean;
           max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";
@@ -659,6 +661,7 @@ export interface Database {
           currency_symbol?: string;
           timezone?: string;
           tax_rate_bps?: number;
+          prices_include_tax?: boolean;
           max_manual_discount_bps?: number;
           allow_guest_checkout?: boolean;
           thermal_printer_width?: "58mm" | "80mm" | "letter";

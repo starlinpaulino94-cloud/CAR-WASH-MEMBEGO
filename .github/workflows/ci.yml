@@ -1,0 +1,65 @@
+name: CI
+
+# Gate de calidad en cada push y cada PR. Antes NO existía: los merges a main,
+# que Vercel despliega solos, iban a producción sin correr ni una prueba ni el
+# typecheck (hallazgo TEST-002 de la auditoría).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: typecheck · build · api tests · audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: clave-de-marcador-para-el-build
+      - name: Pruebas de los bordes (guard SEC-001 + contrato Membego)
+        run: npm run test:api
+      - name: Auditoría de dependencias (no bloquea; informa)
+        run: npm audit --omit=dev || true
+
+  sql:
+    name: SQL · concurrencia · restauración
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar cliente psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Reglas de negocio (RLS, dinero, permisos) + concurrencia + restore
+        # run.sh aplica las 46 migraciones y corre 705 pruebas; concurrency.sh
+        # abre transacciones solapadas reales; restore.sh prueba el ciclo
+        # pg_dump→pg_restore. Todo por TCP (127.0.0.1:5433).
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5433'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash supabase/tests/run.sh && bash supabase/tests/concurrency.sh && bash supabase/tests/restore.sh
