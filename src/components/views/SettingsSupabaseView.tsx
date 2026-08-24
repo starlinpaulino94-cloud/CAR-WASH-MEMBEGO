@@ -34,6 +34,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [headerNote, setHeaderNote] = useState('');
   const [footerNote, setFooterNote] = useState('');
   const [printerWidth, setPrinterWidth] = useState<'58mm' | '80mm' | 'letter'>('80mm');
+  const [itbisIncluido, setItbisIncluido] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     setHeaderNote(company.header_note ?? '');
     setFooterNote(company.footer_note ?? '');
     setPrinterWidth(company.thermal_printer_width);
+    setItbisIncluido(company.prices_include_tax ?? false);
   }, [company]);
 
   useEffect(() => {
@@ -95,7 +97,8 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
       await updateCompany(company.id, {
         trade_name: tradeName.trim(), legal_name: legalName.trim(), tax_id: taxId.trim(),
         header_note: headerNote.trim() || null, footer_note: footerNote.trim() || null,
-        thermal_printer_width: printerWidth
+        thermal_printer_width: printerWidth,
+        prices_include_tax: itbisIncluido
       });
       setNotice('Configuración guardada.');
       await reload();
@@ -157,6 +160,25 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               La tasa impositiva no se edita desde aquí: cambiarla altera el cálculo de
               comprobantes ya emitidos y exige una decisión contable.
             </p>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <span className="text-xs font-semibold text-muted uppercase">Cálculo del ITBIS</span>
+            <label className="flex items-start gap-2.5 bg-canvas border border-line rounded-lg p-2.5 cursor-pointer has-[:disabled]:opacity-60 has-[:disabled]:cursor-default">
+              <input
+                type="checkbox"
+                checked={itbisIncluido}
+                disabled={!editable || busy}
+                onChange={e => setItbisIncluido(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-brand shrink-0"
+              />
+              <span className="text-xs text-strong">
+                Los precios de la lista <strong>ya incluyen</strong> el ITBIS.
+                <span className="block text-faint font-normal mt-0.5">
+                  Activado: un lavado de RD$&nbsp;1.000 se cobra 1.000 y el {bpsToPercent(company?.tax_rate_bps ?? 1800)} se
+                  extrae de adentro para el comprobante. Apagado: el ITBIS se suma encima del precio.
+                </span>
+              </span>
+            </label>
           </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold text-muted uppercase">Moneda</span>
