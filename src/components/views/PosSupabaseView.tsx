@@ -66,6 +66,9 @@ export const PosSupabaseView: React.FC = () => {
 
   const [category, setCategory] = useState<VehicleCategory>('sedan');
   const [tab, setTab] = useState<'services' | 'products'>('services');
+  // Buscador del catálogo. Con decenas de servicios cargados, recorrer la
+  // cuadrícula a ojo es lento; el cajero teclea parte del nombre y filtra.
+  const [catalogSearch, setCatalogSearch] = useState('');
 
   const [services, setServices] = useState<ServiceWithPrice[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -213,6 +216,28 @@ export const PosSupabaseView: React.FC = () => {
   const taxRateBps = company?.tax_rate_bps ?? 1800;
   const itbisIncluido = company?.prices_include_tax ?? false;
   const symbol = company?.currency_symbol ?? 'RD$';
+
+  /**
+   * Filtro del catálogo por texto.
+   *
+   * Se normaliza (minúsculas y sin acentos) en ambos lados para que "basico"
+   * encuentre "Cuidado Básico" y "cera" encuentre "Cera a máquina". Busca en el
+   * nombre y en la descripción del servicio / categoría del producto, que es
+   * donde el cajero espera acertar.
+   */
+  const normalizar = (t: string) =>
+    t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const q = normalizar(catalogSearch.trim());
+
+  const serviciosFiltrados = useMemo(() => {
+    if (!q) return services;
+    return services.filter(s => normalizar(`${s.name} ${s.description}`).includes(q));
+  }, [services, q]);
+
+  const productosFiltrados = useMemo(() => {
+    if (!q) return products;
+    return products.filter(p => normalizar(`${p.name} ${p.category}`).includes(q));
+  }, [products, q]);
 
   const load = useCallback(async () => {
     if (!branch) return;
@@ -768,13 +793,35 @@ export const PosSupabaseView: React.FC = () => {
             ))}
           </div>
 
+          {/* Buscador del catálogo: filtra la pestaña activa por nombre. */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-faint absolute left-2.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
+            <input
+              type="search"
+              value={catalogSearch}
+              onChange={e => setCatalogSearch(e.target.value)}
+              placeholder={tab === 'services' ? 'Buscar servicio por nombre…' : 'Buscar producto por nombre…'}
+              aria-label={tab === 'services' ? 'Buscar servicio' : 'Buscar producto'}
+              autoComplete="off"
+              className="w-full pl-8 pr-8 py-2 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            />
+            {catalogSearch && (
+              <button type="button" onClick={() => setCatalogSearch('')} aria-label="Limpiar búsqueda"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-faint hover:text-strong">
+                <XIcon className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
             {tab === 'services' ? (
-              services.length === 0 ? (
+              serviciosFiltrados.length === 0 ? (
                 <p className="text-xs text-faint italic col-span-full py-8 text-center">
-                  No hay servicios con precio para {CATEGORIES.find(c => c.id === category)?.label}.
+                  {q
+                    ? `Ningún servicio coincide con «${catalogSearch.trim()}».`
+                    : `No hay servicios con precio para ${CATEGORIES.find(c => c.id === category)?.label}.`}
                 </p>
-              ) : services.map(s => (
+              ) : serviciosFiltrados.map(s => (
                 <button
                   key={s.id}
                   onClick={() => addService(s)}
@@ -790,11 +837,13 @@ export const PosSupabaseView: React.FC = () => {
                 </button>
               ))
             ) : (
-              products.length === 0 ? (
+              productosFiltrados.length === 0 ? (
                 <p className="text-xs text-faint italic col-span-full py-8 text-center">
-                  No hay productos a la venta.
+                  {q
+                    ? `Ningún producto coincide con «${catalogSearch.trim()}».`
+                    : 'No hay productos a la venta.'}
                 </p>
-              ) : products.map(p => (
+              ) : productosFiltrados.map(p => (
                 <button
                   key={p.id}
                   onClick={() => addProduct(p)}
