@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban
+  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban, Receipt
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigation } from '../../context/NavigationContext';
 import { useQueueCount } from '../../context/QueueCountContext';
+import { dejarOrdenParaFacturar } from '../../data/billingRepository';
 import { formatCents } from '../../lib/money';
 import {
   fetchBoardOrders, fetchItemsForOrders, fetchBays, fetchOperators, fetchAssignees,
@@ -67,6 +69,14 @@ export const KanbanSupabaseView: React.FC = () => {
    * obligatorio, para lo que es una operación correctiva y no un paso del flujo.
    */
   const puedeCancelar = can(profile, 'cancelOrder');
+  const puedeFacturar = can(profile, 'issueInvoice');
+  const { navigate } = useNavigation();
+
+  /** Manda la orden al POS ya cargada, para cobrarla sin buscarla a mano. */
+  const facturarOrden = (order: WorkOrder) => {
+    dejarOrdenParaFacturar(order.id);
+    navigate('/ventas/pos');
+  };
   const [cancelando, setCancelando] = useState<WorkOrder | null>(null);
   const [motivo, setMotivo] = useState('');
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -314,6 +324,20 @@ export const KanbanSupabaseView: React.FC = () => {
                             </Button>
                           ))}
                         </div>
+                      )}
+
+                      {/* Facturar sin ir a buscarla al POS: manda la orden ya
+                          cargada. Solo si está pendiente de cobro y no cancelada. */}
+                      {puedeFacturar && order.payment_status === 'pendiente'
+                        && order.status !== 'cancelado' && (
+                        <Button
+                          variant="secondary" size="xs" className="w-full"
+                          disabled={busy}
+                          onClick={() => facturarOrden(order)}
+                          aria-label={`Facturar la orden ${order.order_number}`}
+                        >
+                          <Receipt /> Facturar
+                        </Button>
                       )}
 
                       {/* Cancelar va aparte de los botones de flujo y en gris:

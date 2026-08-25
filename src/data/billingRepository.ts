@@ -635,6 +635,48 @@ export async function fetchChargeableOrders(
   return (data ?? []) as unknown as ChargeableOrder[];
 }
 
+/**
+ * Una sola orden cobrable, por id — para «Facturar» desde el módulo de órdenes.
+ *
+ * Mismo select y las mismas condiciones que la lista (pendiente de cobro y no
+ * cancelada): si ya se cobró o se canceló, devuelve null y el POS lo dice, en
+ * vez de dejar cargar una orden que no se puede facturar.
+ */
+export async function fetchChargeableOrderById(
+  branchId: string, orderId: string
+): Promise<ChargeableOrder | null> {
+  const { data, error } = await requireSupabase()
+    .from('work_orders')
+    .select('id,order_number,vehicle_plate,vehicle_category,customer_id,customer_name,' +
+            'customer_phone,status,total_cents,created_at,' +
+            'work_order_items(item_type,service_id,product_id,name,quantity,' +
+            'unit_price_cents,discount_cents,is_membego_covered)')
+    .eq('branch_id', branchId)
+    .eq('id', orderId)
+    .eq('payment_status', 'pendiente')
+    .not('status', 'in', '(cancelado)')
+    .maybeSingle();
+  if (error) throw error;
+  return (data as unknown as ChargeableOrder) ?? null;
+}
+
+/**
+ * Traspaso ligero entre el módulo de órdenes y el POS: se deja el id de la
+ * orden a facturar en sessionStorage y el POS lo recoge (y lo limpia) al abrir.
+ * Evita un buscador manual y sobrevive a la navegación entre módulos.
+ */
+const POS_ORDEN_KEY = 'cw.pos.orden_a_facturar';
+export function dejarOrdenParaFacturar(orderId: string): void {
+  try { sessionStorage.setItem(POS_ORDEN_KEY, orderId); } catch { /* modo privado: no bloquea */ }
+}
+export function tomarOrdenPendientePos(): string | null {
+  try {
+    const v = sessionStorage.getItem(POS_ORDEN_KEY);
+    if (v) sessionStorage.removeItem(POS_ORDEN_KEY);
+    return v;
+  } catch { return null; }
+}
+
 // ───────────────────────────────────────────── El canje de Membego
 
 /**
