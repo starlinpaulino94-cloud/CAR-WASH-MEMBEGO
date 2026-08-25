@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
-import { Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
+import { Loader2, Save, BadgeCheck, Link2, History, RefreshCw, Building2, DownloadCloud } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
 import {
-  updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink
+  updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink,
+  sincronizarPerfilMembego, fetchPerfilMembego, fetchSucursalesMembego,
+  MembegoEmpresaPerfil, MembegoSucursal
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
@@ -50,6 +52,12 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   // para alimentar un simulador; el simulador se fue y esto, que sí es real, se
   // queda donde tiene sentido: al lado del vínculo que lo produce.
   const [membegoLogs, setMembegoLogs] = useState<MembegoSyncLog[]>([]);
+  // Perfil de la empresa sincronizado desde Membego (Fase 1).
+  const [perfilMembego, setPerfilMembego] = useState<MembegoEmpresaPerfil | null>(null);
+  const [sucursalesMembego, setSucursalesMembego] = useState<MembegoSucursal[]>([]);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!company) return;
@@ -70,7 +78,32 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     fetchMembegoLogs(25)
       .then(setMembegoLogs)
       .catch(() => { /* la bitácora es accesoria: no tumba los ajustes */ });
+    fetchPerfilMembego()
+      .then(setPerfilMembego)
+      .catch(() => { /* aún no sincronizado: la vista lo dice */ });
+    fetchSucursalesMembego()
+      .then(setSucursalesMembego)
+      .catch(() => { /* idem */ });
   }, [canManageMembego]);
+
+  const sincronizarPerfil = async () => {
+    if (syncBusy) return;
+    setSyncBusy(true); setSyncError(null); setSyncNotice(null);
+    try {
+      const r = await sincronizarPerfilMembego();
+      setPerfilMembego(await fetchPerfilMembego());
+      setSucursalesMembego(await fetchSucursalesMembego());
+      setSyncNotice(
+        `Perfil sincronizado desde Membego${
+          typeof r.sucursales === 'number' ? ` · ${r.sucursales} sucursal(es)` : ''
+        }.${r.sucursalesError ? ' Las sucursales no se pudieron leer (falta el permiso branches:read).' : ''}`
+      );
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'No se pudo sincronizar');
+    } finally {
+      setSyncBusy(false);
+    }
+  };
 
   const linkMembego = async () => {
     if (!membegoInput.trim() || membegoBusy) return;
@@ -230,6 +263,81 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           para hablar con Membego, y es donde alguien los va a buscar cuando una
           membresía no cubra lo que debería. */}
       {show('membego') && canManageMembego && <NivelesMembego editable={editable} />}
+
+      {/* Perfil de la empresa traído de Membego (Fase 1): datos maestros y
+          sucursales. Es un snapshot informativo; no pisa los datos fiscales ni
+          las sucursales operativas del car wash. */}
+      {show('membego') && canManageMembego && (
+        <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-2 gap-2">
+            <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+              <DownloadCloud className="w-4 h-4 text-brand" /> Perfil desde Membego
+            </h3>
+            <Button size="sm" onClick={() => void sincronizarPerfil()} disabled={syncBusy}>
+              {syncBusy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Sincronizar
+            </Button>
+          </div>
+
+          {syncNotice && <InlineAlert tone="success" onDismiss={() => setSyncNotice(null)}>{syncNotice}</InlineAlert>}
+          {syncError && <InlineAlert tone="error" onDismiss={() => setSyncError(null)}>{syncError}</InlineAlert>}
+
+          {!perfilMembego ? (
+            <p className="text-xs text-faint italic">
+              Todavía no se ha traído el perfil de Membego. Pulsa <strong>Sincronizar</strong> para
+              importar los datos de la empresa y sus sucursales.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-faint uppercase font-semibold">Nombre en Membego</span>
+                  <p className="text-strong font-bold">{perfilMembego.nombre ?? '—'}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-faint uppercase font-semibold">Moneda · Zona horaria</span>
+                  <p className="text-strong font-bold">
+                    {perfilMembego.moneda ?? '—'} · {perfilMembego.zona_horaria ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" /> Sucursales ({sucursalesMembego.length})
+                </span>
+                {sucursalesMembego.length === 0 ? (
+                  <p className="text-xs text-faint italic">
+                    Sin sucursales en el último snapshot (puede faltar el permiso <span className="font-mono">branches:read</span>).
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {sucursalesMembego.map(s => (
+                      <div key={s.membego_branch_id}
+                        className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                        <span className="min-w-0">
+                          <span className="block font-bold text-strong truncate">{s.nombre}</span>
+                          {s.direccion && <span className="block text-muted truncate">{s.direccion}</span>}
+                        </span>
+                        {!s.activa && (
+                          <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning font-bold whitespace-nowrap">
+                            Inactiva
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-faint">
+                Última sincronización: {new Date(perfilMembego.synced_at).toLocaleString('es-DO')}.
+                Es una copia informativa: no cambia tus datos fiscales ni tus sucursales operativas.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {show('membego') && canManageMembego && (
         <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">

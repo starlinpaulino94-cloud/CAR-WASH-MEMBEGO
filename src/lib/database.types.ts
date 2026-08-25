@@ -138,6 +138,71 @@ export interface Database {
         };
         Relationships: [];
       };
+      membego_empresa_perfil: {
+        Row: {
+          company_id: string;
+          membego_company_id: string;
+          nombre: string | null;
+          slug: string | null;
+          logo_url: string | null;
+          moneda: string | null;
+          zona_horaria: string | null;
+          idioma: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_company_id: string;
+          nombre?: string | null;
+          slug?: string | null;
+          logo_url?: string | null;
+          moneda?: string | null;
+          zona_horaria?: string | null;
+          idioma?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          nombre?: string | null;
+          slug?: string | null;
+          logo_url?: string | null;
+          moneda?: string | null;
+          zona_horaria?: string | null;
+          idioma?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_sucursales: {
+        Row: {
+          company_id: string;
+          membego_branch_id: string;
+          nombre: string;
+          direccion: string | null;
+          activa: boolean;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_branch_id: string;
+          nombre?: string;
+          direccion?: string | null;
+          activa?: boolean;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          nombre?: string;
+          direccion?: string | null;
+          activa?: boolean;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
       membego_company_links: {
         Row: {
           company_id: string;

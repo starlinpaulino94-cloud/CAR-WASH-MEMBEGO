@@ -850,6 +850,56 @@ export async function recordMembegoLog(input: {
   if (error) throw error;
 }
 
+// ─────────────────────────────────── Sincronización del perfil de Membego
+
+export type MembegoEmpresaPerfil = Tables<'membego_empresa_perfil'>;
+export type MembegoSucursal = Tables<'membego_sucursales'>;
+
+export interface ResultadoSyncPerfil {
+  ok: boolean;
+  perfil?: { nombre: string; moneda: string };
+  sucursales?: number;
+  sucursalesError?: string | null;
+}
+
+/**
+ * Dispara la sincronización del perfil de la empresa desde Membego.
+ *
+ * El borde `/api/membego/sincronizar-perfil` autentica al empleado, lee el
+ * perfil y las sucursales de Membego y los vuelca al snapshot. Aquí solo se
+ * llama y se devuelve el resumen para enseñárselo al usuario.
+ */
+export async function sincronizarPerfilMembego(): Promise<ResultadoSyncPerfil> {
+  const res = await fetch('/api/membego/sincronizar-perfil', {
+    method: 'POST',
+    headers: await encabezadosMembego({ 'Content-Type': 'application/json' })
+  });
+  const cuerpo = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (cuerpo as { message?: string; error?: string }).message
+      ?? (cuerpo as { error?: string }).error
+      ?? `Error ${res.status}`;
+    throw new Error(msg);
+  }
+  return cuerpo as ResultadoSyncPerfil;
+}
+
+/** El perfil de la empresa en Membego, tal como se sincronizó por última vez. */
+export async function fetchPerfilMembego(): Promise<MembegoEmpresaPerfil | null> {
+  const { data, error } = await requireSupabase()
+    .from('membego_empresa_perfil').select('*').maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Las sucursales de la empresa en Membego, del último snapshot. */
+export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_sucursales').select('*').order('nombre');
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ─────────────────────────────────── Niveles tarifarios de Membego
 
 /**
