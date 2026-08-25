@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
-import { Loader2, Save, BadgeCheck, Link2, History } from 'lucide-react';
+import {
+  Loader2, Save, BadgeCheck, Link2, History, RefreshCw, Building2, DownloadCloud,
+  Ticket, CalendarDays, Car, Plus, Eye, EyeOff
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
 import {
-  updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink
+  updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink,
+  sincronizarPerfilMembego, fetchPerfilMembego, fetchSucursalesMembego,
+  MembegoEmpresaPerfil, MembegoSucursal,
+  sincronizarCatalogoMembego, fetchPromocionesMembego, fetchCitasMembego, fetchMembresiasMembego,
+  MembegoPromocion, MembegoCita, MembegoMembresia,
+  fetchVehicleCategories, createVehicleCategory, updateVehicleCategory, VehicleCategoryRow
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
@@ -27,6 +35,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const show = (s: 'empresa' | 'impresion' | 'membego') => !seccion || seccion === s;
   const editable = can(profile, 'manageCatalog') && profile?.role === 'propietario';
   const canManageMembego = can(profile, 'manageStaff');
+  const esSuperadmin = profile?.role === 'superadmin';
 
   const [tradeName, setTradeName] = useState('');
   const [legalName, setLegalName] = useState('');
@@ -35,6 +44,13 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [footerNote, setFooterNote] = useState('');
   const [printerWidth, setPrinterWidth] = useState<'58mm' | '80mm' | 'letter'>('80mm');
   const [itbisIncluido, setItbisIncluido] = useState(false);
+
+  // Categorías de vehículo (dinámicas, gestionadas por el superadmin).
+  const [categorias, setCategorias] = useState<VehicleCategoryRow[]>([]);
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
+  const [catVehBusy, setCatVehBusy] = useState(false);
+  const [catVehError, setCatVehError] = useState<string | null>(null);
+  const [catVehNotice, setCatVehNotice] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +66,19 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   // para alimentar un simulador; el simulador se fue y esto, que sí es real, se
   // queda donde tiene sentido: al lado del vínculo que lo produce.
   const [membegoLogs, setMembegoLogs] = useState<MembegoSyncLog[]>([]);
+  // Perfil de la empresa sincronizado desde Membego (Fase 1).
+  const [perfilMembego, setPerfilMembego] = useState<MembegoEmpresaPerfil | null>(null);
+  const [sucursalesMembego, setSucursalesMembego] = useState<MembegoSucursal[]>([]);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  // Catálogo de Membego: promociones, citas y membresías (Fase 2).
+  const [promos, setPromos] = useState<MembegoPromocion[]>([]);
+  const [citas, setCitas] = useState<MembegoCita[]>([]);
+  const [membresias, setMembresias] = useState<MembegoMembresia[]>([]);
+  const [catBusy, setCatBusy] = useState(false);
+  const [catNotice, setCatNotice] = useState<string | null>(null);
+  const [catError, setCatError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!company) return;
@@ -63,6 +92,40 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   }, [company]);
 
   useEffect(() => {
+    if (!esSuperadmin) return;
+    fetchVehicleCategories(true).then(setCategorias).catch(() => { /* no bloquea */ });
+  }, [esSuperadmin]);
+
+  const agregarCategoria = async () => {
+    const label = nuevaCategoria.trim();
+    if (!label || catVehBusy) return;
+    setCatVehBusy(true); setCatVehError(null); setCatVehNotice(null);
+    try {
+      await createVehicleCategory(label);
+      setCategorias(await fetchVehicleCategories(true));
+      setNuevaCategoria('');
+      setCatVehNotice(`Categoría «${label}» creada. Ya puedes cargarle precios en el catálogo de servicios.`);
+    } catch (err) {
+      setCatVehError(err instanceof Error ? err.message : 'No se pudo crear la categoría');
+    } finally {
+      setCatVehBusy(false);
+    }
+  };
+
+  const alternarCategoria = async (c: VehicleCategoryRow) => {
+    if (catVehBusy) return;
+    setCatVehBusy(true); setCatVehError(null); setCatVehNotice(null);
+    try {
+      await updateVehicleCategory(c.id, { is_active: !c.is_active });
+      setCategorias(await fetchVehicleCategories(true));
+    } catch (err) {
+      setCatVehError(err instanceof Error ? err.message : 'No se pudo actualizar');
+    } finally {
+      setCatVehBusy(false);
+    }
+  };
+
+  useEffect(() => {
     if (!canManageMembego) return;
     fetchMembegoLink()
       .then(link => { setMembegoLink(link); if (link) setMembegoInput(link.membegoCompanyId); })
@@ -70,7 +133,60 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     fetchMembegoLogs(25)
       .then(setMembegoLogs)
       .catch(() => { /* la bitácora es accesoria: no tumba los ajustes */ });
+    fetchPerfilMembego()
+      .then(setPerfilMembego)
+      .catch(() => { /* aún no sincronizado: la vista lo dice */ });
+    fetchSucursalesMembego()
+      .then(setSucursalesMembego)
+      .catch(() => { /* idem */ });
+    fetchPromocionesMembego().then(setPromos).catch(() => { /* aún no sincronizado */ });
+    fetchCitasMembego().then(setCitas).catch(() => { /* idem */ });
+    fetchMembresiasMembego().then(setMembresias).catch(() => { /* idem */ });
   }, [canManageMembego]);
+
+  const sincronizarCatalogo = async () => {
+    if (catBusy) return;
+    setCatBusy(true); setCatError(null); setCatNotice(null);
+    try {
+      const r = await sincronizarCatalogoMembego();
+      const [p, c, m] = await Promise.all([
+        fetchPromocionesMembego(), fetchCitasMembego(), fetchMembresiasMembego()
+      ]);
+      setPromos(p); setCitas(c); setMembresias(m);
+      const fallos = r.errores
+        ? Object.entries(r.errores).filter(([, v]) => v).map(([k]) => k)
+        : [];
+      setCatNotice(
+        `Catálogo sincronizado: ${r.promociones ?? 0} promoción(es), ${r.citas ?? 0} cita(s), ` +
+        `${r.membresias ?? 0} membresía(s).${
+          fallos.length ? ` No se pudieron leer: ${fallos.join(', ')} (falta el permiso correspondiente).` : ''
+        }`
+      );
+    } catch (err) {
+      setCatError(err instanceof Error ? err.message : 'No se pudo sincronizar el catálogo');
+    } finally {
+      setCatBusy(false);
+    }
+  };
+
+  const sincronizarPerfil = async () => {
+    if (syncBusy) return;
+    setSyncBusy(true); setSyncError(null); setSyncNotice(null);
+    try {
+      const r = await sincronizarPerfilMembego();
+      setPerfilMembego(await fetchPerfilMembego());
+      setSucursalesMembego(await fetchSucursalesMembego());
+      setSyncNotice(
+        `Perfil sincronizado desde Membego${
+          typeof r.sucursales === 'number' ? ` · ${r.sucursales} sucursal(es)` : ''
+        }.${r.sucursalesError ? ' Las sucursales no se pudieron leer (falta el permiso branches:read).' : ''}`
+      );
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'No se pudo sincronizar');
+    } finally {
+      setSyncBusy(false);
+    }
+  };
 
   const linkMembego = async () => {
     if (!membegoInput.trim() || membegoBusy) return;
@@ -196,6 +312,69 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
       </section>
       )}
 
+      {/* Categorías de vehículo (dinámicas): solo el superadmin las gestiona.
+          El almacenamiento sigue siendo el tipo de la base; esto decide qué se
+          muestra y cómo se llama. */}
+      {show('empresa') && esSuperadmin && (
+      <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+        <h3 className="font-bold text-strong text-sm border-b border-line pb-2 flex items-center gap-2">
+          <Car className="w-4 h-4 text-brand" /> Categorías de vehículo
+        </h3>
+        <p className="text-xs text-faint">
+          Las categorías que aparecen al registrar una llegada y en el punto de venta. Crea las que
+          te falten (ej. «Camioneta»); luego cárgales precio en el catálogo de servicios.
+        </p>
+
+        {catVehNotice && <InlineAlert tone="success" onDismiss={() => setCatVehNotice(null)}>{catVehNotice}</InlineAlert>}
+        {catVehError && <InlineAlert tone="error" onDismiss={() => setCatVehError(null)}>{catVehError}</InlineAlert>}
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text" value={nuevaCategoria}
+            onChange={e => setNuevaCategoria(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void agregarCategoria(); }}
+            placeholder="Nombre de la categoría (ej. Camioneta)"
+            disabled={catVehBusy}
+            className="flex-1 p-2.5 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
+          />
+          <Button onClick={() => void agregarCategoria()} disabled={catVehBusy || !nuevaCategoria.trim()}>
+            {catVehBusy ? <Loader2 className="animate-spin" /> : <Plus />}
+            Crear categoría
+          </Button>
+        </div>
+
+        <div className="space-y-1.5">
+          {categorias.length === 0 ? (
+            <p className="text-xs text-faint italic">Aún no hay categorías cargadas.</p>
+          ) : categorias.map(c => (
+            <div key={c.id}
+              className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-xs ${
+                c.is_active ? 'bg-canvas border-line' : 'bg-surface-2/40 border-line/60 opacity-70'
+              }`}>
+              <span className="min-w-0">
+                <span className="font-bold text-strong">{c.label}</span>
+                <span className="ml-2 font-mono text-faint">{c.code}</span>
+                {!c.is_active && <span className="ml-2 text-warning font-semibold">oculta</span>}
+              </span>
+              <button
+                onClick={() => void alternarCategoria(c)}
+                disabled={catVehBusy}
+                title={c.is_active ? 'Ocultar del selector' : 'Mostrar en el selector'}
+                className="p-1.5 rounded-lg text-muted hover:text-strong hover:bg-surface-2 disabled:opacity-40"
+              >
+                {c.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-faint">
+          Una categoría no se borra —su histórico depende de ella—: se <strong>oculta</strong>, y así
+          deja de ofrecerse sin romper las órdenes y facturas que ya la usaron.
+        </p>
+      </section>
+      )}
+
       {show('impresion') && (
       <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
         <h3 className="font-bold text-strong text-sm border-b border-line pb-2">Comprobantes</h3>
@@ -230,6 +409,188 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           para hablar con Membego, y es donde alguien los va a buscar cuando una
           membresía no cubra lo que debería. */}
       {show('membego') && canManageMembego && <NivelesMembego editable={editable} />}
+
+      {/* Perfil de la empresa traído de Membego (Fase 1): datos maestros y
+          sucursales. Es un snapshot informativo; no pisa los datos fiscales ni
+          las sucursales operativas del car wash. */}
+      {show('membego') && canManageMembego && (
+        <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-2 gap-2">
+            <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+              <DownloadCloud className="w-4 h-4 text-brand" /> Perfil desde Membego
+            </h3>
+            <Button size="sm" onClick={() => void sincronizarPerfil()} disabled={syncBusy}>
+              {syncBusy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Sincronizar
+            </Button>
+          </div>
+
+          {syncNotice && <InlineAlert tone="success" onDismiss={() => setSyncNotice(null)}>{syncNotice}</InlineAlert>}
+          {syncError && <InlineAlert tone="error" onDismiss={() => setSyncError(null)}>{syncError}</InlineAlert>}
+
+          {!perfilMembego ? (
+            <p className="text-xs text-faint italic">
+              Todavía no se ha traído el perfil de Membego. Pulsa <strong>Sincronizar</strong> para
+              importar los datos de la empresa y sus sucursales.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-faint uppercase font-semibold">Nombre en Membego</span>
+                  <p className="text-strong font-bold">{perfilMembego.nombre ?? '—'}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="text-faint uppercase font-semibold">Moneda · Zona horaria</span>
+                  <p className="text-strong font-bold">
+                    {perfilMembego.moneda ?? '—'} · {perfilMembego.zona_horaria ?? '—'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" /> Sucursales ({sucursalesMembego.length})
+                </span>
+                {sucursalesMembego.length === 0 ? (
+                  <p className="text-xs text-faint italic">
+                    Sin sucursales en el último snapshot (puede faltar el permiso <span className="font-mono">branches:read</span>).
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {sucursalesMembego.map(s => (
+                      <div key={s.membego_branch_id}
+                        className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                        <span className="min-w-0">
+                          <span className="block font-bold text-strong truncate">{s.nombre}</span>
+                          {s.direccion && <span className="block text-muted truncate">{s.direccion}</span>}
+                        </span>
+                        {!s.activa && (
+                          <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning font-bold whitespace-nowrap">
+                            Inactiva
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-faint">
+                Última sincronización: {new Date(perfilMembego.synced_at).toLocaleString('es-DO')}.
+                Es una copia informativa: no cambia tus datos fiscales ni tus sucursales operativas.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Catálogo de Membego (Fase 2): promociones, citas y membresías, traídas
+          en bloque. Snapshots informativos, no autorizan canjes. */}
+      {show('membego') && canManageMembego && (
+        <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-2 gap-2">
+            <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+              <DownloadCloud className="w-4 h-4 text-brand" /> Catálogo desde Membego
+            </h3>
+            <Button size="sm" onClick={() => void sincronizarCatalogo()} disabled={catBusy}>
+              {catBusy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Sincronizar
+            </Button>
+          </div>
+
+          {catNotice && <InlineAlert tone="success" onDismiss={() => setCatNotice(null)}>{catNotice}</InlineAlert>}
+          {catError && <InlineAlert tone="error" onDismiss={() => setCatError(null)}>{catError}</InlineAlert>}
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{promos.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><Ticket className="w-3 h-3" /> Promos</div>
+            </div>
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{citas.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3" /> Citas</div>
+            </div>
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{membresias.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><BadgeCheck className="w-3 h-3" /> Membresías</div>
+            </div>
+          </div>
+
+          {promos.length === 0 && citas.length === 0 && membresias.length === 0 ? (
+            <p className="text-xs text-faint italic">
+              Todavía no se ha traído el catálogo. Pulsa <strong>Sincronizar</strong>. (Requiere que Membego
+              tenga desplegados los endpoints de la Fase 2 y que la credencial tenga los permisos
+              <span className="font-mono"> promotions:read</span>, <span className="font-mono">appointments:read</span> y
+              <span className="font-mono"> memberships:read</span>.)
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {promos.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <Ticket className="w-3.5 h-3.5" /> Promociones
+                  </span>
+                  {promos.slice(0, 8).map(p => (
+                    <div key={p.membego_promotion_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-strong truncate">{p.titulo}</span>
+                        {p.descripcion && <span className="block text-muted truncate">{p.descripcion}</span>}
+                      </span>
+                      {!p.activo && (
+                        <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning font-bold whitespace-nowrap">Inactiva</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {citas.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5" /> Próximas citas
+                  </span>
+                  {citas.slice(0, 8).map(c => (
+                    <div key={c.membego_appointment_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-strong truncate">{c.servicio ?? 'Cita'}</span>
+                        <span className="block text-muted">
+                          {c.inicio ? new Date(c.inicio).toLocaleString('es-DO') : '—'} · {c.duracion_min} min
+                        </span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-info/15 text-info font-bold whitespace-nowrap">{c.estado}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {membresias.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Membresías activas
+                  </span>
+                  {membresias.slice(0, 8).map(m => (
+                    <div key={m.membego_membership_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="block font-bold text-strong truncate">{m.plan_nombre}</span>
+                      <span className="text-muted whitespace-nowrap">
+                        {m.vigente_hasta ? `Hasta ${new Date(m.vigente_hasta).toLocaleDateString('es-DO')}` : 'Sin vencimiento'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-faint">
+                Copia informativa (proyección): sirve para ver y planificar, no autoriza canjes.
+                El canje se decide siempre en el momento contra Membego.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {show('membego') && canManageMembego && (
         <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">

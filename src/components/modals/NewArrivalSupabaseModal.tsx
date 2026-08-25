@@ -7,20 +7,12 @@ import {
   createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
 import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import {
   lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
   CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
 import { PanelFichaMembego } from '../common/FichaMembego';
-
-const CATEGORIES: { id: VehicleCategory; label: string }[] = [
-  { id: 'sedan', label: 'Sedán' },
-  { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep' },
-  { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' },
-  { id: 'motorcycle', label: 'Moto' }
-];
 
 interface Props {
   onClose: () => void;
@@ -77,6 +69,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const symbol = company?.currency_symbol ?? 'RD$';
 
   const [plate, setPlate] = useState('');
+  const CATEGORIES = useVehicleCategories();
   const [category, setCategory] = useState<VehicleCategory>('sedan');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');

@@ -850,6 +850,150 @@ export async function recordMembegoLog(input: {
   if (error) throw error;
 }
 
+// ─────────────────────────────────── Sincronización del perfil de Membego
+
+export type MembegoEmpresaPerfil = Tables<'membego_empresa_perfil'>;
+export type MembegoSucursal = Tables<'membego_sucursales'>;
+
+export interface ResultadoSyncPerfil {
+  ok: boolean;
+  perfil?: { nombre: string; moneda: string };
+  sucursales?: number;
+  sucursalesError?: string | null;
+}
+
+/**
+ * Dispara la sincronización del perfil de la empresa desde Membego.
+ *
+ * El borde `/api/membego/sincronizar-perfil` autentica al empleado, lee el
+ * perfil y las sucursales de Membego y los vuelca al snapshot. Aquí solo se
+ * llama y se devuelve el resumen para enseñárselo al usuario.
+ */
+export async function sincronizarPerfilMembego(): Promise<ResultadoSyncPerfil> {
+  const res = await fetch('/api/membego/sincronizar-perfil', {
+    method: 'POST',
+    headers: await encabezadosMembego({ 'Content-Type': 'application/json' })
+  });
+  const cuerpo = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (cuerpo as { message?: string; error?: string }).message
+      ?? (cuerpo as { error?: string }).error
+      ?? `Error ${res.status}`;
+    throw new Error(msg);
+  }
+  return cuerpo as ResultadoSyncPerfil;
+}
+
+/** El perfil de la empresa en Membego, tal como se sincronizó por última vez. */
+export async function fetchPerfilMembego(): Promise<MembegoEmpresaPerfil | null> {
+  const { data, error } = await requireSupabase()
+    .from('membego_empresa_perfil').select('*').maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Las sucursales de la empresa en Membego, del último snapshot. */
+export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_sucursales').select('*').order('nombre');
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ─────────────────────────────────── Categorías de vehículo (dinámicas)
+
+export type VehicleCategoryRow = Tables<'vehicle_categories'>;
+
+/**
+ * Categorías de vehículo de la empresa, activas y ordenadas.
+ *
+ * Reemplaza la lista fija que estaba codificada en cada pantalla. Si la empresa
+ * aún no tiene ninguna (empresa recién creada, o el usuario no está autenticado
+ * contra Supabase), quien llama usa un respaldo por defecto para no dejar el
+ * selector vacío.
+ */
+export async function fetchVehicleCategories(incluirInactivas = false): Promise<VehicleCategoryRow[]> {
+  let q = requireSupabase().from('vehicle_categories').select('*').order('sort_order');
+  if (!incluirInactivas) q = q.eq('is_active', true);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Crea una categoría (solo superadmin, la base lo verifica). */
+export async function createVehicleCategory(label: string): Promise<VehicleCategoryRow> {
+  const { data, error } = await requireSupabase()
+    .rpc('create_vehicle_category', { p_label: label });
+  if (error) throw error;
+  return data as unknown as VehicleCategoryRow;
+}
+
+/** Edita etiqueta, orden o visibilidad de una categoría (solo superadmin). */
+export async function updateVehicleCategory(
+  id: string,
+  patch: { label?: string; sort_order?: number; is_active?: boolean }
+): Promise<VehicleCategoryRow> {
+  const { data, error } = await requireSupabase().rpc('update_vehicle_category', {
+    p_id: id,
+    p_label: patch.label ?? undefined,
+    p_sort_order: patch.sort_order ?? undefined,
+    p_is_active: patch.is_active ?? undefined
+  });
+  if (error) throw error;
+  return data as unknown as VehicleCategoryRow;
+}
+
+// ─────────────────────────────────── Catálogo de Membego (promos/citas/membresías)
+
+export type MembegoPromocion = Tables<'membego_promociones'>;
+export type MembegoCita = Tables<'membego_citas'>;
+export type MembegoMembresia = Tables<'membego_membresias'>;
+
+export interface ResultadoSyncCatalogo {
+  ok: boolean;
+  promociones?: number;
+  citas?: number;
+  membresias?: number;
+  errores?: { promociones: string | null; citas: string | null; membresias: string | null };
+}
+
+/** Dispara la sincronización masiva de promociones, citas y membresías. */
+export async function sincronizarCatalogoMembego(): Promise<ResultadoSyncCatalogo> {
+  const res = await fetch('/api/membego/sincronizar-catalogo', {
+    method: 'POST',
+    headers: await encabezadosMembego({ 'Content-Type': 'application/json' })
+  });
+  const cuerpo = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (cuerpo as { message?: string; error?: string }).message
+      ?? (cuerpo as { error?: string }).error
+      ?? `Error ${res.status}`;
+    throw new Error(msg);
+  }
+  return cuerpo as ResultadoSyncCatalogo;
+}
+
+export async function fetchPromocionesMembego(): Promise<MembegoPromocion[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_promociones').select('*').order('titulo');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchCitasMembego(): Promise<MembegoCita[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_citas').select('*').order('inicio');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchMembresiasMembego(): Promise<MembegoMembresia[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_membresias').select('*').order('plan_nombre');
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ─────────────────────────────────── Niveles tarifarios de Membego
 
 /**

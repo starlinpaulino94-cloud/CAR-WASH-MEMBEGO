@@ -138,6 +138,204 @@ export interface Database {
         };
         Relationships: [];
       };
+      membego_empresa_perfil: {
+        Row: {
+          company_id: string;
+          membego_company_id: string;
+          nombre: string | null;
+          slug: string | null;
+          logo_url: string | null;
+          moneda: string | null;
+          zona_horaria: string | null;
+          idioma: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_company_id: string;
+          nombre?: string | null;
+          slug?: string | null;
+          logo_url?: string | null;
+          moneda?: string | null;
+          zona_horaria?: string | null;
+          idioma?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          nombre?: string | null;
+          slug?: string | null;
+          logo_url?: string | null;
+          moneda?: string | null;
+          zona_horaria?: string | null;
+          idioma?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_sucursales: {
+        Row: {
+          company_id: string;
+          membego_branch_id: string;
+          nombre: string;
+          direccion: string | null;
+          activa: boolean;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_branch_id: string;
+          nombre?: string;
+          direccion?: string | null;
+          activa?: boolean;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          nombre?: string;
+          direccion?: string | null;
+          activa?: boolean;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_categories: {
+        Row: {
+          id: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          label?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_promociones: {
+        Row: {
+          company_id: string;
+          membego_promotion_id: string;
+          titulo: string;
+          descripcion: string;
+          imagen_url: string | null;
+          activo: boolean;
+          vigencia_desde: string | null;
+          vigencia_hasta: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_promotion_id: string;
+          titulo?: string;
+          descripcion?: string;
+          imagen_url?: string | null;
+          activo?: boolean;
+          vigencia_desde?: string | null;
+          vigencia_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          titulo?: string;
+          descripcion?: string;
+          imagen_url?: string | null;
+          activo?: boolean;
+          vigencia_desde?: string | null;
+          vigencia_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_citas: {
+        Row: {
+          company_id: string;
+          membego_appointment_id: string;
+          membego_customer_id: string | null;
+          membego_branch_id: string | null;
+          membego_vehicle_id: string | null;
+          inicio: string | null;
+          duracion_min: number;
+          servicio: string | null;
+          estado: string;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_appointment_id: string;
+          membego_customer_id?: string | null;
+          membego_branch_id?: string | null;
+          membego_vehicle_id?: string | null;
+          inicio?: string | null;
+          duracion_min?: number;
+          servicio?: string | null;
+          estado?: string;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          inicio?: string | null;
+          duracion_min?: number;
+          servicio?: string | null;
+          estado?: string;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_membresias: {
+        Row: {
+          company_id: string;
+          membego_membership_id: string;
+          membego_customer_id: string | null;
+          plan_nombre: string;
+          estado: string;
+          vigente_hasta: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_membership_id: string;
+          membego_customer_id?: string | null;
+          plan_nombre?: string;
+          estado?: string;
+          vigente_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          plan_nombre?: string;
+          estado?: string;
+          vigente_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
       membego_company_links: {
         Row: {
           company_id: string;
@@ -2627,6 +2825,23 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_vehicle_category: {
+        Args: {
+          p_label: string;
+          p_code?: string;
+          p_sort_order?: number;
+        };
+        Returns: Database['public']['Tables']['vehicle_categories']['Row'];
+      };
+      update_vehicle_category: {
+        Args: {
+          p_id: string;
+          p_label?: string;
+          p_sort_order?: number;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['vehicle_categories']['Row'];
+      };
       advance_work_order: {
         Args: {
           p_order_id: string;

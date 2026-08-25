@@ -24,15 +24,7 @@ import {
 import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
 import { aplicarCobertura, categoriaTopeDelPlan } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
-
-const CATEGORIES: { id: VehicleCategory; label: string }[] = [
-  { id: 'sedan', label: 'Sedán' },
-  { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep 4x4' },
-  { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' },
-  { id: 'motorcycle', label: 'Moto' }
-];
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 
 const ESTADO_ORDEN: Record<string, string> = {
   pendiente: 'Recién llegado', en_espera: 'En espera', asignada: 'Asignada',
@@ -64,6 +56,7 @@ const METHODS: { id: PaymentMethod; label: string; icon: typeof Banknote }[] = [
 export const PosSupabaseView: React.FC = () => {
   const { profile, company, branch } = useAuth();
 
+  const CATEGORIES = useVehicleCategories();
   const [category, setCategory] = useState<VehicleCategory>('sedan');
   const [tab, setTab] = useState<'services' | 'products'>('services');
   // Buscador del catálogo. Con decenas de servicios cargados, recorrer la
