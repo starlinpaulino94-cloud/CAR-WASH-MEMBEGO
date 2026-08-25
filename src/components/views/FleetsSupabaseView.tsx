@@ -7,6 +7,7 @@ import { formatCents, parseAmountToCents, centsToInput } from '../../lib/money';
 import { RANGES, RangeId, rangeDates } from '../../lib/reportRanges';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import { fetchCustomerPage, fetchServicesWithPrices, ServiceWithPrices } from '../../data/adminRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import {
   fetchFleetPage, fetchFleetVehicles, fetchFleetRates, searchFreeVehicles,
   upsertFleet, assignVehicleToFleet, setFleetRate, deleteFleetRate,
@@ -27,17 +28,6 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Todas' }
 ];
 
-const CATEGORIES: { id: VehicleCategory | ''; label: string }[] = [
-  { id: '', label: 'Todo el parque' },
-  { id: 'sedan', label: 'Sedán' },
-  { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep' },
-  { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' },
-  { id: 'truck', label: 'Camión' },
-  { id: 'motorcycle', label: 'Motocicleta' },
-  { id: 'special', label: 'Especial' }
-];
 
 const emptyFleet = {
   customerId: '', name: '', code: '', contactName: '',
@@ -53,6 +43,10 @@ const emptyFleet = {
  * una vez, a crédito, contra el cliente que paga.
  */
 export const FleetsSupabaseView: React.FC = () => {
+  const CATEGORIES: { id: VehicleCategory | ''; label: string }[] = [
+    { id: '', label: 'Todo el parque' },
+    ...useVehicleCategories()
+  ];
   const { profile, phase, company } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const canManage = ['propietario', 'administrador', 'contador', 'superadmin']

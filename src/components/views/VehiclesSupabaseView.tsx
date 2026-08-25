@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from '../ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import {
   fetchVehiclePage, updateVehicle, eliminarFila, VehicleRow, VehicleCategory
 } from '../../data/adminRepository';
@@ -19,11 +20,10 @@ import { useAuth } from '../../context/AuthContext';
 
 const PAGE_SIZE = 25;
 
-const CATEGORIAS: VehicleCategory[] =
-  ['sedan', 'suv', 'jeep', 'pickup', 'van', 'truck', 'motorcycle', 'special'];
 
 /** Flotilla registrada. Paginado y búsqueda en el servidor. */
 export const VehiclesSupabaseView: React.FC = () => {
+  const CATEGORIAS = useVehicleCategories();
   const { profile } = useAuth();
   const q = usePagedQuery<VehicleRow>({ fetcher: fetchVehiclePage, pageSize: PAGE_SIZE });
 
@@ -187,7 +187,7 @@ export const VehiclesSupabaseView: React.FC = () => {
               hint="De ella depende la tarifa y si su membresía cubre el lavado.">
               <select id="ed-veh-cat" className={textInputClass} value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value as VehicleCategory }))}>
-                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </Field>
           </div>

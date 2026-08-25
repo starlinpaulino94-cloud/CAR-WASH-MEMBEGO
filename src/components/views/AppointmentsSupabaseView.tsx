@@ -7,6 +7,7 @@ import {
   convertAppointment, checkAvailability, Appointment, Availability
 } from '../../data/appointmentRepository';
 import { fetchServicesWithPrices, ServiceWithPrices, VehicleCategory } from '../../data/adminRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import {
   ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice
 } from '../common/DataViewShell';
@@ -25,11 +26,6 @@ const STATUS_LABEL: Record<string, string> = {
   convertida: 'En taller', cancelada: 'Cancelada', ausente: 'No asistió'
 };
 
-const CATEGORIES: { id: VehicleCategory; label: string }[] = [
-  { id: 'sedan', label: 'Sedán' }, { id: 'suv', label: 'SUV' }, { id: 'jeep', label: 'Jeep' },
-  { id: 'pickup', label: 'Pickup' }, { id: 'van', label: 'Van' }, { id: 'truck', label: 'Camión' },
-  { id: 'motorcycle', label: 'Motor' }, { id: 'special', label: 'Especial' }
-];
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -41,6 +37,7 @@ const isoDay = (d: Date) => d.toISOString().slice(0, 10);
  * servidor rechaza la reserva si la franja está llena.
  */
 export const AppointmentsSupabaseView: React.FC = () => {
+  const CATEGORIES = useVehicleCategories();
   const { branch, profile, phase } = useAuth();
   const canBook = ['propietario', 'administrador', 'supervisor', 'recepcionista', 'cajero', 'superadmin']
     .includes(profile?.role ?? '');

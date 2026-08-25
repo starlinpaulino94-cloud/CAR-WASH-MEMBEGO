@@ -10,14 +10,7 @@ import {
 } from '../../data/adminRepository';
 import { InlineAlert } from '../common/DataViewShell';
 import { Field, textInputClass } from '../common/FormModal';
-
-const CATEGORIES: { id: VehicleCategory | ''; label: string }[] = [
-  { id: '', label: 'Todas las categorías' },
-  { id: 'sedan', label: 'Sedán' }, { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep' }, { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' }, { id: 'truck', label: 'Camión' },
-  { id: 'motorcycle', label: 'Motor' }, { id: 'special', label: 'Especial' }
-];
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 
 /**
  * Receta de insumos de un servicio.
@@ -32,6 +25,10 @@ export const RecipeModal: React.FC<{
   serviceName: string;
   onClose: () => void;
 }> = ({ serviceId, serviceName, onClose }) => {
+  const CATEGORIES: { id: VehicleCategory | ''; label: string }[] = [
+    { id: '', label: 'Todas las categorías' },
+    ...useVehicleCategories()
+  ];
   const { company } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
 

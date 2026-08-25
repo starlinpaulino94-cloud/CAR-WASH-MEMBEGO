@@ -9,6 +9,7 @@ import {
   fetchServicesWithPrices, upsertServicePrice, createService, updateService,
   eliminarFila, archivarFila, ServiceWithPrices, VehicleCategory
 } from '../../data/adminRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, HelpNote } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
@@ -22,15 +23,6 @@ const emptyServiceForm = {
   membego: false, prices: {} as Record<string, string>
 };
 
-const COLUMNS: { id: VehicleCategory; label: string }[] = [
-  { id: 'sedan', label: 'Sedán' },
-  { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep' },
-  { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' },
-  { id: 'motorcycle', label: 'Moto' }
-];
-
 /**
  * Catálogo y matriz de precios.
  *
@@ -39,6 +31,7 @@ const COLUMNS: { id: VehicleCategory; label: string }[] = [
  * un precio está restringido por rol y RLS lo aplica igual desde el API.
  */
 export const ServicesSupabaseView: React.FC = () => {
+  const COLUMNS = useVehicleCategories();
   const { company, profile } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const editable = can(profile, 'manageCatalog');
