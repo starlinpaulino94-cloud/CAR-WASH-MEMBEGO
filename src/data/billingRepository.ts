@@ -407,6 +407,41 @@ export async function fetchInvoiceItems(invoiceId: string): Promise<InvoiceItem[
   return data ?? [];
 }
 
+/**
+ * Datos accesorios del comprobante que no viven en `invoices`.
+ *
+ * El nombre del cajero (la tabla guarda su id) y la ficha del vehículo (la
+ * factura solo guarda la placa) se resuelven aquí para pintar el comprobante
+ * al estilo de Membego, sin duplicarlos en `invoices` ni tocar
+ * `create_invoice`. Si algo falta, el comprobante lo omite: es informativo,
+ * nunca bloquea la impresión.
+ */
+export interface ComprobanteExtras {
+  cashierName: string | null;
+  vehicle: { make: string; model: string; year: number | null } | null;
+}
+
+export async function fetchComprobanteExtras(invoice: Invoice): Promise<ComprobanteExtras> {
+  const sb = requireSupabase();
+  const [cashierRes, vehRes] = await Promise.all([
+    sb.from('profiles').select('full_name').eq('id', invoice.cashier_id).maybeSingle(),
+    invoice.vehicle_plate
+      ? sb.from('vehicles').select('make, model, year')
+          .eq('company_id', invoice.company_id)
+          .eq('plate', invoice.vehicle_plate)
+          .maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
+
+  const cashierName = (cashierRes.data as { full_name?: string } | null)?.full_name ?? null;
+  const v = vehRes.data as { make?: string; model?: string; year?: number | null } | null;
+  const vehicle = v && (v.make || v.model || v.year)
+    ? { make: v.make ?? '', model: v.model ?? '', year: v.year ?? null }
+    : null;
+
+  return { cashierName, vehicle };
+}
+
 export type InvoiceKindFilter = 'all' | 'invoices' | 'credit_notes' | 'annulled';
 
 export interface InvoicePageParams {
