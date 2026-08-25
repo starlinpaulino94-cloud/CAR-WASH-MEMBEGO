@@ -11,6 +11,7 @@ import { formatCents } from '../../lib/money';
 import {
   fetchOrderPage, WorkOrder, OrderStatus, STATUS_LABEL
 } from '../../data/ordersRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { InspectionModal } from '../modals/InspectionModal';
 import { ExportButton } from '../common/ExportButton';
@@ -46,6 +47,9 @@ const STATUS_TONE: Record<OrderStatus, string> = {
  * filtraba en memoria sobre el array completo en cada pulsación de tecla.
  */
 export const OrdersSupabaseView: React.FC = () => {
+  const categorias = useVehicleCategories();
+  const etiquetaCategoria = (code: string) =>
+    categorias.find(c => c.id === code)?.label ?? code;
   const { branch, company } = useAuth();
   const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
@@ -199,7 +203,7 @@ export const OrdersSupabaseView: React.FC = () => {
                   <TableCell className="p-3">
                     <div className="font-bold text-strong uppercase">{order.vehicle_plate}</div>
                     <div className="text-xs text-muted">
-                      {order.vehicle_make_model || '—'} ({order.vehicle_category})
+                      {order.vehicle_make_model || '—'} ({etiquetaCategoria(order.vehicle_category)})
                     </div>
                   </TableCell>
                   <TableCell className="p-3 text-body">{order.customer_name}</TableCell>

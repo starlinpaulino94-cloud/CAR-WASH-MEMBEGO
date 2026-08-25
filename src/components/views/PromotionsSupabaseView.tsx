@@ -5,6 +5,7 @@ import { Plus, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
 import { fetchServicesWithPrices, ServiceWithPrices } from '../../data/adminRepository';
+import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import {
   fetchPromotions, upsertPromotion,
   Promotion, PromotionKind, PromotionScope, VehicleCategory
@@ -29,13 +30,6 @@ const SCOPES: { id: PromotionScope; label: string }[] = [
   { id: 'categoria', label: 'Una categoría de vehículo' }
 ];
 
-const CATEGORIES: { id: VehicleCategory; label: string }[] = [
-  { id: 'sedan', label: 'Sedán' }, { id: 'suv', label: 'SUV' },
-  { id: 'jeep', label: 'Jeep' }, { id: 'pickup', label: 'Pickup' },
-  { id: 'van', label: 'Van' }, { id: 'truck', label: 'Camión' },
-  { id: 'motorcycle', label: 'Motocicleta' }, { id: 'special', label: 'Especial' }
-];
-
 // 0 = domingo, como extract(dow) en PostgreSQL.
 const DAYS = [
   { n: 1, label: 'L' }, { n: 2, label: 'M' }, { n: 3, label: 'X' },
@@ -58,6 +52,7 @@ const emptyForm = {
  * un descuento a dedo.
  */
 export const PromotionsSupabaseView: React.FC = () => {
+  const CATEGORIES = useVehicleCategories();
   const { profile, phase, company } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const canManage = ['propietario', 'administrador', 'superadmin'].includes(profile?.role ?? '');
