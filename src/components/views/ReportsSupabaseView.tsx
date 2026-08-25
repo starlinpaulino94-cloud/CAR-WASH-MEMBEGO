@@ -6,7 +6,8 @@ import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
-  fetchAuditPage, fetchDashboardMetrics, AuditLog, DashboardMetrics
+  fetchAuditPage, fetchDashboardMetrics, fetchTeam,
+  AuditLog, DashboardMetrics, Profile
 } from '../../data/adminRepository';
 import {
   ViewHeader, ErrorState, SearchBox, Pagination, SkeletonRows, EmptyRow,
@@ -14,6 +15,29 @@ import {
 } from '../common/DataViewShell';
 
 const PAGE_SIZE = 25;
+
+/** Módulos conocidos, para filtrar por tipo de dato. La búsqueda de texto cubre
+ *  cualquier otro que no esté en esta lista. */
+const ENTIDADES: { id: string; label: string }[] = [
+  { id: '', label: 'Todos los módulos' },
+  { id: 'invoice', label: 'Facturas' },
+  { id: 'credit_note', label: 'Notas de crédito' },
+  { id: 'product', label: 'Productos' },
+  { id: 'service', label: 'Servicios' },
+  { id: 'customer', label: 'Clientes' },
+  { id: 'vehicle', label: 'Vehículos' },
+  { id: 'work_order', label: 'Órdenes' },
+  { id: 'fleet', label: 'Flotillas' },
+  { id: 'promotion', label: 'Promociones' },
+  { id: 'membership', label: 'Membresías' },
+  { id: 'expense', label: 'Gastos' },
+  { id: 'cash_session', label: 'Caja' },
+  { id: 'profile', label: 'Usuarios' },
+  { id: 'company', label: 'Empresa' }
+];
+
+const selectClass =
+  'w-full bg-canvas border border-line rounded-lg p-2 text-strong text-xs focus:outline-none focus:border-brand';
 
 type RangeId = 'today' | 'week' | 'month';
 const RANGES: { id: RangeId; label: string }[] = [
@@ -48,9 +72,38 @@ export const ReportsSupabaseView: React.FC = () => {
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const period = useMemo(() => bounds(range), [range]);
 
+  // Filtros de la bitácora.
+  const [fEntidad, setFEntidad] = useState('');
+  const [fActor, setFActor] = useState('');
+  const [fDesde, setFDesde] = useState('');
+  const [fHasta, setFHasta] = useState('');
+  const [team, setTeam] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    if (!canSee) return;
+    fetchTeam().then(setTeam).catch(() => { /* el filtro de usuario es accesorio */ });
+  }, [canSee]);
+
+  const fetcher = useCallback(
+    (page: number, size: number, search: string) => fetchAuditPage(page, size, {
+      search,
+      entity: fEntidad || undefined,
+      actorId: fActor || undefined,
+      from: fDesde ? new Date(`${fDesde}T00:00:00`).toISOString() : undefined,
+      to: fHasta ? new Date(`${fHasta}T23:59:59.999`).toISOString() : undefined
+    }),
+    [fEntidad, fActor, fDesde, fHasta]
+  );
+
   const q = usePagedQuery<AuditLog>({
-    fetcher: fetchAuditPage, pageSize: PAGE_SIZE, enabled: canSee
+    fetcher, pageSize: PAGE_SIZE, enabled: canSee,
+    deps: [fEntidad, fActor, fDesde, fHasta]
   });
+
+  const hayFiltros = Boolean(fEntidad || fActor || fDesde || fHasta || q.searchInput);
+  const limpiarFiltros = () => {
+    setFEntidad(''); setFActor(''); setFDesde(''); setFHasta(''); q.setSearchInput('');
+  };
 
   const loadMetrics = useCallback(async () => {
     if (!branch) return;
@@ -109,6 +162,41 @@ export const ReportsSupabaseView: React.FC = () => {
         <SearchBox id="audit-search" label="Buscar en la bitácora" value={q.searchInput}
           onChange={q.setSearchInput} placeholder="Buscar por acción, detalle o usuario…" />
 
+        {/* Filtros: módulo, usuario y rango de fechas. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="space-y-1">
+            <label htmlFor="f-entidad" className="text-xs font-semibold text-muted uppercase">Módulo</label>
+            <select id="f-entidad" className={selectClass} value={fEntidad}
+              onChange={e => setFEntidad(e.target.value)}>
+              {ENTIDADES.map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="f-actor" className="text-xs font-semibold text-muted uppercase">Usuario</label>
+            <select id="f-actor" className={selectClass} value={fActor}
+              onChange={e => setFActor(e.target.value)}>
+              <option value="">Todos los usuarios</option>
+              {team.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="f-desde" className="text-xs font-semibold text-muted uppercase">Desde</label>
+            <input id="f-desde" type="date" className={selectClass} value={fDesde}
+              max={fHasta || undefined} onChange={e => setFDesde(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="f-hasta" className="text-xs font-semibold text-muted uppercase">Hasta</label>
+            <input id="f-hasta" type="date" className={selectClass} value={fHasta}
+              min={fDesde || undefined} onChange={e => setFHasta(e.target.value)} />
+          </div>
+        </div>
+        {hayFiltros && (
+          <button onClick={limpiarFiltros}
+            className="text-xs font-semibold text-brand hover:underline">
+            Limpiar filtros
+          </button>
+        )}
+
         <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <Table className="text-xs">
@@ -125,7 +213,7 @@ export const ReportsSupabaseView: React.FC = () => {
                 {q.loading ? <SkeletonRows cols={4} />
                   : q.rows.length === 0 ? (
                     <EmptyRow cols={4}>
-                      {q.searchInput ? 'Ningún evento coincide con la búsqueda.' : 'Todavía no hay eventos registrados.'}
+                      {hayFiltros ? 'Ningún evento coincide con los filtros.' : 'Todavía no hay eventos registrados.'}
                     </EmptyRow>
                   ) : q.rows.map(log => (
                     <TableRow key={log.id} className="hover:bg-surface-2/40 align-top">
@@ -134,7 +222,9 @@ export const ReportsSupabaseView: React.FC = () => {
                       </TableCell>
                       <TableCell className="p-3">
                         <span className="font-bold text-brand-hi whitespace-nowrap">{log.action}</span>
-                        <div className="text-xs text-faint">{log.entity}</div>
+                        <div className="text-xs text-faint">
+                          {ENTIDADES.find(x => x.id === log.entity)?.label ?? log.entity}
+                        </div>
                       </TableCell>
                       <TableCell className="p-3 text-body">{log.details}</TableCell>
                       <TableCell className="p-3 text-muted whitespace-nowrap">
