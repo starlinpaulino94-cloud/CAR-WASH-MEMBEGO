@@ -900,6 +900,49 @@ export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
   return data ?? [];
 }
 
+// ─────────────────────────────────── Categorías de vehículo (dinámicas)
+
+export type VehicleCategoryRow = Tables<'vehicle_categories'>;
+
+/**
+ * Categorías de vehículo de la empresa, activas y ordenadas.
+ *
+ * Reemplaza la lista fija que estaba codificada en cada pantalla. Si la empresa
+ * aún no tiene ninguna (empresa recién creada, o el usuario no está autenticado
+ * contra Supabase), quien llama usa un respaldo por defecto para no dejar el
+ * selector vacío.
+ */
+export async function fetchVehicleCategories(incluirInactivas = false): Promise<VehicleCategoryRow[]> {
+  let q = requireSupabase().from('vehicle_categories').select('*').order('sort_order');
+  if (!incluirInactivas) q = q.eq('is_active', true);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Crea una categoría (solo superadmin, la base lo verifica). */
+export async function createVehicleCategory(label: string): Promise<VehicleCategoryRow> {
+  const { data, error } = await requireSupabase()
+    .rpc('create_vehicle_category', { p_label: label });
+  if (error) throw error;
+  return data as unknown as VehicleCategoryRow;
+}
+
+/** Edita etiqueta, orden o visibilidad de una categoría (solo superadmin). */
+export async function updateVehicleCategory(
+  id: string,
+  patch: { label?: string; sort_order?: number; is_active?: boolean }
+): Promise<VehicleCategoryRow> {
+  const { data, error } = await requireSupabase().rpc('update_vehicle_category', {
+    p_id: id,
+    p_label: patch.label ?? undefined,
+    p_sort_order: patch.sort_order ?? undefined,
+    p_is_active: patch.is_active ?? undefined
+  });
+  if (error) throw error;
+  return data as unknown as VehicleCategoryRow;
+}
+
 // ─────────────────────────────────── Catálogo de Membego (promos/citas/membresías)
 
 export type MembegoPromocion = Tables<'membego_promociones'>;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
 import {
   Loader2, Save, BadgeCheck, Link2, History, RefreshCw, Building2, DownloadCloud,
-  Ticket, CalendarDays
+  Ticket, CalendarDays, Car, Plus, Eye, EyeOff
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
@@ -12,7 +12,8 @@ import {
   sincronizarPerfilMembego, fetchPerfilMembego, fetchSucursalesMembego,
   MembegoEmpresaPerfil, MembegoSucursal,
   sincronizarCatalogoMembego, fetchPromocionesMembego, fetchCitasMembego, fetchMembresiasMembego,
-  MembegoPromocion, MembegoCita, MembegoMembresia
+  MembegoPromocion, MembegoCita, MembegoMembresia,
+  fetchVehicleCategories, createVehicleCategory, updateVehicleCategory, VehicleCategoryRow
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
@@ -34,6 +35,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const show = (s: 'empresa' | 'impresion' | 'membego') => !seccion || seccion === s;
   const editable = can(profile, 'manageCatalog') && profile?.role === 'propietario';
   const canManageMembego = can(profile, 'manageStaff');
+  const esSuperadmin = profile?.role === 'superadmin';
 
   const [tradeName, setTradeName] = useState('');
   const [legalName, setLegalName] = useState('');
@@ -42,6 +44,13 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [footerNote, setFooterNote] = useState('');
   const [printerWidth, setPrinterWidth] = useState<'58mm' | '80mm' | 'letter'>('80mm');
   const [itbisIncluido, setItbisIncluido] = useState(false);
+
+  // Categorías de vehículo (dinámicas, gestionadas por el superadmin).
+  const [categorias, setCategorias] = useState<VehicleCategoryRow[]>([]);
+  const [nuevaCategoria, setNuevaCategoria] = useState('');
+  const [catVehBusy, setCatVehBusy] = useState(false);
+  const [catVehError, setCatVehError] = useState<string | null>(null);
+  const [catVehNotice, setCatVehNotice] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +90,40 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     setPrinterWidth(company.thermal_printer_width);
     setItbisIncluido(company.prices_include_tax ?? false);
   }, [company]);
+
+  useEffect(() => {
+    if (!esSuperadmin) return;
+    fetchVehicleCategories(true).then(setCategorias).catch(() => { /* no bloquea */ });
+  }, [esSuperadmin]);
+
+  const agregarCategoria = async () => {
+    const label = nuevaCategoria.trim();
+    if (!label || catVehBusy) return;
+    setCatVehBusy(true); setCatVehError(null); setCatVehNotice(null);
+    try {
+      await createVehicleCategory(label);
+      setCategorias(await fetchVehicleCategories(true));
+      setNuevaCategoria('');
+      setCatVehNotice(`Categoría «${label}» creada. Ya puedes cargarle precios en el catálogo de servicios.`);
+    } catch (err) {
+      setCatVehError(err instanceof Error ? err.message : 'No se pudo crear la categoría');
+    } finally {
+      setCatVehBusy(false);
+    }
+  };
+
+  const alternarCategoria = async (c: VehicleCategoryRow) => {
+    if (catVehBusy) return;
+    setCatVehBusy(true); setCatVehError(null); setCatVehNotice(null);
+    try {
+      await updateVehicleCategory(c.id, { is_active: !c.is_active });
+      setCategorias(await fetchVehicleCategories(true));
+    } catch (err) {
+      setCatVehError(err instanceof Error ? err.message : 'No se pudo actualizar');
+    } finally {
+      setCatVehBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!canManageMembego) return;
@@ -266,6 +309,69 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
             </p>
           </div>
         </div>
+      </section>
+      )}
+
+      {/* Categorías de vehículo (dinámicas): solo el superadmin las gestiona.
+          El almacenamiento sigue siendo el tipo de la base; esto decide qué se
+          muestra y cómo se llama. */}
+      {show('empresa') && esSuperadmin && (
+      <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+        <h3 className="font-bold text-strong text-sm border-b border-line pb-2 flex items-center gap-2">
+          <Car className="w-4 h-4 text-brand" /> Categorías de vehículo
+        </h3>
+        <p className="text-xs text-faint">
+          Las categorías que aparecen al registrar una llegada y en el punto de venta. Crea las que
+          te falten (ej. «Camioneta»); luego cárgales precio en el catálogo de servicios.
+        </p>
+
+        {catVehNotice && <InlineAlert tone="success" onDismiss={() => setCatVehNotice(null)}>{catVehNotice}</InlineAlert>}
+        {catVehError && <InlineAlert tone="error" onDismiss={() => setCatVehError(null)}>{catVehError}</InlineAlert>}
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text" value={nuevaCategoria}
+            onChange={e => setNuevaCategoria(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void agregarCategoria(); }}
+            placeholder="Nombre de la categoría (ej. Camioneta)"
+            disabled={catVehBusy}
+            className="flex-1 p-2.5 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 dark:bg-input/30"
+          />
+          <Button onClick={() => void agregarCategoria()} disabled={catVehBusy || !nuevaCategoria.trim()}>
+            {catVehBusy ? <Loader2 className="animate-spin" /> : <Plus />}
+            Crear categoría
+          </Button>
+        </div>
+
+        <div className="space-y-1.5">
+          {categorias.length === 0 ? (
+            <p className="text-xs text-faint italic">Aún no hay categorías cargadas.</p>
+          ) : categorias.map(c => (
+            <div key={c.id}
+              className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-xs ${
+                c.is_active ? 'bg-canvas border-line' : 'bg-surface-2/40 border-line/60 opacity-70'
+              }`}>
+              <span className="min-w-0">
+                <span className="font-bold text-strong">{c.label}</span>
+                <span className="ml-2 font-mono text-faint">{c.code}</span>
+                {!c.is_active && <span className="ml-2 text-warning font-semibold">oculta</span>}
+              </span>
+              <button
+                onClick={() => void alternarCategoria(c)}
+                disabled={catVehBusy}
+                title={c.is_active ? 'Ocultar del selector' : 'Mostrar en el selector'}
+                className="p-1.5 rounded-lg text-muted hover:text-strong hover:bg-surface-2 disabled:opacity-40"
+              >
+                {c.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-faint">
+          Una categoría no se borra —su histórico depende de ella—: se <strong>oculta</strong>, y así
+          deja de ofrecerse sin romper las órdenes y facturas que ya la usaron.
+        </p>
       </section>
       )}
 

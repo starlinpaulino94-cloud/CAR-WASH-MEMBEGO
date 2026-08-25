@@ -203,6 +203,35 @@ export interface Database {
         };
         Relationships: [];
       };
+      vehicle_categories: {
+        Row: {
+          id: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          label?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       membego_promociones: {
         Row: {
           company_id: string;
@@ -2796,6 +2825,23 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_vehicle_category: {
+        Args: {
+          p_label: string;
+          p_code?: string;
+          p_sort_order?: number;
+        };
+        Returns: Database['public']['Tables']['vehicle_categories']['Row'];
+      };
+      update_vehicle_category: {
+        Args: {
+          p_id: string;
+          p_label?: string;
+          p_sort_order?: number;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['vehicle_categories']['Row'];
+      };
       advance_work_order: {
         Args: {
           p_order_id: string;
