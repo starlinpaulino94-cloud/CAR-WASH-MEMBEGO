@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Printer, Loader2, AlertCircle, Ban } from 'lucide-react';
 import { formatCents, bpsToPercent } from '../../lib/money';
-import { fetchInvoiceItems, Invoice, InvoiceItem } from '../../data/billingRepository';
+import {
+  fetchInvoiceItems, fetchComprobanteExtras,
+  Invoice, InvoiceItem, ComprobanteExtras
+} from '../../data/billingRepository';
 import { Tables } from '../../lib/database.types';
 import { LogoMark } from '../common/Logo';
+import { QrCode } from '../common/QrCode';
 
 interface Props {
   invoice: Invoice | null;
@@ -11,6 +15,30 @@ interface Props {
   branch: Tables<'branches'> | null;
   onClose: () => void;
 }
+
+/**
+ * Los cuatro tamaños en que Membego rinde el mismo comprobante: dos anchos de
+ * papel térmico y dos hojas completas. El contenido no cambia, solo el lienzo.
+ */
+const FORMATOS = [
+  { id: '58mm',  label: 'Térmica 58 mm' },
+  { id: '80mm',  label: 'Térmica 80 mm' },
+  { id: 'carta', label: 'Carta' },
+  { id: 'a4',    label: 'A4' }
+] as const;
+type Formato = (typeof FORMATOS)[number]['id'];
+
+/** Ancho del lienzo en pantalla (px) por formato. */
+const ANCHO_PANTALLA: Record<Formato, number> = {
+  '58mm': 220, '80mm': 300, carta: 640, a4: 640
+};
+/** Tamaño de página y márgenes para @page al imprimir. */
+const PAGINA_IMPRESION: Record<Formato, { size: string; margin: string }> = {
+  '58mm': { size: '58mm', margin: '0' },
+  '80mm': { size: '80mm', margin: '0' },
+  carta:  { size: 'letter', margin: '12mm' },
+  a4:     { size: 'A4', margin: '12mm' }
+};
 
 /**
  * Comprobante térmico.
@@ -25,8 +53,12 @@ interface Props {
  */
 export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch, onClose }) => {
   const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [extras, setExtras] = useState<ComprobanteExtras>({ cashierName: null, vehicle: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [formato, setFormato] = useState<Formato>(
+    company?.thermal_printer_width === '58mm' ? '58mm' : '80mm'
+  );
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -38,8 +70,8 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
     let active = true;
     setLoading(true);
     setError(null);
-    fetchInvoiceItems(invoice.id)
-      .then(rows => { if (active) setItems(rows); })
+    Promise.all([fetchInvoiceItems(invoice.id), fetchComprobanteExtras(invoice)])
+      .then(([rows, ex]) => { if (active) { setItems(rows); setExtras(ex); } })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'No se pudo cargar el detalle'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -75,11 +107,51 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
     };
   }, [invoice, onClose]);
 
-  const handlePrint = useCallback(() => { window.print(); }, []);
+  // Al imprimir se fija el tamaño de página en la raíz: @page no puede leer una
+  // variable puesta sobre un elemento suelto, así que va en documentElement.
+  const handlePrint = useCallback(() => {
+    const { size, margin } = PAGINA_IMPRESION[formato];
+    const root = document.documentElement;
+    root.style.setProperty('--print-page-size', size);
+    root.style.setProperty('--print-page-margin', margin);
+    window.print();
+  }, [formato]);
 
   if (!invoice) return null;
 
-  const width = company?.thermal_printer_width === '58mm' ? '58mm' : '80mm';
+  const isPage = formato === 'carta' || formato === 'a4';
+  const anchoTicket = isPage ? 360 : ANCHO_PANTALLA[formato];
+
+  const fecha = new Date(invoice.created_at);
+  const fechaStr = fecha.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
+  const horaStr = fecha.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
+
+  const esRegalo = invoice.total_cents === 0;
+  const vehiculoStr = extras.vehicle
+    ? `${extras.vehicle.make} ${extras.vehicle.model}`.trim() +
+      (extras.vehicle.year ? ` (${extras.vehicle.year})` : '')
+    : null;
+  const cubierto = items.some(i => i.is_membego_covered);
+
+  // El QR codifica la referencia verificable de la operación (número, NCF, RNC
+  // y total). No abre una web: es el archivo que Membego imprime como respaldo.
+  const qrValue = [
+    company?.trade_name ?? '',
+    `Comprobante ${invoice.invoice_number}`,
+    invoice.ncf ? `NCF ${invoice.ncf}` : '',
+    `RNC ${company?.tax_id ?? ''}`,
+    `Total ${formatCents(invoice.total_cents, symbol)}`,
+    fecha.toISOString()
+  ].filter(Boolean).join(' | ');
+
+  const banda = '*'.repeat(37);
+  const linea = '-'.repeat(37);
+  const fila = (etiqueta: string, valor: React.ReactNode, fuerte = false) => (
+    <div className="flex justify-between gap-2">
+      <span>{etiqueta}</span>
+      <span className={`text-right ${fuerte ? 'font-bold' : ''}`}>{valor}</span>
+    </div>
+  );
 
   return (
     <div
@@ -91,7 +163,7 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
         role="dialog"
         aria-modal="true"
         aria-label={`Comprobante ${invoice.invoice_number}`}
-        className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className={`bg-slate-900 border border-slate-800 w-full ${isPage ? 'max-w-2xl' : 'max-w-md'} rounded-2xl shadow-2xl overflow-hidden flex flex-col`}
       >
         <div className="print-hide bg-slate-800 px-5 py-3 border-b border-slate-700 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-white font-bold text-sm">
@@ -108,6 +180,24 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
           </button>
         </div>
 
+        {/* Selector de formato: el mismo comprobante en papel térmico u hoja. */}
+        <div className="print-hide bg-slate-800/60 px-4 py-2.5 border-b border-slate-700 flex flex-wrap gap-1.5">
+          {FORMATOS.map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFormato(f.id)}
+              aria-pressed={formato === f.id}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                formato === f.id
+                  ? 'bg-indigo-600 text-white border-transparent'
+                  : 'bg-transparent text-slate-300 border-slate-600 hover:bg-slate-700'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div className="p-6 bg-slate-950 flex justify-center overflow-y-auto max-h-[60vh]">
           {loading ? (
             <div className="py-10 flex items-center gap-2 text-xs text-slate-400" aria-busy="true">
@@ -119,121 +209,133 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
             </div>
           ) : (
             <div
-              className="print-ticket bg-white text-slate-900 p-4 rounded shadow-md font-mono text-[11px] leading-tight space-y-3"
+              className={`print-ticket ${isPage ? 'is-page' : ''} bg-white text-slate-900 rounded shadow-md font-mono ${
+                isPage ? 'text-[12px] p-8' : 'text-[11px] p-4'
+              } leading-tight space-y-2`}
               style={{
-                width: width === '58mm' ? '200px' : '280px',
-                ['--ticket-width' as string]: width
+                width: `${anchoTicket}px`,
+                ['--ticket-width' as string]: formato === '58mm' ? '58mm' : '80mm'
               }}
             >
-              <div className="text-center space-y-1 pb-2 border-b border-dashed border-slate-400">
-                {/* El símbolo en un solo tono: la térmica no tiene tinta de
-                    color y un degradado sale como una mancha gris. Va pequeño
-                    porque el papel es caro y el comprobante empieza abajo. */}
-                <LogoMark className="w-8 h-8 mx-auto text-slate-900" simple mono />
-                <div className="font-extrabold text-sm uppercase tracking-tight">{company?.trade_name}</div>
-                <div className="text-[10px]">{company?.legal_name}</div>
-                <div className="text-[10px]">RNC: {company?.tax_id}</div>
+              {/* Banda superior + COPIA, como el comprobante de Membego. */}
+              <div className="text-center space-y-0.5">
+                <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
+                <div className="font-extrabold tracking-[0.3em]">COPIA</div>
+                <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
+              </div>
+
+              {esRegalo && !isCreditNote && (
+                <div className="text-center space-y-0.5">
+                  <div className="font-bold">COMPROBANTE DE ENTREGA</div>
+                  <div className="text-[10px]">Sin valor comercial</div>
+                  <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
+                </div>
+              )}
+
+              {/* Logo redondo + datos del negocio. */}
+              <div className="text-center space-y-1 pb-1">
+                <LogoMark className="w-12 h-12 mx-auto text-slate-900" simple mono />
+                <div className="font-extrabold text-base uppercase tracking-tight">{company?.trade_name}</div>
+                {branch?.name && <div className="text-[10px]">{branch.name}</div>}
                 {branch?.address && <div className="text-[10px]">{branch.address}</div>}
                 {branch?.phone && <div className="text-[10px]">Tel: {branch.phone}</div>}
+                <div className="text-[10px]">RNC: {company?.tax_id}</div>
               </div>
 
               {isCreditNote && (
-                <div className="text-center font-extrabold text-[11px] border border-slate-900 py-1">
-                  NOTA DE CRÉDITO
-                </div>
+                <div className="text-center font-extrabold border border-slate-900 py-1">NOTA DE CRÉDITO</div>
               )}
               {invoice.is_annulled && (
-                <div className="text-center font-extrabold text-[11px] border border-slate-900 py-1">
-                  *** ANULADA ***
-                </div>
+                <div className="text-center font-extrabold border border-slate-900 py-1">*** ANULADA ***</div>
               )}
 
-              <div className="space-y-0.5 text-[10px] pb-2 border-b border-dashed border-slate-400">
-                <div className="flex justify-between font-bold">
-                  <span>COMPROBANTE</span><span>{invoice.invoice_number}</span>
-                </div>
-                {invoice.ncf && (
-                  <div className="flex justify-between font-bold">
-                    <span>NCF</span><span>{invoice.ncf}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span>FECHA</span>
-                  <span>{new Date(invoice.created_at).toLocaleString('es-DO')}</span>
-                </div>
+              {/* Datos de la operación. */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              <div className="space-y-0.5">
+                {fila('Fecha:', fechaStr)}
+                {fila('Hora:', horaStr)}
+                {extras.cashierName && fila('Empleado:', extras.cashierName)}
+                {fila('Comprobante:', invoice.invoice_number, true)}
+                {invoice.ncf && fila('NCF:', invoice.ncf, true)}
               </div>
 
-              <div className="space-y-0.5 text-[10px] pb-2 border-b border-dashed border-slate-400">
-                <div className="flex justify-between">
-                  <span>CLIENTE</span>
-                  <span className="font-bold truncate max-w-[130px]">{invoice.customer_name}</span>
-                </div>
-                {invoice.customer_tax_id && (
-                  <div className="flex justify-between"><span>RNC/CÉDULA</span><span>{invoice.customer_tax_id}</span></div>
-                )}
-                {invoice.vehicle_plate && (
-                  <div className="flex justify-between"><span>PLACA</span><span className="font-bold">{invoice.vehicle_plate}</span></div>
-                )}
+              {/* Cliente. */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              <div className="space-y-0.5">
+                <div className="font-bold">CLIENTE</div>
+                {fila('Nombre:', invoice.customer_name, true)}
+                {invoice.customer_tax_id && fila('RNC/Cédula:', invoice.customer_tax_id)}
+                {vehiculoStr && fila('Vehículo:', vehiculoStr)}
+                {invoice.vehicle_plate && fila('Placa:', invoice.vehicle_plate, true)}
+                {cubierto && fila('Membresía:', 'Cubre este servicio')}
               </div>
 
-              <div className="space-y-1.5 pb-2 border-b border-dashed border-slate-400">
-                <div className="font-bold flex justify-between border-b border-slate-300 pb-1">
-                  <span>CANT / DESCRIPCIÓN</span><span>IMPORTE</span>
-                </div>
+              {/* Servicio(s). */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              <div className="space-y-1">
+                <div className="font-bold">{items.length > 1 ? 'SERVICIOS' : 'SERVICIO'}</div>
                 {items.map(item => (
                   <div key={item.id} className="space-y-0.5">
                     <div className="flex justify-between gap-2">
                       <span className="truncate">{item.quantity}x {item.name}</span>
                       <span className="font-bold whitespace-nowrap">
                         {item.is_membego_covered
-                          ? formatCents(0, symbol)
+                          ? 'Gratis'
                           : formatCents(item.unit_price_cents * item.quantity - item.discount_cents, symbol)}
                       </span>
                     </div>
                     {item.is_membego_covered && (
-                      <div className="text-[9px] font-bold pl-2">✔ CUBIERTO POR MEMBEGO</div>
+                      <div className="text-[9px] font-bold pl-2">✔ Cubierto por Membego</div>
                     )}
                     {item.discount_cents > 0 && !item.is_membego_covered && (
-                      <div className="text-[9px] pl-2">
-                        Desc: −{formatCents(item.discount_cents, symbol)}
-                      </div>
+                      <div className="text-[9px] pl-2">Desc: −{formatCents(item.discount_cents, symbol)}</div>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-1 text-[11px]">
-                <div className="flex justify-between"><span>SUBTOTAL</span><span>{formatCents(invoice.subtotal_cents, symbol)}</span></div>
-                {invoice.discount_cents > 0 && (
-                  <div className="flex justify-between font-semibold">
-                    <span>DESCUENTO</span><span>−{formatCents(invoice.discount_cents, symbol)}</span>
+              {/* Totales / pago. */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              {esRegalo ? (
+                <div className="space-y-0.5">{fila('Pago:', 'Regalo · sin costo', true)}</div>
+              ) : (
+                <div className="space-y-0.5">
+                  {fila('Subtotal:', formatCents(invoice.subtotal_cents, symbol))}
+                  {invoice.discount_cents > 0 &&
+                    fila('Descuento:', `−${formatCents(invoice.discount_cents, symbol)}`)}
+                  {fila(`ITBIS (${bpsToPercent(company?.tax_rate_bps ?? 1800)}):`,
+                    formatCents(invoice.tax_cents, symbol))}
+                  <div className="flex justify-between font-extrabold text-sm border-t border-b border-slate-900 py-1 my-1">
+                    <span>{isCreditNote ? 'TOTAL ACREDITADO' : 'TOTAL'}</span>
+                    <span>{formatCents(invoice.total_cents, symbol)}</span>
                   </div>
-                )}
-                <div className="flex justify-between">
-                  <span>ITBIS ({bpsToPercent(company?.tax_rate_bps ?? 1800)})</span>
-                  <span>{formatCents(invoice.tax_cents, symbol)}</span>
-                </div>
-                <div className="flex justify-between font-extrabold text-sm border-t border-b border-slate-900 py-1 my-1">
-                  <span>{isCreditNote ? 'TOTAL ACREDITADO' : 'TOTAL'}</span>
-                  <span>{formatCents(invoice.total_cents, symbol)}</span>
-                </div>
-                {invoice.change_cents > 0 && (
-                  <div className="flex justify-between font-bold">
-                    <span>CAMBIO</span><span>{formatCents(invoice.change_cents, symbol)}</span>
-                  </div>
-                )}
-              </div>
-
-              {invoice.is_annulled && invoice.annulled_reason && (
-                <div className="text-[9px] pt-1 border-t border-dashed border-slate-400">
-                  <div className="font-bold">MOTIVO DE ANULACIÓN:</div>
-                  <div>{invoice.annulled_reason}</div>
+                  {invoice.change_cents > 0 && fila('Cambio:', formatCents(invoice.change_cents, symbol), true)}
                 </div>
               )}
 
-              <div className="text-center space-y-1 text-[9px] pt-1">
-                <div>{company?.header_note}</div>
-                <div className="font-semibold">{company?.footer_note}</div>
+              {invoice.is_annulled && invoice.annulled_reason && (
+                <>
+                  <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+                  <div className="text-[9px]">
+                    <div className="font-bold">MOTIVO DE ANULACIÓN:</div>
+                    <div>{invoice.annulled_reason}</div>
+                  </div>
+                </>
+              )}
+
+              {/* QR de la operación. */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              <div className="flex flex-col items-center gap-1 pt-1">
+                <QrCode value={qrValue} size={isPage ? 132 : 104} />
+                <div className="text-[9px] text-center">Escanea para consultar esta operación</div>
+              </div>
+
+              {/* Pie. */}
+              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
+              <div className="text-center space-y-1 text-[10px]">
+                {company?.header_note && <div>{company.header_note}</div>}
+                <div className="font-bold">¡Gracias por tu preferencia!</div>
+                {company?.footer_note && <div>{company.footer_note}</div>}
               </div>
             </div>
           )}

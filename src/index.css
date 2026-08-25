@@ -352,10 +352,22 @@ html {
     line-height: 1.25 !important;
   }
 
-  /* Papel continuo: la altura la decide el contenido, no una hoja fija. */
+  /* Formato de hoja completa (Carta / A4): el mismo comprobante centrado en la
+     página, no pegado al borde como el papel térmico. */
+  .print-ticket.is-page {
+    position: static !important;
+    width: auto !important;
+    max-width: 150mm !important;
+    margin: 0 auto !important;
+    padding: 6mm 8mm !important;
+    font-size: 11pt !important;
+  }
+
+  /* Térmico: papel continuo (altura por contenido). Hoja: tamaño y margen los
+     pone el modal en documentElement al imprimir (--print-page-*). */
   @page {
-    size: var(--ticket-width, 80mm) auto;
-    margin: 0;
+    size: var(--print-page-size, 80mm) auto;
+    margin: var(--print-page-margin, 0);
   }
 
   /* Nada de cortes a mitad de una línea del detalle. */
