@@ -203,6 +203,110 @@ export interface Database {
         };
         Relationships: [];
       };
+      membego_promociones: {
+        Row: {
+          company_id: string;
+          membego_promotion_id: string;
+          titulo: string;
+          descripcion: string;
+          imagen_url: string | null;
+          activo: boolean;
+          vigencia_desde: string | null;
+          vigencia_hasta: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_promotion_id: string;
+          titulo?: string;
+          descripcion?: string;
+          imagen_url?: string | null;
+          activo?: boolean;
+          vigencia_desde?: string | null;
+          vigencia_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          titulo?: string;
+          descripcion?: string;
+          imagen_url?: string | null;
+          activo?: boolean;
+          vigencia_desde?: string | null;
+          vigencia_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_citas: {
+        Row: {
+          company_id: string;
+          membego_appointment_id: string;
+          membego_customer_id: string | null;
+          membego_branch_id: string | null;
+          membego_vehicle_id: string | null;
+          inicio: string | null;
+          duracion_min: number;
+          servicio: string | null;
+          estado: string;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_appointment_id: string;
+          membego_customer_id?: string | null;
+          membego_branch_id?: string | null;
+          membego_vehicle_id?: string | null;
+          inicio?: string | null;
+          duracion_min?: number;
+          servicio?: string | null;
+          estado?: string;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          inicio?: string | null;
+          duracion_min?: number;
+          servicio?: string | null;
+          estado?: string;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
+      membego_membresias: {
+        Row: {
+          company_id: string;
+          membego_membership_id: string;
+          membego_customer_id: string | null;
+          plan_nombre: string;
+          estado: string;
+          vigente_hasta: string | null;
+          raw: Json;
+          synced_at: string;
+        };
+        Insert: {
+          company_id: string;
+          membego_membership_id: string;
+          membego_customer_id?: string | null;
+          plan_nombre?: string;
+          estado?: string;
+          vigente_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Update: {
+          plan_nombre?: string;
+          estado?: string;
+          vigente_hasta?: string | null;
+          raw?: Json;
+          synced_at?: string;
+        };
+        Relationships: [];
+      };
       membego_company_links: {
         Row: {
           company_id: string;

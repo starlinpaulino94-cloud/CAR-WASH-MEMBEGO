@@ -900,6 +900,57 @@ export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
   return data ?? [];
 }
 
+// ─────────────────────────────────── Catálogo de Membego (promos/citas/membresías)
+
+export type MembegoPromocion = Tables<'membego_promociones'>;
+export type MembegoCita = Tables<'membego_citas'>;
+export type MembegoMembresia = Tables<'membego_membresias'>;
+
+export interface ResultadoSyncCatalogo {
+  ok: boolean;
+  promociones?: number;
+  citas?: number;
+  membresias?: number;
+  errores?: { promociones: string | null; citas: string | null; membresias: string | null };
+}
+
+/** Dispara la sincronización masiva de promociones, citas y membresías. */
+export async function sincronizarCatalogoMembego(): Promise<ResultadoSyncCatalogo> {
+  const res = await fetch('/api/membego/sincronizar-catalogo', {
+    method: 'POST',
+    headers: await encabezadosMembego({ 'Content-Type': 'application/json' })
+  });
+  const cuerpo = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = (cuerpo as { message?: string; error?: string }).message
+      ?? (cuerpo as { error?: string }).error
+      ?? `Error ${res.status}`;
+    throw new Error(msg);
+  }
+  return cuerpo as ResultadoSyncCatalogo;
+}
+
+export async function fetchPromocionesMembego(): Promise<MembegoPromocion[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_promociones').select('*').order('titulo');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchCitasMembego(): Promise<MembegoCita[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_citas').select('*').order('inicio');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchMembresiasMembego(): Promise<MembegoMembresia[]> {
+  const { data, error } = await requireSupabase()
+    .from('membego_membresias').select('*').order('plan_nombre');
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ─────────────────────────────────── Niveles tarifarios de Membego
 
 /**

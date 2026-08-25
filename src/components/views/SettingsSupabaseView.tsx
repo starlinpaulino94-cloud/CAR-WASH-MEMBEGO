@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
-import { Loader2, Save, BadgeCheck, Link2, History, RefreshCw, Building2, DownloadCloud } from 'lucide-react';
+import {
+  Loader2, Save, BadgeCheck, Link2, History, RefreshCw, Building2, DownloadCloud,
+  Ticket, CalendarDays
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { bpsToPercent } from '../../lib/money';
 import {
   updateCompany, fetchMembegoLink, linkMembegoCompany, MembegoLink,
   sincronizarPerfilMembego, fetchPerfilMembego, fetchSucursalesMembego,
-  MembegoEmpresaPerfil, MembegoSucursal
+  MembegoEmpresaPerfil, MembegoSucursal,
+  sincronizarCatalogoMembego, fetchPromocionesMembego, fetchCitasMembego, fetchMembresiasMembego,
+  MembegoPromocion, MembegoCita, MembegoMembresia
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
@@ -58,6 +63,13 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  // Catálogo de Membego: promociones, citas y membresías (Fase 2).
+  const [promos, setPromos] = useState<MembegoPromocion[]>([]);
+  const [citas, setCitas] = useState<MembegoCita[]>([]);
+  const [membresias, setMembresias] = useState<MembegoMembresia[]>([]);
+  const [catBusy, setCatBusy] = useState(false);
+  const [catNotice, setCatNotice] = useState<string | null>(null);
+  const [catError, setCatError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!company) return;
@@ -84,7 +96,35 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     fetchSucursalesMembego()
       .then(setSucursalesMembego)
       .catch(() => { /* idem */ });
+    fetchPromocionesMembego().then(setPromos).catch(() => { /* aún no sincronizado */ });
+    fetchCitasMembego().then(setCitas).catch(() => { /* idem */ });
+    fetchMembresiasMembego().then(setMembresias).catch(() => { /* idem */ });
   }, [canManageMembego]);
+
+  const sincronizarCatalogo = async () => {
+    if (catBusy) return;
+    setCatBusy(true); setCatError(null); setCatNotice(null);
+    try {
+      const r = await sincronizarCatalogoMembego();
+      const [p, c, m] = await Promise.all([
+        fetchPromocionesMembego(), fetchCitasMembego(), fetchMembresiasMembego()
+      ]);
+      setPromos(p); setCitas(c); setMembresias(m);
+      const fallos = r.errores
+        ? Object.entries(r.errores).filter(([, v]) => v).map(([k]) => k)
+        : [];
+      setCatNotice(
+        `Catálogo sincronizado: ${r.promociones ?? 0} promoción(es), ${r.citas ?? 0} cita(s), ` +
+        `${r.membresias ?? 0} membresía(s).${
+          fallos.length ? ` No se pudieron leer: ${fallos.join(', ')} (falta el permiso correspondiente).` : ''
+        }`
+      );
+    } catch (err) {
+      setCatError(err instanceof Error ? err.message : 'No se pudo sincronizar el catálogo');
+    } finally {
+      setCatBusy(false);
+    }
+  };
 
   const sincronizarPerfil = async () => {
     if (syncBusy) return;
@@ -333,6 +373,113 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               <p className="text-xs text-faint">
                 Última sincronización: {new Date(perfilMembego.synced_at).toLocaleString('es-DO')}.
                 Es una copia informativa: no cambia tus datos fiscales ni tus sucursales operativas.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Catálogo de Membego (Fase 2): promociones, citas y membresías, traídas
+          en bloque. Snapshots informativos, no autorizan canjes. */}
+      {show('membego') && canManageMembego && (
+        <section className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-2 gap-2">
+            <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+              <DownloadCloud className="w-4 h-4 text-brand" /> Catálogo desde Membego
+            </h3>
+            <Button size="sm" onClick={() => void sincronizarCatalogo()} disabled={catBusy}>
+              {catBusy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              Sincronizar
+            </Button>
+          </div>
+
+          {catNotice && <InlineAlert tone="success" onDismiss={() => setCatNotice(null)}>{catNotice}</InlineAlert>}
+          {catError && <InlineAlert tone="error" onDismiss={() => setCatError(null)}>{catError}</InlineAlert>}
+
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{promos.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><Ticket className="w-3 h-3" /> Promos</div>
+            </div>
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{citas.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3" /> Citas</div>
+            </div>
+            <div className="bg-canvas border border-line rounded-lg p-2">
+              <div className="text-lg font-black text-strong">{membresias.length}</div>
+              <div className="text-xs text-faint flex items-center justify-center gap-1"><BadgeCheck className="w-3 h-3" /> Membresías</div>
+            </div>
+          </div>
+
+          {promos.length === 0 && citas.length === 0 && membresias.length === 0 ? (
+            <p className="text-xs text-faint italic">
+              Todavía no se ha traído el catálogo. Pulsa <strong>Sincronizar</strong>. (Requiere que Membego
+              tenga desplegados los endpoints de la Fase 2 y que la credencial tenga los permisos
+              <span className="font-mono"> promotions:read</span>, <span className="font-mono">appointments:read</span> y
+              <span className="font-mono"> memberships:read</span>.)
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {promos.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <Ticket className="w-3.5 h-3.5" /> Promociones
+                  </span>
+                  {promos.slice(0, 8).map(p => (
+                    <div key={p.membego_promotion_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-strong truncate">{p.titulo}</span>
+                        {p.descripcion && <span className="block text-muted truncate">{p.descripcion}</span>}
+                      </span>
+                      {!p.activo && (
+                        <span className="px-1.5 py-0.5 rounded bg-warning/20 text-warning font-bold whitespace-nowrap">Inactiva</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {citas.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5" /> Próximas citas
+                  </span>
+                  {citas.slice(0, 8).map(c => (
+                    <div key={c.membego_appointment_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-strong truncate">{c.servicio ?? 'Cita'}</span>
+                        <span className="block text-muted">
+                          {c.inicio ? new Date(c.inicio).toLocaleString('es-DO') : '—'} · {c.duracion_min} min
+                        </span>
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-info/15 text-info font-bold whitespace-nowrap">{c.estado}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {membresias.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-xs text-faint uppercase font-semibold flex items-center gap-1.5">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Membresías activas
+                  </span>
+                  {membresias.slice(0, 8).map(m => (
+                    <div key={m.membego_membership_id}
+                      className="flex items-center justify-between gap-2 p-2 bg-canvas rounded-lg border border-line text-xs">
+                      <span className="block font-bold text-strong truncate">{m.plan_nombre}</span>
+                      <span className="text-muted whitespace-nowrap">
+                        {m.vigente_hasta ? `Hasta ${new Date(m.vigente_hasta).toLocaleDateString('es-DO')}` : 'Sin vencimiento'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-xs text-faint">
+                Copia informativa (proyección): sirve para ver y planificar, no autoriza canjes.
+                El canje se decide siempre en el momento contra Membego.
               </p>
             </div>
           )}
