@@ -749,14 +749,37 @@ export async function createBay(input: {
 
 // --------------------------------------------------------------- Reportes
 
+export interface AuditFilters {
+  /** Texto libre: busca en acción, detalle, usuario y entidad. */
+  search?: string;
+  /** Tipo de dato exacto: 'invoice', 'product', 'service'… ('' = todos). */
+  entity?: string;
+  /** Acción (contiene): 'creó', 'editó', 'anuló'… */
+  action?: string;
+  /** Usuario que hizo la acción ('' = todos). */
+  actorId?: string;
+  /** Desde / hasta en ISO; `to` debe venir como fin del día. */
+  from?: string;
+  to?: string;
+}
+
 export async function fetchAuditPage(
-  page: number, pageSize: number, search: string
+  page: number, pageSize: number, f: AuditFilters = {}
 ): Promise<PagedResult<AuditLog>> {
   let query = requireSupabase().from('audit_logs').select('*', { count: 'exact' });
-  if (search.trim()) {
-    const t = escape(search.trim());
-    query = query.or(`action.ilike.%${t}%,details.ilike.%${t}%,actor_name.ilike.%${t}%`);
+  const s = (f.search ?? '').trim();
+  if (s) {
+    const t = escape(s);
+    query = query.or(
+      `action.ilike.%${t}%,details.ilike.%${t}%,actor_name.ilike.%${t}%,entity.ilike.%${t}%`
+    );
   }
+  if (f.entity) query = query.eq('entity', f.entity);
+  if (f.action && f.action.trim()) query = query.ilike('action', `%${escape(f.action.trim())}%`);
+  if (f.actorId) query = query.eq('actor_id', f.actorId);
+  if (f.from) query = query.gte('occurred_at', f.from);
+  if (f.to) query = query.lte('occurred_at', f.to);
+
   const { data, error, count } = await query
     .order('occurred_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);

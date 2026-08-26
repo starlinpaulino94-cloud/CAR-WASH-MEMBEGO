@@ -139,6 +139,12 @@ check('el actor de la bitácora es el usuario autenticado',
 check('la interfaz confirma la emisión al cajero',
   await page.getByText(/Emitida FAC-/).isVisible().catch(() => false));
 
+// El comprobante se abre solo, listo para imprimir; se cierra para seguir.
+check('al cobrar, el comprobante sale listo para imprimir',
+  await page.getByRole('button', { name: /Imprimir/ }).isVisible().catch(() => false));
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+
 // ------------------------------------------------------- Doble clic (idempotencia)
 console.log('\n[4] POS — protección contra doble cobro');
 await page.getByRole('button', { name: /Lavado Completo/ }).isVisible().catch(() => {});
@@ -158,6 +164,9 @@ await page.waitForTimeout(2500);
 check('el doble clic no emitió dos facturas',
   Number(sql('select count(*) from invoices')) === beforeDouble + 1,
   `antes=${beforeDouble} después=${sql('select count(*) from invoices')}`);
+
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 // ------------------------------------------------------------ Permisos (RLS)
 console.log('\n[5] Autorización aplicada por la base de datos');

@@ -25,6 +25,8 @@ import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/admi
 import { aplicarCobertura, categoriaTopeDelPlan } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { TicketSupabaseModal } from '../modals/TicketSupabaseModal';
+import { fetchChargeableOrderById, tomarOrdenPendientePos } from '../../data/billingRepository';
 
 const ESTADO_ORDEN: Record<string, string> = {
   pendiente: 'Recién llegado', en_espera: 'En espera', asignada: 'Asignada',
@@ -103,6 +105,8 @@ export const PosSupabaseView: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
+  // El comprobante recién emitido, para abrirlo listo para imprimir.
+  const [ticketInvoice, setTicketInvoice] = useState<Invoice | null>(null);
 
   // --- La membresía del cliente, aplicada al cobro
   // Esto es lo que convierte el aviso en dinero: hasta aquí la caja sabía que
@@ -406,6 +410,21 @@ export const PosSupabaseView: React.FC = () => {
     requestIdRef.current = null;
   };
 
+  // «Facturar» desde el módulo de órdenes: si se dejó una orden pendiente, se
+  // carga sola al abrir el POS, sin que el cajero la busque a mano.
+  useEffect(() => {
+    if (!branch) return;
+    const orderId = tomarOrdenPendientePos();
+    if (!orderId) return;
+    let active = true;
+    fetchChargeableOrderById(branch.id, orderId)
+      .then(o => { if (active && o) void elegirOrden(o); })
+      .catch(() => { /* si ya se cobró/canceló, se ignora; el panel de órdenes sigue */ });
+    return () => { active = false; };
+    // Solo al montar/estar lista la sucursal: es un traspaso de una sola vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branch]);
+
   // --------------------------------------------------------------- Carrito
 
   const addService = (s: ServiceWithPrice) => {
@@ -617,6 +636,8 @@ export const PosSupabaseView: React.FC = () => {
       });
 
       setLastInvoice(invoice);
+      // El comprobante sale de una vez, listo para imprimir.
+      setTicketInvoice(invoice);
 
       /*
        * Avisar a Membego DESPUÉS de facturar, y nunca antes.
@@ -1335,6 +1356,17 @@ export const PosSupabaseView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* El comprobante recién emitido, listo para imprimir. Se abre solo al
+          cobrar; cerrarlo no deshace la venta, que ya está registrada. */}
+      {ticketInvoice && (
+        <TicketSupabaseModal
+          invoice={ticketInvoice}
+          company={company}
+          branch={branch}
+          onClose={() => setTicketInvoice(null)}
+        />
+      )}
     </div>
   );
 };

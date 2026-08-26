@@ -215,6 +215,9 @@ await page.getByLabel(/Recibido|Efectivo|Monto/i).first().fill('5000').catch(() 
 await page.waitForTimeout(400);
 await page.getByRole('button', { name: /^Cobrar/ }).click();
 await page.waitForTimeout(3500);
+// El comprobante se abre solo, listo para imprimir; se cierra para continuar.
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 const factura = sql("select id from invoices order by created_at desc limit 1");
 check('la venta emite una factura', factura.length === 36, totalTexto);
