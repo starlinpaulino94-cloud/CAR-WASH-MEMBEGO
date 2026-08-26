@@ -2916,6 +2916,21 @@ export interface Database {
         Args: { p_order_id: string; p_reason: string };
         Returns: Database['public']['Tables']['work_orders']['Row'];
       };
+      edit_work_order: {
+        Args: {
+          p_order_id: string;
+          p_items: Json;
+          p_customer_name?: string | null;
+          p_customer_phone?: string | null;
+          p_vehicle_make?: string | null;
+          p_vehicle_model?: string | null;
+          p_vehicle_color?: string | null;
+          p_vehicle_category?: Database['public']['Enums']['vehicle_category'] | null;
+          p_priority?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Database['public']['Tables']['work_orders']['Row'];
+      };
       create_work_order: {
         Args: {
           p_branch_id: string;

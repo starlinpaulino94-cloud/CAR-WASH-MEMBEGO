@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban, Receipt
+  Car, Plus, ShieldCheck, UserCheck, AlertCircle, RefreshCw, Loader2, Warehouse, X, Ban, Receipt, Pencil
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogTitle } from '../ui/dialog';
@@ -17,6 +17,7 @@ import {
 import { can } from '../../lib/auth';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
+import { EditOrderSupabaseModal } from '../modals/EditOrderSupabaseModal';
 import { QcReviewModal } from '../modals/QcReviewModal';
 
 const COLUMNS: { id: OrderStatus; label: string; tone: string }[] = [
@@ -69,8 +70,10 @@ export const KanbanSupabaseView: React.FC = () => {
    * obligatorio, para lo que es una operación correctiva y no un paso del flujo.
    */
   const puedeCancelar = can(profile, 'cancelOrder');
+  const puedeEditar = can(profile, 'editOrder');
   const puedeFacturar = can(profile, 'issueInvoice');
   const { navigate } = useNavigation();
+  const [editando, setEditando] = useState<WorkOrder | null>(null);
 
   /** Manda la orden al POS ya cargada, para cobrarla sin buscarla a mano. */
   const facturarOrden = (order: WorkOrder) => {
@@ -326,6 +329,22 @@ export const KanbanSupabaseView: React.FC = () => {
                         </div>
                       )}
 
+                      {/* Editar la orden: corregir servicios, cantidades,
+                          categoría o datos. Solo mientras está en el taller y sin
+                          cobrar; el servidor rechaza entregadas, canceladas y
+                          facturadas. */}
+                      {puedeEditar && order.payment_status === 'pendiente'
+                        && order.status !== 'cancelado' && order.status !== 'entregado' && (
+                        <Button
+                          variant="ghost" size="xs" className="w-full text-faint hover:text-strong"
+                          disabled={busy}
+                          onClick={() => setEditando(order)}
+                          aria-label={`Editar la orden ${order.order_number}`}
+                        >
+                          <Pencil /> Editar orden
+                        </Button>
+                      )}
+
                       {/* Facturar sin ir a buscarla al POS: manda la orden ya
                           cargada. Solo si está pendiente de cobro y no cancelada. */}
                       {puedeFacturar && order.payment_status === 'pendiente'
@@ -425,6 +444,14 @@ export const KanbanSupabaseView: React.FC = () => {
         <NewArrivalSupabaseModal
           onClose={() => setCreating(false)}
           onCreated={() => { setCreating(false); void load(); refreshQueue(); }}
+        />
+      )}
+
+      {editando && (
+        <EditOrderSupabaseModal
+          order={editando}
+          onClose={() => setEditando(null)}
+          onSaved={() => { setEditando(null); setActionError(null); void load(); refreshQueue(); }}
         />
       )}
     </div>

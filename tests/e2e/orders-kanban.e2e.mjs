@@ -304,6 +304,49 @@ check('cerrar sin registrar no deja rastro',
   sql("select count(*) from work_orders") === '3',
   sql("select count(*) from work_orders"));
 
+// ====================================================== Editar una orden
+// Corregir una orden en el taller: solo un rol de gestión puede, el importe lo
+// recalcula el servidor y queda en la bitácora. Se hace con el DUEÑO (el cajero
+// de las secciones anteriores no ve el botón: `editOrder` no está en su rol).
+console.log('\n[6] Órdenes — editar (rol de gestión, reprecio en el servidor)');
+
+const ctxAdmin = await browser.newContext();
+const admin = await ctxAdmin.newPage();
+await login(admin, 'dueno@example.com', /^Operaciones/);
+await admin.locator('nav[aria-label="Submódulos"]').getByRole('link', { name: /^Cola/ }).click();
+await admin.waitForTimeout(2000);
+
+// ZZ0002 sigue pendiente y sin cobrar: es editable. Parte de 1 x Lavado.
+const antesEdit = sql("select total_cents from work_orders where vehicle_plate='ZZ0002'");
+const cardZZ = admin.locator('article', { hasText: 'ZZ0002' });
+check('el dueño ve el botón de editar en una orden pendiente',
+  await cardZZ.getByRole('button', { name: /Editar la orden/ }).isVisible().catch(() => false),
+  `total antes = ${antesEdit}`);
+
+await cardZZ.getByRole('button', { name: /Editar la orden/ }).click();
+await admin.waitForTimeout(1200);
+
+check('el editor abre con el servicio que la orden ya traía preseleccionado',
+  await admin.getByRole('button', { name: /Agregar uno de Lavado Completo/ }).isVisible().catch(() => false));
+
+// Subir la cantidad a 2. El navegador no manda precios: el servidor tarifa.
+await admin.getByRole('button', { name: /Agregar uno de Lavado Completo/ }).click();
+await admin.waitForTimeout(300);
+await admin.getByRole('button', { name: /Guardar cambios/ }).click();
+await admin.waitForTimeout(2500);
+
+check('editar recalculó el importe en el servidor (2 x 100000 + ITBIS = 236000)',
+  sql("select total_cents from work_orders where vehicle_plate='ZZ0002'") === '236000',
+  sql("select total_cents from work_orders where vehicle_plate='ZZ0002'"));
+check('la línea quedó con cantidad 2 y el precio de catálogo',
+  sql("select quantity||'/'||unit_price_cents from work_order_items i join work_orders o on o.id=i.work_order_id where o.vehicle_plate='ZZ0002' and i.item_type='service'") === '2/100000',
+  sql("select quantity||'/'||unit_price_cents from work_order_items i join work_orders o on o.id=i.work_order_id where o.vehicle_plate='ZZ0002' and i.item_type='service'"));
+check('la edición quedó en la bitácora',
+  Number(sql("select count(*) from audit_logs where action='EDITAR_ORDEN'")) >= 1,
+  sql("select count(*) from audit_logs where action='EDITAR_ORDEN'"));
+
+await ctxAdmin.close();
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
