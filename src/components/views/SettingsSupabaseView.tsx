@@ -16,7 +16,7 @@ import {
   fetchVehicleCategories, createVehicleCategory, updateVehicleCategory, VehicleCategoryRow
 } from '../../data/adminRepository';
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
-import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
+import { fetchMembegoLogs, MembegoSyncLog, diagnosticarMembego } from '../../data/adminRepository';
 import { NivelesMembego } from '../settings/NivelesMembego';
 
 /**
@@ -79,6 +79,24 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [catBusy, setCatBusy] = useState(false);
   const [catNotice, setCatNotice] = useState<string | null>(null);
   const [catError, setCatError] = useState<string | null>(null);
+
+  // Diagnóstico temporal de la conexión Membego ↔ Supabase.
+  const [diagBusy, setDiagBusy] = useState(false);
+  const [diagResult, setDiagResult] = useState<Record<string, unknown> | null>(null);
+  const [diagError, setDiagError] = useState<string | null>(null);
+
+  const correrDiagnostico = async () => {
+    setDiagBusy(true);
+    setDiagError(null);
+    setDiagResult(null);
+    try {
+      setDiagResult(await diagnosticarMembego());
+    } catch (e) {
+      setDiagError(e instanceof Error ? e.message : 'No se pudo correr el diagnóstico.');
+    } finally {
+      setDiagBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!company) return;
@@ -611,6 +629,39 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
 
           {membegoNotice && <InlineAlert tone="success" onDismiss={() => setMembegoNotice(null)}>{membegoNotice}</InlineAlert>}
           {membegoError && <InlineAlert tone="error" onDismiss={() => setMembegoError(null)}>{membegoError}</InlineAlert>}
+
+          {/* Diagnóstico temporal: por qué el POS dice «La sesión no es válida o
+              expiró» al consultar Membego. No revela ninguna clave. */}
+          <div className="space-y-2 rounded-xl border border-line bg-canvas/40 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-bold text-strong text-xs">Diagnóstico de conexión</h4>
+              <Button size="sm" variant="outline" onClick={() => void correrDiagnostico()} disabled={diagBusy}>
+                {diagBusy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                Probar conexión
+              </Button>
+            </div>
+            <p className="text-xs text-faint">
+              Comprueba que el servidor valide tu sesión con Supabase. No muestra ninguna clave.
+            </p>
+            {diagError && <InlineAlert tone="error" onDismiss={() => setDiagError(null)}>{diagError}</InlineAlert>}
+            {diagResult && (
+              <div className="space-y-2">
+                {typeof diagResult.veredicto === 'string' && (
+                  <p className={`text-xs font-semibold p-2 rounded-lg border ${
+                    (diagResult.supabase as { anonKeyEsDelMismoProyecto?: boolean })?.anonKeyEsDelMismoProyecto
+                      && (diagResult.validacionDeSesion as { authUserHttpStatus?: unknown })?.authUserHttpStatus === 200
+                      ? 'bg-success/20 border-success/40 text-success'
+                      : 'bg-warning/20 border-warning/40 text-warning'
+                  }`}>
+                    {diagResult.veredicto as string}
+                  </p>
+                )}
+                <pre className="text-[11px] leading-relaxed bg-canvas border border-line rounded-lg p-2.5 overflow-x-auto text-muted">
+                  {JSON.stringify(diagResult, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-1">
             <label htmlFor="s-membego" className="text-xs font-semibold text-muted uppercase">
