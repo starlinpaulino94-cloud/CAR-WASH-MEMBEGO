@@ -62,7 +62,10 @@ export const PERMISSIONS = {
   // Cancelar una orden borra trabajo del tablero y descuadra el conteo del día.
   // Mismos roles que anular una factura, que es la operación correctiva
   // equivalente, y los MISMOS que el gate de cancel_work_order() en 0041.
-  cancelOrder:       ['propietario', 'administrador', 'supervisor', 'superadmin']
+  cancelOrder:       ['propietario', 'administrador', 'supervisor', 'superadmin'],
+  // Editar una orden mueve el importe que se va a cobrar. Mismos roles que
+  // cancelarla, y los MISMOS que el gate de edit_work_order() en 0042.
+  editOrder:         ['propietario', 'administrador', 'supervisor', 'superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

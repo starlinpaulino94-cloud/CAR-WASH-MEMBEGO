@@ -278,6 +278,48 @@ export async function cancelOrder(orderId: string, reason: string): Promise<Work
   return data as unknown as WorkOrder;
 }
 
+export interface EditOrderParams {
+  orderId: string;
+  category: VehicleCategory;
+  services: { serviceId: string; name: string; quantity: number }[];
+  customerName?: string | null;
+  customerPhone?: string | null;
+  make?: string;
+  model?: string;
+  color?: string;
+  priority?: 'normal' | 'alta' | 'vip_membego';
+  notes?: string | null;
+}
+
+/**
+ * Corregir una orden en el taller.
+ *
+ * El servidor vuelve a tarifar cada servicio sobre la categoría (posiblemente
+ * nueva) de la orden: el navegador manda qué servicios y cuántos, nunca a qué
+ * precio. Rechaza órdenes entregadas, canceladas o ya facturadas, y deja el
+ * cambio —con el total de antes y el de después— en la bitácora.
+ */
+export async function editWorkOrder(params: EditOrderParams): Promise<WorkOrder> {
+  const { data, error } = await requireSupabase().rpc('edit_work_order', {
+    p_order_id: params.orderId,
+    p_items: params.services.map(s => ({
+      service_id: s.serviceId, name: s.name, quantity: s.quantity,
+      discount_cents: 0, is_membego_covered: false
+    })),
+    p_customer_name: params.customerName ?? null,
+    p_customer_phone: params.customerPhone ?? null,
+    p_vehicle_make: params.make ?? null,
+    p_vehicle_model: params.model ?? null,
+    p_vehicle_color: params.color ?? null,
+    p_vehicle_category: params.category,
+    p_priority: params.priority ?? null,
+    p_notes: params.notes ?? null
+  });
+
+  if (error) throw new Error(translate(error.message));
+  return data as unknown as WorkOrder;
+}
+
 /** Mensajes del servidor traducidos a algo accionable en el taller. */
 function translate(message: string): string {
   // Los mensajes de cancel_work_order ya vienen escritos para el usuario y
@@ -286,7 +328,10 @@ function translate(message: string): string {
   if (message.includes('ya está facturada') ||
       message.includes('lista para entregar') ||
       message.includes('Explique por qué') ||
-      message.includes('no permite cancelar')) {
+      message.includes('no permite cancelar') ||
+      message.includes('no permite editar') ||
+      message.includes('ya se entregó') ||
+      message.includes('está cancelada')) {
     return message;
   }
   if (message.includes('ya está ocupada')) {
