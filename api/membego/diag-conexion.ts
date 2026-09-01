@@ -37,6 +37,16 @@ function claimsDe(token: string): unknown {
   }
 }
 
+/** Cabeceras de Vercel que identifican QUÉ deployment atendió la petición. */
+function cabecerasVercel(r: Response): Record<string, string | null> {
+  return {
+    xVercelId: r.headers.get('x-vercel-id'),
+    xMatchedPath: r.headers.get('x-matched-path'),
+    server: r.headers.get('server'),
+    xVercelCache: r.headers.get('x-vercel-cache'),
+  };
+}
+
 export async function GET(): Promise<Response> {
   const out: Record<string, unknown> = {
     nota: 'Diagnóstico temporal. No se revela el client_secret ni el token.',
@@ -52,7 +62,7 @@ export async function GET(): Promise<Response> {
     const txt = await r.text();
     let body: unknown = txt.slice(0, 400);
     try { body = JSON.parse(txt); } catch { /* no era JSON: se deja el texto */ }
-    out.membegoDiag = { status: r.status, body };
+    out.membegoDiag = { status: r.status, headers: cabecerasVercel(r), body };
   } catch (e) {
     out.membegoDiag = { error: (e as Error).message };
   }
@@ -76,6 +86,7 @@ export async function GET(): Promise<Response> {
     token = typeof body.access_token === 'string' ? body.access_token : '';
     out.mint = {
       status: r.status,
+      headers: cabecerasVercel(r),
       gotToken: token !== '',
       claims: token ? claimsDe(token) : null,
       bodyIfError: r.ok ? undefined : txt.slice(0, 300),
@@ -94,6 +105,7 @@ export async function GET(): Promise<Response> {
       out.resourceCall = {
         endpoint: '/branches',
         status: r.status,
+        headers: cabecerasVercel(r),
         body: r.ok ? 'OK (200)' : txt.slice(0, 300),
       };
     } catch (e) {
