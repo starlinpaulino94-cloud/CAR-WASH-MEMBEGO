@@ -1,0 +1,16 @@
+{
+  "slug": "car-wash-membego",
+  "nombre": "Membego Car Wash",
+  "urlBase": "https://REEMPLAZA-CON-TU-DOMINIO-DEL-CARWASH",
+  "webhookUrl": "https://REEMPLAZA-CON-TU-DOMINIO-DEL-CARWASH/api/membego/webhook",
+  "businessTypes": ["CAR_WASH"],
+  "capabilities": [
+    "CUSTOMER_LOOKUP",
+    "MEMBERSHIP_LOOKUP",
+    "BENEFIT_EVALUATION",
+    "BENEFIT_REDEMPTION",
+    "PROMOTION_LOOKUP",
+    "APPOINTMENT_LOOKUP",
+    "BRANCH_LOOKUP"
+  ]
+}
