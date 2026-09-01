@@ -89,6 +89,10 @@ export async function GET(): Promise<Response> {
       headers: cabecerasVercel(r),
       gotToken: token !== '',
       claims: token ? claimsDe(token) : null,
+      // Huella del secreto con que Membego FIRMÓ, y si el token supera su propia
+      // verificación al emitirlo (campos _diag_* que añadió el /oauth/token).
+      signFp: body._diag_sign_fp ?? null,
+      selfVerify: body._diag_self_verify ?? null,
       bodyIfError: r.ok ? undefined : txt.slice(0, 300),
     };
   } catch (e) {
