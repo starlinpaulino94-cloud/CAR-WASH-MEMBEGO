@@ -1230,21 +1230,3 @@ export async function fetchNivelesDeMembego(): Promise<NivelesDeMembego | null> 
     return null;
   }
 }
-
-/**
- * Diagnóstico TEMPORAL de la conexión con Membego (borde `/api/membego/diagnostico`).
- *
- * Devuelve el JSON tal cual: presencia de variables del servidor, el proyecto de
- * la anon key (dato público) y el código HTTP real con que Supabase valida la
- * sesión. Ninguna clave se revela. Sirve para saber por qué el POS decía «La
- * sesión no es válida o expiró» sin adivinar.
- */
-export async function diagnosticarMembego(): Promise<Record<string, unknown>> {
-  const res = await fetch('/api/membego/diagnostico', { headers: await encabezadosMembego() });
-  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) {
-    const msg = typeof body.message === 'string' ? body.message : `El diagnóstico respondió ${res.status}.`;
-    throw new Error(msg);
-  }
-  return body;
-}
