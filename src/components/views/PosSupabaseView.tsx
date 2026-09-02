@@ -12,7 +12,7 @@ import { validatePromotion, PromotionPreview } from '../../data/promotionReposit
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
   fetchChargeableOrders, ChargeableOrder,
-  lookupMembegoByPhone, fetchServicePricesForCategory, canjearEnMembego,
+  lookupMembegoByPhone, fetchServicePricesForCategory, canjearEnMembego, empujarTransaccionMembego,
   ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice,
   FiscalStatus, MembegoBenefitSummary
 } from '../../data/billingRepository';
@@ -696,6 +696,23 @@ export const PosSupabaseView: React.FC = () => {
               texto: `La factura salió bien, pero Membego no descontó el lavado (${r.motivo}). ` +
                      'Queda anotado en la factura para reintentarlo.'
             });
+      }
+
+      /*
+       * Empujar la venta a Membego cuando el cliente es de Membego: así el
+       * comprobante queda también en su ficha y en los informes del dueño, no
+       * solo en el car wash. Fuego-y-olvido: la factura del car wash ya es el
+       * comprobante local, y un fallo aquí NO toca el cobro (idempotente por
+       * factura, se puede reintentar). Se salta las ventas de mostrador sin
+       * cliente de Membego para no ensuciar sus informes con lo ajeno.
+       */
+      if (membegoCustomerId) {
+        void empujarTransaccionMembego({
+          invoiceId: invoice.id,
+          amountCents: invoice.total_cents,
+          descripcion: lines.map(l => l.name).join(', ').slice(0, 120) || 'Venta car wash',
+          membegoCustomerId
+        });
       }
 
       // La orden acaba de dejar de estar pendiente: fuera del panel.
