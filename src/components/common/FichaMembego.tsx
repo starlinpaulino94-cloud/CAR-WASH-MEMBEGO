@@ -31,11 +31,16 @@ interface Props {
   placa?: string;
   /** Si se pasa, los vehículos son botones que rellenan la placa. */
   onElegirPlaca?: (placa: string) => void;
+  /**
+   * Si se pasa, cada beneficio usable muestra un botón «Aplicar» que agrega el
+   * servicio cubierto a la venta. Sin él, la ficha solo informa.
+   */
+  onAplicarBeneficio?: (b: { tipo: 'membership' | 'promotion'; id: string; nombre: string }) => void;
   disabled?: boolean;
 }
 
 export const PanelFichaMembego: React.FC<Props> = ({
-  ficha, error, buscando, placa = '', onElegirPlaca, disabled = false
+  ficha, error, buscando, placa = '', onElegirPlaca, onAplicarBeneficio, disabled = false
 }) => {
   const promosElegibles = ficha?.promotions.filter(p => p.eligible) ?? [];
 
@@ -93,6 +98,20 @@ export const PanelFichaMembego: React.FC<Props> = ({
                     ? 'Esta placa no está en su membresía: el lavado se cobra completo.'
                     : 'Sin lavados disponibles: el lavado se cobra completo.'}
               </p>
+            )}
+
+            {/* Aplicar: agrega el servicio cubierto a la venta. Solo si la
+                membresía tiene lavados (ilimitada o con saldo) y NO está negada
+                de plano por falta de saldo/placa; la diferencia por categoría sí
+                se permite (se cobra el excedente). */}
+            {onAplicarBeneficio && (m.coverage?.unlimited || m.usesLeft > 0) &&
+              m.coverage?.reason !== 'NO_USES_LEFT' &&
+              m.coverage?.reason !== 'VEHICLE_NOT_IN_MEMBERSHIP' && (
+              <button type="button" disabled={disabled}
+                onClick={() => onAplicarBeneficio({ tipo: 'membership', id: m.id, nombre: m.nombre })}
+                className="mt-1 px-3 py-1.5 rounded-lg bg-success text-on-accent text-xs font-bold disabled:opacity-50 hover:opacity-90 transition-opacity">
+                Aplicar al lavado
+              </button>
             )}
           </div>
         );

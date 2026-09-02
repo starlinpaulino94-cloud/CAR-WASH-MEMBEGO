@@ -459,6 +459,30 @@ export const PosSupabaseView: React.FC = () => {
 
   const removeLine = (key: string) => setLines(prev => prev.filter(l => l.key !== key));
 
+  /**
+   * Aplicar un beneficio Membego desde la ficha: agrega a la venta el servicio
+   * cubierto —el mejor lavado incluible de la categoría actual— si todavía no
+   * está. La cobertura ya existente (`cobertura`) lo descuenta sola; el cajero
+   * solo confirma y cobra. Así se llena la factura sin teclear el servicio.
+   */
+  const aplicarBeneficio = () => {
+    const incluibles = services.filter(s => s.included_in_membego);
+    if (incluibles.length === 0) {
+      setSubmitError(
+        'No hay ningún servicio marcado como «incluible en Membego» para esta categoría. ' +
+        'Márcalo en el catálogo de servicios para poder aplicar el beneficio.'
+      );
+      return;
+    }
+    // Si ya hay una línea de servicio incluible, la cobertura ya la toma: no se
+    // duplica.
+    const yaHay = lines.some(l => l.serviceId && incluibles.some(s => s.id === l.serviceId));
+    if (yaHay) return;
+    // El mejor lavado del cliente: el incluible más caro de la categoría.
+    const mejor = incluibles.reduce((a, b) => (b.price_cents > a.price_cents ? b : a));
+    addService(mejor);
+  };
+
   // ----------------------------------------------------------- Promoción
   const [promoCode, setPromoCode] = useState('');
   const [promoPreview, setPromoPreview] = useState<PromotionPreview | null>(null);
@@ -1044,6 +1068,7 @@ export const PosSupabaseView: React.FC = () => {
               <PanelFichaMembego
                 ficha={ficha} error={fichaError} buscando={fichaBuscando}
                 placa={vehiclePlate} onElegirPlaca={setVehiclePlate}
+                onAplicarBeneficio={aplicarBeneficio}
                 disabled={submitting}
               />
             </div>
