@@ -759,6 +759,56 @@ export async function canjearEnMembego(params: {
   return { ok: visitId !== null, visitId, usesLeft, motivo };
 }
 
+export interface ResultadoCanjePromo {
+  ok: boolean;
+  /** Usos que le quedan a la promoción tras el canje. */
+  usesLeft: number | null;
+  /** true si el canje agotó la promoción. */
+  consumed: boolean;
+  /** Por qué falló, cuando falló. */
+  motivo: string | null;
+}
+
+/**
+ * Canjear una PROMOCIÓN en Membego, DESPUÉS de facturar. Hermano de
+ * `canjearEnMembego` (membresías). El descuento de la promo ya quedó en la
+ * factura del car wash (es el comprobante local); esto consume el uso en
+ * Membego para que también quede allá. Un fallo NO tira el cobro: se devuelve el
+ * motivo para enseñárselo al cajero.
+ */
+export async function canjearPromocionMembego(params: {
+  invoiceId: string;
+  promotionId: string;
+  servicio: string;
+  sucursalId?: string | null;
+}): Promise<ResultadoCanjePromo> {
+  try {
+    const res = await fetch('/api/membego/canjear-promo', {
+      method: 'POST',
+      headers: await encabezadosMembego({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        invoiceId: params.invoiceId,
+        promotionId: params.promotionId,
+        servicio: params.servicio,
+        sucursalId: params.sucursalId ?? null
+      })
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      redemptionId?: string; usesLeft?: number; consumed?: boolean;
+      message?: string; error?: string;
+    };
+    if (res.ok && body.redemptionId) {
+      return { ok: true, usesLeft: body.usesLeft ?? null, consumed: body.consumed ?? false, motivo: null };
+    }
+    return {
+      ok: false, usesLeft: null, consumed: false,
+      motivo: body.message ?? body.error ?? `Membego respondió ${res.status}`
+    };
+  } catch {
+    return { ok: false, usesLeft: null, consumed: false, motivo: 'No se pudo contactar con Membego.' };
+  }
+}
+
 /**
  * Empuja una factura a Membego como transacción (venta), para que el comprobante
  * quede también allá: en la ficha del cliente y en los informes del dueño.

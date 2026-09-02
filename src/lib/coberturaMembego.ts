@@ -78,6 +78,103 @@ const SIN_COBERTURA = (explicacion: string): AplicacionCobertura => ({
 });
 
 /**
+ * EL EFECTO MONETARIO DE UNA PROMOCIÓN, tal como lo manda Membego.
+ *
+ * Membego decide qué rebaja una promoción; el car wash decide sobre qué línea y
+ * con qué tarifa. Igual que con la membresía, la regla de negocio (el tipo de
+ * promo, el porcentaje, el monto) vive en Membego y viaja en este `effect`; aquí
+ * solo se traduce a centavos sobre el servicio de ESTA venta.
+ *
+ * `NONE` es deliberado y NO es un error: un 2x1, un upgrade o un regalo no tienen
+ * una rebaja automática que el mostrador pueda calcular sin equivocarse, así que
+ * Membego lo dice y el car wash no toca la factura — la promo se aplica a mano.
+ */
+export type EfectoPromocion =
+  | { kind: 'PERCENT'; value: number; label: string }
+  | { kind: 'AMOUNT'; amountCents: number; label: string }
+  | { kind: 'FREE'; label: string }
+  | { kind: 'NONE'; label: string };
+
+export interface AplicacionPromocion {
+  /** Índice de la línea que rebaja la promoción. `null` = ninguna. */
+  lineaIndex: number | null;
+  /** Lo que la promoción rebaja, en centavos (nunca más que un servicio). */
+  discountCents: number;
+  /** Por qué salió así, para el cajero. Se enseña siempre. */
+  explicacion: string;
+}
+
+const SIN_PROMO = (explicacion: string): AplicacionPromocion => ({
+  lineaIndex: null, discountCents: 0, explicacion
+});
+
+/**
+ * Cuánto rebaja una promoción en esta venta.
+ *
+ * UN canje = UN servicio. La promoción rebaja UNA unidad del servicio más caro
+ * del carrito (nunca un producto: una fragancia o un café no es lo que promete
+ * una promo de lavado), y nunca más que el precio de ese servicio — un cupón de
+ * «RD$500» sobre un lavado de 300 rebaja 300, no regala dinero. Eso mantiene el
+ * canje honesto: se consume un uso y se descuenta un servicio.
+ *
+ * El servidor (`create_invoice`) recalcula y acota igual; esto es lo que ve el
+ * cajero antes de cobrar.
+ */
+export function descuentoPromocion(params: {
+  effect: EfectoPromocion | null;
+  nombre: string;
+  lineas: LineaCobrable[];
+}): AplicacionPromocion {
+  const { effect, nombre, lineas } = params;
+
+  if (!effect || effect.kind === 'NONE') {
+    return SIN_PROMO(
+      `${nombre} no tiene una rebaja automática: aplícala a mano si corresponde.`
+    );
+  }
+
+  // Solo servicios. El más caro, no el primero que tecleó el cajero.
+  const servicios = lineas
+    .map((l, i) => ({ l, i }))
+    .filter(({ l }) => l.serviceId !== null);
+  if (servicios.length === 0) {
+    return SIN_PROMO(`Agrega el servicio para aplicar ${nombre}.`);
+  }
+  const elegida = servicios.reduce((mejor, actual) =>
+    actual.l.unitPriceCents > mejor.l.unitPriceCents ? actual : mejor
+  );
+
+  const precioUnidad = elegida.l.unitPriceCents;
+  let bruto: number;
+  switch (effect.kind) {
+    case 'FREE':
+      bruto = precioUnidad;
+      break;
+    case 'PERCENT':
+      bruto = Math.round((precioUnidad * effect.value) / 100);
+      break;
+    case 'AMOUNT':
+      bruto = effect.amountCents;
+      break;
+  }
+
+  // Nunca más que un servicio: la promo rebaja, no paga de más.
+  const discountCents = Math.max(0, Math.min(bruto, precioUnidad));
+  if (discountCents === 0) {
+    return SIN_PROMO(`${nombre} no rebaja nada en este servicio.`);
+  }
+
+  return {
+    lineaIndex: elegida.i,
+    discountCents,
+    explicacion:
+      effect.kind === 'FREE'
+        ? `${nombre}: este servicio va gratis.`
+        : `${nombre} (${effect.label}) aplicada a este servicio.`,
+  };
+}
+
+/**
  * La categoría más cara que el plan sí cubre.
  *
  * Sube por los niveles configurados y se queda con el mayor que no pase del tope

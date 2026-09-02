@@ -121,12 +121,44 @@ export const PanelFichaMembego: React.FC<Props> = ({
         <p className="text-xs text-faint">Sin membresía activa en Membego.</p>
       )}
 
-      {promosElegibles.length > 0 && (
+      {promosElegibles.length > 0 && !onAplicarBeneficio && (
         <p className="text-xs text-body">
           <strong>{promosElegibles.length}</strong>{' '}
           {promosElegibles.length === 1 ? 'promoción disponible' : 'promociones disponibles'}
           : {promosElegibles.map(p => p.nombre).join(' · ')}
         </p>
+      )}
+
+      {/* En la caja (con onAplicarBeneficio) cada promo elegible se puede aplicar.
+          Las que rebajan solas (%, monto, gratis) traen botón; un 2x1 o un regalo
+          (effect NONE) se listan para que el cajero los vea, pero no se aplican
+          solos: cobrarlos mal cuesta dinero. */}
+      {promosElegibles.length > 0 && onAplicarBeneficio && (
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-muted uppercase">Promociones</span>
+          {promosElegibles.map(p => {
+            const automatica = p.effect && p.effect.kind !== 'NONE';
+            return (
+              <div key={p.id} className="flex items-center justify-between gap-2">
+                <span className="text-xs text-body">
+                  <strong>{p.nombre}</strong>
+                  {p.effect && p.effect.kind !== 'NONE' && (
+                    <span className="text-muted"> · {p.effect.label}</span>
+                  )}
+                </span>
+                {automatica ? (
+                  <button type="button" disabled={disabled}
+                    onClick={() => onAplicarBeneficio({ tipo: 'promotion', id: p.id, nombre: p.nombre })}
+                    className="px-3 py-1.5 rounded-lg bg-success text-on-accent text-xs font-bold disabled:opacity-50 hover:opacity-90 transition-opacity flex-shrink-0">
+                    Aplicar
+                  </button>
+                ) : (
+                  <EtiquetaMembego tono="info">Aplicar a mano</EtiquetaMembego>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {/* Sus carros en Membego. Tocar uno pone su placa: es lo que el mostrador

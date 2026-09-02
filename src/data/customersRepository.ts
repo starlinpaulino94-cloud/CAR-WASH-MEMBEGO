@@ -135,6 +135,17 @@ export interface CoberturaMembego {
   reason: string | null;
 }
 
+/**
+ * Efecto monetario de una promoción, tal como lo manda Membego (`/benefits/
+ * evaluate`). Solo lo traen las promociones; una membresía cubre lavados y no
+ * lleva `effect`. `NONE` = sin rebaja automática computable.
+ */
+export type EfectoPromocion =
+  | { kind: 'PERCENT'; value: number; label: string }
+  | { kind: 'AMOUNT'; amountCents: number; label: string }
+  | { kind: 'FREE'; label: string }
+  | { kind: 'NONE'; label: string };
+
 export interface BeneficioMembego {
   id: string;
   nombre: string;
@@ -145,6 +156,8 @@ export interface BeneficioMembego {
   expiresAt: string | null;
   reason: string | null;
   coverage: CoberturaMembego | null;
+  /** Solo promociones: cuánto rebaja. Ausente en membresías. */
+  effect?: EfectoPromocion;
 }
 
 export interface VehiculoMembego {
