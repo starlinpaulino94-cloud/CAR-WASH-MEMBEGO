@@ -760,6 +760,40 @@ export async function canjearEnMembego(params: {
 }
 
 /**
+ * Empuja una factura a Membego como transacción (venta), para que el comprobante
+ * quede también allá: en la ficha del cliente y en los informes del dueño.
+ *
+ * Solo para clientes de Membego. Es fuego-y-olvido: si Membego no contesta, la
+ * factura del car wash ya existe (es el comprobante local) y no se bloquea el
+ * cobro. Devuelve el id de la transacción de Membego cuando salió bien.
+ */
+export async function empujarTransaccionMembego(params: {
+  invoiceId: string;
+  amountCents: number;
+  descripcion?: string;
+  membegoCustomerId?: string | null;
+  membegoBranchId?: string | null;
+}): Promise<{ ok: boolean; transactionId: string | null }> {
+  try {
+    const res = await fetch('/api/membego/transaccion', {
+      method: 'POST',
+      headers: await encabezadosMembego({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        invoiceId: params.invoiceId,
+        amountCents: params.amountCents,
+        descripcion: params.descripcion ?? null,
+        membegoCustomerId: params.membegoCustomerId ?? null,
+        membegoBranchId: params.membegoBranchId ?? null
+      })
+    });
+    const body = (await res.json().catch(() => ({}))) as { transactionId?: string };
+    return { ok: res.ok && !!body.transactionId, transactionId: body.transactionId ?? null };
+  } catch {
+    return { ok: false, transactionId: null };
+  }
+}
+
+/**
  * Devolverle el lavado al cliente al anular la factura.
  *
  * Revertir dos veces devuelve un lavado, no dos: Membego responde 200 con

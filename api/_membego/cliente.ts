@@ -39,7 +39,7 @@ export const COMPANY_ID = process.env.MEMBEGO_COMPANY_ID ?? '';
 const TIMEOUT_MS = Number(process.env.MEMBEGO_TIMEOUT_MS ?? '8000');
 
 /** Qué se pide al autenticar. Menos que esto no alcanza; más, sobra. */
-const SCOPES = 'customers:read vehicles:read memberships:read benefits:read benefits:redeem';
+const SCOPES = 'customers:read vehicles:read memberships:read benefits:read benefits:redeem transactions:write';
 
 /**
  * `fetch` con corte por tiempo. Al vencer, aborta y lo traduce a un error de
