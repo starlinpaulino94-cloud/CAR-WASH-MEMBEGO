@@ -52,6 +52,13 @@ interface Cobertura {
   reason: string | null;
 }
 
+/** Efecto monetario de una promoción; solo lo traen las promociones. */
+type EfectoPromocion =
+  | { kind: 'PERCENT'; value: number; label: string }
+  | { kind: 'AMOUNT'; amountCents: number; label: string }
+  | { kind: 'FREE'; label: string }
+  | { kind: 'NONE'; label: string };
+
 interface Beneficio {
   type: 'MEMBERSHIP' | 'PROMOTION';
   id: string;
@@ -61,6 +68,7 @@ interface Beneficio {
   expiresAt: string | null;
   reason: string | null;
   coverage: Cobertura | null;
+  effect?: EfectoPromocion;
 }
 
 export async function POST(request: Request): Promise<Response> {

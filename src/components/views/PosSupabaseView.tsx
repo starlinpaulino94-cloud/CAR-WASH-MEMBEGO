@@ -12,7 +12,7 @@ import { validatePromotion, PromotionPreview } from '../../data/promotionReposit
 import {
   fetchServices, fetchProducts, fetchOpenCashSession, createInvoice, fetchFiscalStatus,
   fetchChargeableOrders, ChargeableOrder,
-  lookupMembegoByPhone, fetchServicePricesForCategory, canjearEnMembego, empujarTransaccionMembego,
+  lookupMembegoByPhone, fetchServicePricesForCategory, canjearEnMembego, canjearPromocionMembego, empujarTransaccionMembego,
   ServiceWithPrice, Product, CashSession, CartLine, VehicleCategory, PaymentMethod, Invoice,
   FiscalStatus, MembegoBenefitSummary
 } from '../../data/billingRepository';
@@ -22,7 +22,7 @@ import {
   CustomerMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
 import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
-import { aplicarCobertura, categoriaTopeDelPlan } from '../../lib/coberturaMembego';
+import { aplicarCobertura, categoriaTopeDelPlan, descuentoPromocion, type EfectoPromocion } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { TicketSupabaseModal } from '../modals/TicketSupabaseModal';
@@ -122,6 +122,11 @@ export const PosSupabaseView: React.FC = () => {
   const [membegoCustomerId, setMembegoCustomerId] = useState<string | null>(null);
   /** Resultado del último canje, para enseñárselo al cajero tras cobrar. */
   const [avisoCanje, setAvisoCanje] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Promoción Membego que el cajero aplicó a esta venta (se canjea al cobrar). */
+  const [promoMembego, setPromoMembego] =
+    useState<{ id: string; nombre: string; effect: EfectoPromocion | null } | null>(null);
+  /** Resultado del último canje de promoción, para enseñárselo tras cobrar. */
+  const [avisoPromo, setAvisoPromo] = useState<{ ok: boolean; texto: string } | null>(null);
 
   // Búsqueda de beneficios Membego por teléfono (aviso al cajero).
   const [membegoPhone, setMembegoPhone] = useState('');
@@ -406,6 +411,7 @@ export const PosSupabaseView: React.FC = () => {
     setLines([]);
     setCustomerName('');
     setVehiclePlate('');
+    setPromoMembego(null);
     if (method === 'credito') setMethod('efectivo');
     requestIdRef.current = null;
   };
@@ -465,7 +471,16 @@ export const PosSupabaseView: React.FC = () => {
    * está. La cobertura ya existente (`cobertura`) lo descuenta sola; el cajero
    * solo confirma y cobra. Así se llena la factura sin teclear el servicio.
    */
-  const aplicarBeneficio = () => {
+  const aplicarBeneficio = (b: { tipo: 'membership' | 'promotion'; id: string; nombre: string }) => {
+    if (b.tipo === 'promotion') {
+      // Una promoción se recuerda y se descuenta sola (descuentoPromo). El
+      // servicio lo pone el cajero: la promo rebaja el que haya, no lo inventa.
+      const promo = ficha?.promotions.find(p => p.id === b.id);
+      setPromoMembego({ id: b.id, nombre: b.nombre, effect: promo?.effect ?? null });
+      setSubmitError(null);
+      return;
+    }
+
     const incluibles = services.filter(s => s.included_in_membego);
     if (incluibles.length === 0) {
       setSubmitError(
@@ -479,9 +494,11 @@ export const PosSupabaseView: React.FC = () => {
     const yaHay = lines.some(l => l.serviceId && incluibles.some(s => s.id === l.serviceId));
     if (yaHay) return;
     // El mejor lavado del cliente: el incluible más caro de la categoría.
-    const mejor = incluibles.reduce((a, b) => (b.price_cents > a.price_cents ? b : a));
+    const mejor = incluibles.reduce((a, b2) => (b2.price_cents > a.price_cents ? b2 : a));
     addService(mejor);
   };
+
+  const quitarPromoMembego = () => { setPromoMembego(null); };
 
   // ----------------------------------------------------------- Promoción
   const [promoCode, setPromoCode] = useState('');
@@ -570,26 +587,64 @@ export const PosSupabaseView: React.FC = () => {
       ? cobertura.coveredCents
       : 0;
 
+  /**
+   * Qué rebaja la promoción Membego aplicada, sobre las líneas ya con membresía.
+   *
+   * Se calcula sobre `lineasEfectivas` pero ocultando (serviceId a null) las que
+   * ya cubre una membresía: una promo no se apila sobre un lavado que va gratis.
+   * El índice que devuelve alinea con `lineasEfectivas` porque el array que se le
+   * pasa tiene la misma longitud.
+   */
+  const descuentoPromo = useMemo(() => {
+    if (!promoMembego) return null;
+    return descuentoPromocion({
+      effect: promoMembego.effect,
+      nombre: promoMembego.nombre,
+      lineas: lineasEfectivas.map(l => ({
+        serviceId: l.isMembegoCovered ? null : l.serviceId,
+        incluidoEnMembego: false,
+        unitPriceCents: l.unitPriceCents,
+        quantity: l.quantity
+      }))
+    });
+  }, [promoMembego, lineasEfectivas]);
+
+  /** Las líneas con la promoción ya aplicada como descuento. Es lo que se cobra. */
+  const lineasFinales = useMemo<CartLine[]>(() => {
+    if (!descuentoPromo || descuentoPromo.lineaIndex === null || descuentoPromo.discountCents === 0) {
+      return lineasEfectivas;
+    }
+    return lineasEfectivas.map((l, i) => {
+      if (i !== descuentoPromo.lineaIndex) return l;
+      const tope = l.unitPriceCents * l.quantity;
+      return { ...l, discountCents: Math.min(tope, l.discountCents + descuentoPromo.discountCents) };
+    });
+  }, [lineasEfectivas, descuentoPromo]);
+
   // Previsualización. La cifra que vale es la que devuelve create_invoice().
   const preview = useMemo(() => {
-    const subtotal = lineasEfectivas.reduce((acc, l) => acc + l.unitPriceCents * l.quantity, 0);
+    const subtotal = lineasFinales.reduce((acc, l) => acc + l.unitPriceCents * l.quantity, 0);
+    // Lo que rebaja la promo Membego, como el importe de membresía, NO cuenta
+    // como descuento del cajero en el informe: no lo dio él.
+    const promoMembegoCents = descuentoPromo?.discountCents ?? 0;
     // Lo que absorbe Membego se resta de los descuentos manuales: viaja como
     // descuento por el contrato del servidor, pero no es un descuento del
     // cajero y contarlo ahí mentiría en el informe de descuentos.
-    const manual = lineasEfectivas.reduce(
-      (acc, l) => acc + (l.isMembegoCovered ? 0 : l.discountCents), 0) - cubiertoComoImporte;
-    const membego = lineasEfectivas.reduce(
+    const manual = lineasFinales.reduce(
+      (acc, l) => acc + (l.isMembegoCovered ? 0 : l.discountCents), 0)
+      - cubiertoComoImporte - promoMembegoCents;
+    const membego = lineasFinales.reduce(
       (acc, l) => acc + (l.isMembegoCovered ? l.unitPriceCents * l.quantity : 0), 0
     ) + cubiertoComoImporte;
-    // El descuento promocional lo calculó el servidor al validar el código; aquí
+    // El descuento promocional (código) lo calculó el servidor al validar; aquí
     // solo se pinta. Al emitir, create_invoice lo vuelve a calcular.
     const promo = promoPreview?.valid ? (promoPreview.discount_cents ?? 0) : 0;
-    const discount = manual + promo;
+    const discount = manual + promo + promoMembegoCents;
     const taxable = Math.max(0, subtotal - discount - membego);
     // Respeta si la empresa vende con ITBIS incluido en el precio.
     const { tax, total } = desglosarItbis(taxable, taxRateBps, itbisIncluido);
-    return { subtotal, discount, manual, promo, membego, tax, total };
-  }, [lineasEfectivas, cubiertoComoImporte, taxRateBps, itbisIncluido, promoPreview]);
+    return { subtotal, discount, manual, promo, promoMembego: promoMembegoCents, membego, tax, total };
+  }, [lineasFinales, descuentoPromo, cubiertoComoImporte, taxRateBps, itbisIncluido, promoPreview]);
 
   const tenderedCents = parseAmountToCents(tenderedInput);
   const effectiveTendered = method === 'efectivo'
@@ -628,13 +683,14 @@ export const PosSupabaseView: React.FC = () => {
     setSubmitting(true);
     setSubmitError(null);
     setAvisoCanje(null);
+    setAvisoPromo(null);
 
     try {
       const invoice = await createInvoice({
         branchId: branch.id,
         clientRequestId: ensureRequestId(),
         // Con el beneficio ya aplicado: lo que se factura es lo que se cobra.
-        lines: lineasEfectivas,
+        lines: lineasFinales,
         /*
          * Una factura de cero no lleva pagos.
          *
@@ -699,6 +755,37 @@ export const PosSupabaseView: React.FC = () => {
       }
 
       /*
+       * Canjear la promoción, con la MISMA lógica y el mismo orden que la
+       * membresía: factura primero, canje después, y su fallo NO tira el cobro
+       * —se le enseña al cajero—. El descuento ya quedó en la factura; esto
+       * consume el uso en Membego para que quede en la ficha del cliente.
+       */
+      if (promoMembego && descuentoPromo && descuentoPromo.discountCents > 0) {
+        const servicio =
+          descuentoPromo.lineaIndex !== null
+            ? lineasFinales[descuentoPromo.lineaIndex]?.name ?? 'Servicio'
+            : 'Servicio';
+        const r = await canjearPromocionMembego({
+          invoiceId: invoice.id,
+          promotionId: promoMembego.id,
+          servicio,
+          sucursalId: branch.id
+        });
+        setAvisoPromo(r.ok
+          ? {
+              ok: true,
+              texto: r.consumed
+                ? `${promoMembego.nombre} canjeada (sin usos restantes).`
+                : `${promoMembego.nombre} canjeada. Le quedan ${r.usesLeft ?? '—'}.`
+            }
+          : {
+              ok: false,
+              texto: `La factura salió bien, pero Membego no canjeó ${promoMembego.nombre} ` +
+                     `(${r.motivo}). El descuento ya quedó en la factura.`
+            });
+      }
+
+      /*
        * Empujar la venta a Membego cuando el cliente es de Membego: así el
        * comprobante queda también en su ficha y en los informes del dueño, no
        * solo en el car wash. Fuego-y-olvido: la factura del car wash ya es el
@@ -729,6 +816,7 @@ export const PosSupabaseView: React.FC = () => {
       setMembegoPhone(''); setMembegoSummary(null); setMembegoSearched(false);
       setFicha(null); setFichaError(null); setPreciosTope(null);
       quitarPromo();
+      setPromoMembego(null);
       void load();     // refresca stock y caja
     } catch (err) {
       // NO se limpia requestIdRef: un reintento debe llevar la MISMA clave.
@@ -1242,6 +1330,32 @@ export const PosSupabaseView: React.FC = () => {
                   <span>−{formatCents(preview.membego, symbol)}</span>
                 </div>
               )}
+              {/* La promoción Membego, como línea propia igual que la membresía.
+                  El cajero señala la cifra y dice «esto lo pone su promoción». */}
+              {promoMembego && preview.promoMembego > 0 && (
+                <div className="flex justify-between text-success">
+                  <span className="flex items-center gap-1.5">
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                    {promoMembego.nombre}
+                    <button type="button" onClick={quitarPromoMembego}
+                      className="text-muted underline text-xs font-normal hover:text-strong">
+                      Quitar
+                    </button>
+                  </span>
+                  <span>−{formatCents(preview.promoMembego, symbol)}</span>
+                </div>
+              )}
+              {/* Promo aplicada pero sin rebaja calculable en esta venta (falta el
+                  servicio, o es de las que se aplican a mano): se dice, con opción
+                  de quitarla. */}
+              {promoMembego && preview.promoMembego === 0 && descuentoPromo && (
+                <p className="text-xs text-warning pb-0.5 flex items-center justify-between gap-2">
+                  <span>{descuentoPromo.explicacion}</span>
+                  <button type="button" onClick={quitarPromoMembego}
+                    className="underline flex-shrink-0 hover:text-strong">Quitar</button>
+                </p>
+              )}
+
               {/* La diferencia a pagar, dicha con todas las letras. Sin esto el
                   cliente ve un total que no cuadra con «tengo membresía» y la
                   discusión la aguanta el cajero. */}
@@ -1377,6 +1491,20 @@ export const PosSupabaseView: React.FC = () => {
                   ? <BadgeCheck className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
                 <span>{avisoCanje.texto}</span>
+              </div>
+            )}
+
+            {avisoPromo && (
+              <div role="status"
+                className={`rounded-xl p-2.5 text-xs flex items-start gap-2 border ${
+                  avisoPromo.ok
+                    ? 'bg-success/10 border-success/40 text-success'
+                    : 'bg-warning/10 border-warning/40 text-warning'
+                }`}>
+                {avisoPromo.ok
+                  ? <BadgeCheck className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
+                <span>{avisoPromo.texto}</span>
               </div>
             )}
 
