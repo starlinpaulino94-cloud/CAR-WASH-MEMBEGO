@@ -109,11 +109,31 @@ export async function GET(): Promise<Response> {
       out.resourceCall = {
         endpoint: '/branches',
         status: r.status,
+        // r.redirected + r.url revelan si hubo un redirect que descartó el
+        // Authorization (causa de "no_token_en_cabecera").
+        redirected: r.redirected,
+        finalUrl: r.url,
         headers: cabecerasVercel(r),
         body: r.ok ? 'OK (200)' : txt.slice(0, 300),
       };
     } catch (e) {
       out.resourceCall = { error: (e as Error).message };
+    }
+
+    // 4) La MISMA llamada pero SIN seguir redirects: si sale un 3xx con Location,
+    // ahí está la causa (el redirect descarta el Authorization).
+    try {
+      const r = await fetch(`${BASE}/branches?companyId=${encodeURIComponent(COMPANY_ID)}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        redirect: 'manual',
+      });
+      out.resourceCallManual = {
+        status: r.status,
+        location: r.headers.get('location'),
+        esRedirect: r.status >= 300 && r.status < 400,
+      };
+    } catch (e) {
+      out.resourceCallManual = { error: (e as Error).message };
     }
   }
 
