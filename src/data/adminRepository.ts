@@ -915,6 +915,52 @@ export async function fetchPerfilMembego(): Promise<MembegoEmpresaPerfil | null>
   return data;
 }
 
+/**
+ * El perfil de Membego aplanado para la CABECERA DEL COMPROBANTE: logo, nombre,
+ * datos legales y de contacto y redes. La empresa lo edita en Membego y el car
+ * wash lo imprime igual, para que su factura tenga la misma identidad.
+ *
+ * Los campos de contacto y redes viajan en `raw` (el DTO completo que devuelve
+ * `GET /companies/{id}`); solo aparecen tras sincronizar contra un Membego que
+ * ya los exponga. Antes de eso son `null` y el comprobante cae a los datos
+ * locales, sin romperse.
+ */
+export interface PerfilComprobanteMembego {
+  logoUrl: string | null;
+  nombre: string | null;
+  razonSocial: string | null;
+  direccion: string | null;
+  ciudad: string | null;
+  telefono: string | null;
+  website: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  horario: string | null;
+  colorPrimario: string | null;
+}
+
+export async function fetchPerfilComprobanteMembego(): Promise<PerfilComprobanteMembego | null> {
+  const row = await fetchPerfilMembego();
+  if (!row) return null;
+  const raw = (row.raw ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  return {
+    logoUrl: row.logo_url ?? str(raw.logoUrl),
+    nombre: row.nombre ?? str(raw.nombre),
+    razonSocial: str(raw.razonSocial),
+    direccion: str(raw.direccion),
+    ciudad: str(raw.ciudad),
+    telefono: str(raw.telefono),
+    website: str(raw.website),
+    whatsapp: str(raw.whatsapp),
+    instagram: str(raw.instagram),
+    facebook: str(raw.facebook),
+    horario: str(raw.horario),
+    colorPrimario: str(raw.colorPrimario),
+  };
+}
+
 /** Las sucursales de la empresa en Membego, del último snapshot. */
 export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
   const { data, error } = await requireSupabase()
