@@ -33,7 +33,18 @@ import { NivelesMembego } from '../settings/NivelesMembego';
 export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' | 'membego' }> = ({ seccion }) => {
   const { company, branch, profile, reload } = useAuth();
   const show = (s: 'empresa' | 'impresion' | 'membego') => !seccion || seccion === s;
-  const editable = can(profile, 'manageCatalog') && profile?.role === 'propietario';
+  /*
+   * Quién edita: lo MISMO que autoriza la base, ni más ni menos.
+   *
+   * La política `companies_update` acepta propietario Y superadmin. Aquí se
+   * exigía además `role === 'propietario'`, así que el superadmin veía todo en
+   * gris pese a tener permiso: la pantalla era más estricta que la regla real, y
+   * quien no puede editar su propio RNC acaba pidiéndoselo a alguien con acceso
+   * a la base — que es peor para todos.
+   */
+  const editable =
+    can(profile, 'manageCatalog') &&
+    (profile?.role === 'propietario' || profile?.role === 'superadmin');
   const canManageMembego = can(profile, 'manageStaff');
   const esSuperadmin = profile?.role === 'superadmin';
 
@@ -44,6 +55,11 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
   const [footerNote, setFooterNote] = useState('');
   const [printerWidth, setPrinterWidth] = useState<'58mm' | '80mm' | 'letter'>('80mm');
   const [itbisIncluido, setItbisIncluido] = useState(false);
+  /** La tasa se edita en POR CIENTO, que es como la piensa quien la cambia;
+   *  la base la guarda en puntos básicos. La conversión va en un solo sitio. */
+  const [itbisPct, setItbisPct] = useState('18');
+  const [currency, setCurrency] = useState('DOP');
+  const [currencySymbol, setCurrencySymbol] = useState('RD$');
 
   // Categorías de vehículo (dinámicas, gestionadas por el superadmin).
   const [categorias, setCategorias] = useState<VehicleCategoryRow[]>([]);
@@ -89,6 +105,9 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     setFooterNote(company.footer_note ?? '');
     setPrinterWidth(company.thermal_printer_width);
     setItbisIncluido(company.prices_include_tax ?? false);
+    setItbisPct(String((company.tax_rate_bps ?? 1800) / 100));
+    setCurrency(company.currency ?? 'DOP');
+    setCurrencySymbol(company.currency_symbol ?? 'RD$');
   }, [company]);
 
   useEffect(() => {
@@ -208,13 +227,32 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
       setError('Nombre comercial, razón social y RNC son obligatorios.');
       return;
     }
+    if (!currency.trim() || !currencySymbol.trim()) {
+      setError('La moneda y su símbolo son obligatorios.');
+      return;
+    }
+    /*
+     * La tasa se valida ANTES de tocar nada. Un campo vacío o con texto daría
+     * NaN, y `Math.round(NaN)` es NaN: se guardaría un ITBIS corrupto que
+     * rompería el cálculo de TODAS las ventas siguientes. Es el único campo de
+     * esta pantalla que multiplica dinero.
+     */
+    const pct = Number(itbisPct.replace(',', '.'));
+    if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+      setError('El ITBIS debe ser un porcentaje entre 0 y 100.');
+      return;
+    }
+    const bps = Math.round(pct * 100);
     setBusy(true); setError(null);
     try {
       await updateCompany(company.id, {
         trade_name: tradeName.trim(), legal_name: legalName.trim(), tax_id: taxId.trim(),
         header_note: headerNote.trim() || null, footer_note: footerNote.trim() || null,
         thermal_printer_width: printerWidth,
-        prices_include_tax: itbisIncluido
+        prices_include_tax: itbisIncluido,
+        tax_rate_bps: bps,
+        currency: currency.trim().toUpperCase(),
+        currency_symbol: currencySymbol.trim()
       });
       setNotice('Configuración guardada.');
       await reload();
@@ -240,6 +278,13 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
     impresion: { title: 'Impresión', subtitle: 'Impresora térmica y notas de los comprobantes' },
     membego:   { title: 'Membego', subtitle: 'Vínculo de esta empresa con la plataforma Membego' }
   } as const;
+  /** ¿La tasa escrita difiere de la guardada? Decide si se avisa. */
+  const tasaCambia = (() => {
+    const pct = Number(itbisPct.replace(',', '.'));
+    if (!Number.isFinite(pct)) return false;
+    return Math.round(pct * 100) !== (company?.tax_rate_bps ?? 1800);
+  })();
+
   const header = seccion
     ? headerBySection[seccion]
     : { title: 'Configuración de la empresa', subtitle: 'Datos fiscales, moneda e impresión de comprobantes' };
@@ -253,8 +298,8 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
 
       {seccion !== 'membego' && !editable && (
         <ReadOnlyNotice>
-          Solo el propietario puede modificar estos datos. La restricción la aplica la base
-          de datos, no esta pantalla.
+          Solo el propietario o un superadministrador pueden modificar estos datos. La
+          restricción la aplica la base de datos, no esta pantalla.
         </ReadOnlyNotice>
       )}
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
@@ -268,14 +313,30 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           {field('s-legal', 'Razón social', legalName, setLegalName)}
           {field('s-tax', 'RNC', taxId, setTaxId, 'Aparece en todos los comprobantes.')}
           <div className="space-y-1">
-            <span className="text-xs font-semibold text-muted uppercase">ITBIS</span>
-            <p className="w-full bg-canvas border border-line rounded-lg p-2.5 text-strong text-xs font-bold">
-              {bpsToPercent(company?.tax_rate_bps ?? 1800)}
-            </p>
+            <label htmlFor="s-itbis" className="text-xs font-semibold text-muted uppercase">ITBIS</label>
+            <div className="flex items-center gap-2">
+              <input id="s-itbis" type="number" inputMode="decimal" step="0.01" min="0" max="100"
+                value={itbisPct} disabled={!editable || busy}
+                onChange={e => setItbisPct(e.target.value)}
+                className="w-28 bg-canvas border border-line rounded-lg p-2.5 text-strong text-xs font-bold focus:outline-none focus:border-brand disabled:opacity-60" />
+              <span className="text-xs text-muted">%</span>
+            </div>
+            {/* Se dice qué alcance tiene el cambio y qué NO toca. La duda de si
+                reescribe lo ya facturado es justo lo que paraliza a quien tiene
+                que cambiarlo por una reforma fiscal. */}
             <p className="text-xs text-faint">
-              La tasa impositiva no se edita desde aquí: cambiarla altera el cálculo de
-              comprobantes ya emitidos y exige una decisión contable.
+              Solo afecta a lo que se facture <strong>de aquí en adelante</strong>. Las
+              facturas ya emitidas conservan su importe y su porcentaje.
             </p>
+            {/* El aviso aparece solo cuando de verdad va a cambiar algo: un
+                cartel permanente se vuelve invisible a los dos días. */}
+            {tasaCambia && (
+              <p className="text-xs text-warning font-semibold">
+                Va a cambiar el ITBIS de {bpsToPercent(company?.tax_rate_bps ?? 1800)} a{' '}
+                {itbisPct.replace(',', '.')}%. Afecta a todas las ventas que se cobren
+                después de guardar.
+              </p>
+            )}
           </div>
           <div className="space-y-1 sm:col-span-2">
             <span className="text-xs font-semibold text-muted uppercase">Cálculo del ITBIS</span>
@@ -296,12 +357,9 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               </span>
             </label>
           </div>
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-muted uppercase">Moneda</span>
-            <p className="w-full bg-canvas border border-line rounded-lg p-2.5 text-strong text-xs font-bold">
-              {company?.currency} ({company?.currency_symbol})
-            </p>
-          </div>
+          {field('s-currency', 'Moneda (ISO)', currency, setCurrency, 'Ej.: DOP, USD, EUR.')}
+          {field('s-symbol', 'Símbolo', currencySymbol, setCurrencySymbol,
+                 'Con el que se imprimen los importes. Ej.: RD$.')}
           <div className="space-y-1">
             <span className="text-xs font-semibold text-muted uppercase">Sucursal activa</span>
             <p className="w-full bg-canvas border border-line rounded-lg p-2.5 text-strong text-xs font-bold">

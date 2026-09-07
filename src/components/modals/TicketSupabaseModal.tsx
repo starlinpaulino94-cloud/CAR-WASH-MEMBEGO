@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Printer, Loader2, AlertCircle, Ban } from 'lucide-react';
-import { formatCents, bpsToPercent } from '../../lib/money';
+import { formatCents, bpsToPercent, tasaEfectivaBps } from '../../lib/money';
 import {
   fetchInvoiceItems, fetchComprobanteExtras,
   Invoice, InvoiceItem, ComprobanteExtras
@@ -139,6 +139,24 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
       (extras.vehicle.year ? ` (${extras.vehicle.year})` : '')
     : null;
   const cubierto = items.some(i => i.is_membego_covered);
+
+  /*
+   * LA TASA QUE SE IMPRIME SALE DE LA FACTURA, NO DE LA EMPRESA DE HOY.
+   *
+   * El importe del ITBIS ya estaba congelado en `tax_cents` —eso nunca se
+   * recalcula—, pero el PORCENTAJE se pintaba leyendo la tasa actual de la
+   * empresa. Mientras la tasa no cambiara nadie lo notaba; el día que cambie,
+   * cada reimpresión de una factura vieja diría un porcentaje que no cuadra con
+   * su propio importe: «ITBIS (16%): RD$ 180» sobre una base de 1.000. Un
+   * comprobante que se contradice a sí mismo delante de un inspector.
+   *
+   * Se deriva de sus propias cifras: la base gravada es el total menos el
+   * impuesto —vale igual con precios que incluyen ITBIS y con precios que lo
+   * suman—, y la tasa es el impuesto sobre esa base. Así una factura de 2024
+   * imprime su 18% aunque hoy la empresa cobre otra cosa.
+   */
+  const tasaDeEstaFactura = tasaEfectivaBps(
+    invoice.total_cents, invoice.tax_cents, company?.tax_rate_bps ?? 1800);
 
   // Cabecera y pie del comprobante: se prefiere el perfil de Membego (la
   // identidad que la empresa mantiene allá) y se cae a los datos locales cuando
@@ -333,7 +351,7 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
                   {fila('Subtotal:', formatCents(invoice.subtotal_cents, symbol))}
                   {invoice.discount_cents > 0 &&
                     fila('Descuento:', `−${formatCents(invoice.discount_cents, symbol)}`)}
-                  {fila(`ITBIS (${bpsToPercent(company?.tax_rate_bps ?? 1800)}):`,
+                  {fila(`ITBIS (${bpsToPercent(tasaDeEstaFactura)}):`,
                     formatCents(invoice.tax_cents, symbol))}
                   <div className="flex justify-between font-extrabold text-sm border-t border-b border-slate-900 py-1 my-1">
                     <span>{isCreditNote ? 'TOTAL ACREDITADO' : 'TOTAL'}</span>
