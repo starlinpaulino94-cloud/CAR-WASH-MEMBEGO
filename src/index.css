@@ -380,6 +380,38 @@ html {
   .print-hide {
     display: none !important;
   }
+
+  /* ---------------------------------------------------------------------
+     Etiquetas de producto (código de barras)
+     ---------------------------------------------------------------------
+     Mismo mecanismo que el comprobante —visibility, no display— pero la hoja
+     es una REJILLA de etiquetas, no un ticket continuo. Cada etiqueta se
+     mantiene entera: una barra partida entre dos páginas no la lee nadie. */
+  .print-labels,
+  .print-labels * {
+    visibility: visible !important;
+  }
+
+  .print-labels {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .print-labels .etiqueta {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
 }
 
 /* Los tokens de shadcn en oscuro, por el mismo camino que los --mb-*: primero
