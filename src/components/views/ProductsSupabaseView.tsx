@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
-import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText } from 'lucide-react';
+import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText, Tag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
@@ -19,6 +19,8 @@ import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { ExportButton } from '../common/ExportButton';
 import { ImportButton } from '../common/ImportModal';
 import { productsExport } from '../../lib/exportSpecs';
+import { Barcode } from '../common/Barcode';
+import { EtiquetasProductoModal } from '../modals/EtiquetasProductoModal';
 
 const PAGE_SIZE = 25;
 
@@ -114,8 +116,11 @@ export const ProductsSupabaseView: React.FC = () => {
   const puedeBorrar = can(profile, 'deleteRecords');
   const [fichaDe, setFichaDe] = useState<Product | null>(null);
   const [borrando, setBorrando] = useState<Product | null>(null);
+  /** Producto cuya hoja de etiquetas se está preparando para imprimir. */
+  const [etiquetando, setEtiquetando] = useState<Product | null>(null);
   const [ficha, setFicha] = useState({
-    name: '', code: '', category: '', cost: '', price: '', minStock: '', unit: '', forSale: true
+    name: '', code: '', category: '', cost: '', price: '', minStock: '', unit: '',
+    forSale: true, barcode: ''
   });
   const [fichaBusy, setFichaBusy] = useState(false);
   const [fichaError, setFichaError] = useState<string | null>(null);
@@ -124,7 +129,8 @@ export const ProductsSupabaseView: React.FC = () => {
     setFicha({
       name: p.name, code: p.code, category: p.category ?? '',
       cost: (p.cost_cents / 100).toFixed(2), price: (p.price_cents / 100).toFixed(2),
-      minStock: String(p.min_stock), unit: p.unit, forSale: p.is_for_sale
+      minStock: String(p.min_stock), unit: p.unit, forSale: p.is_for_sale,
+      barcode: p.barcode ?? ''
     });
     setFichaError(null);
     setFichaDe(p);
@@ -148,7 +154,9 @@ export const ProductsSupabaseView: React.FC = () => {
       await updateProduct(fichaDe.id, {
         name: ficha.name.trim(), code: ficha.code.trim(),
         category: ficha.category.trim(), cost_cents: costo, price_cents: precio,
-        min_stock: minimo, unit: ficha.unit.trim() || 'Unidad', is_for_sale: ficha.forSale
+        min_stock: minimo, unit: ficha.unit.trim() || 'Unidad', is_for_sale: ficha.forSale,
+        // Vaciarlo es válido: la base repone uno automáticamente.
+        barcode: ficha.barcode.trim()
       });
       setFichaDe(null);
       q.reload();
@@ -299,6 +307,14 @@ export const ProductsSupabaseView: React.FC = () => {
                       </TableCell>
                       <TableCell className="p-3">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Etiquetar no cambia nada del producto: lo puede hacer
+                              cualquiera que vea el catálogo, igual que exportar. */}
+                          <Button variant="ghost" size="icon-sm" onClick={() => setEtiquetando(p)}
+                            aria-label={`Imprimir etiquetas de ${p.name}`}
+                            title="Imprimir etiquetas con su código de barras"
+                            >
+                            <Tag className="w-4 h-4" />
+                          </Button>
                           {editable && (
                             <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(p)} aria-label={`Editar ${p.name}`}
                               title="Nombre, código, precio y unidad"
@@ -354,6 +370,29 @@ export const ProductsSupabaseView: React.FC = () => {
                 onChange={e => setFicha(f => ({ ...f, code: e.target.value }))} />
             </Field>
           </div>
+
+          {/* Código de barras: se genera solo al crear el producto. Se puede
+              sustituir por el del envase; si se deja vacío, la base repone uno. */}
+          <div className="grid grid-cols-3 gap-3 items-end">
+            <div className="col-span-2">
+              <Field label="Código de barras" htmlFor="ed-prd-barcode"
+                hint="Se genera solo. Si el producto trae el suyo en el envase, escríbalo aquí.">
+                <input id="ed-prd-barcode" inputMode="numeric" className={textInputClass}
+                  value={ficha.barcode}
+                  onChange={e => setFicha(f => ({ ...f, barcode: e.target.value }))} />
+              </Field>
+            </div>
+            <div className="bg-white rounded p-2 flex items-center justify-center min-h-[64px]">
+              <Barcode value={ficha.barcode} alto={40} className="text-slate-900 w-full" />
+            </div>
+          </div>
+
+          <div>
+            <Button type="button" variant="secondary" size="sm"
+              onClick={() => { const p = fichaDe; setFichaDe(null); setEtiquetando(p); }}>
+              <Tag className="w-4 h-4 mr-1.5" /> Imprimir etiquetas
+            </Button>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Categoría" htmlFor="ed-prd-cat">
               <input id="ed-prd-cat" className={textInputClass} value={ficha.category}
@@ -390,6 +429,14 @@ export const ProductsSupabaseView: React.FC = () => {
             La existencia se cambia tocando la cifra en la tabla, y queda en el kardex con su motivo.
           </p>
         </FormModal>
+      )}
+
+      {etiquetando && (
+        <EtiquetasProductoModal
+          producto={etiquetando}
+          symbol={symbol}
+          onClose={() => setEtiquetando(null)}
+        />
       )}
 
       {borrando && (
@@ -453,6 +500,12 @@ export const ProductsSupabaseView: React.FC = () => {
                 placeholder="ARO-01" />
             </Field>
           </div>
+
+          <p className="text-xs text-faint">
+            El <strong>código de barras</strong> se genera solo al guardar: podrá imprimir sus
+            etiquetas desde la lista. Si el producto ya trae el suyo en el envase, cámbielo
+            después en la ficha.
+          </p>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Categoría" htmlFor="prod-cat">
