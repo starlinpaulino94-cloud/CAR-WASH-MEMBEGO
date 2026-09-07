@@ -25,6 +25,7 @@ import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/admi
 import { aplicarCobertura, categoriaTopeDelPlan, descuentoPromocion, type EfectoPromocion } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { useLectorCodigoBarras } from '../../hooks/useLectorCodigoBarras';
 import { TicketSupabaseModal } from '../modals/TicketSupabaseModal';
 import { fetchChargeableOrderById, tomarOrdenPendientePos } from '../../data/billingRepository';
 
@@ -122,6 +123,9 @@ export const PosSupabaseView: React.FC = () => {
   const [membegoCustomerId, setMembegoCustomerId] = useState<string | null>(null);
   /** Resultado del último canje, para enseñárselo al cajero tras cobrar. */
   const [avisoCanje, setAvisoCanje] = useState<{ ok: boolean; texto: string } | null>(null);
+  /** Resultado del último escaneo, para confirmarle al cajero qué entró. */
+  const [avisoEscaneo, setAvisoEscaneo] =
+    useState<{ ok: boolean; texto: string } | null>(null);
   /** Promoción Membego que el cajero aplicó a esta venta (se canjea al cobrar). */
   const [promoMembego, setPromoMembego] =
     useState<{ id: string; nombre: string; effect: EfectoPromocion | null } | null>(null);
@@ -238,8 +242,12 @@ export const PosSupabaseView: React.FC = () => {
 
   const productosFiltrados = useMemo(() => {
     if (!q) return products;
-    return products.filter(p => normalizar(`${p.name} ${p.category}`).includes(q));
-  }, [products, q]);
+    return products.filter(p =>
+      normalizar(`${p.name} ${p.category}`).includes(q) ||
+      // También por código: teclear o pegar el código encuentra el producto.
+      (p.barcode ?? '').includes(catalogSearch.trim())
+    );
+  }, [products, q, catalogSearch]);
 
   const load = useCallback(async () => {
     if (!branch) return;
@@ -458,6 +466,50 @@ export const PosSupabaseView: React.FC = () => {
       }];
     });
   };
+
+  /**
+   * Un escaneo del lector: buscar el producto por su código y meterlo al carro.
+   *
+   * La búsqueda es en memoria contra el catálogo ya cargado, no una consulta:
+   * el cajero escanea seis productos seguidos y cada uno tiene que entrar en el
+   * acto. Una ida a la base por escaneo se notaría justo cuando más prisa hay.
+   *
+   * El código que no está en el catálogo NO se traga en silencio: se enseña tal
+   * cual salió del lector, que es lo que el cajero necesita para saber si el
+   * producto no está dado de alta o si escaneó la etiqueta equivocada.
+   */
+  const alEscanear = useCallback((codigo: string) => {
+    const limpio = codigo.trim();
+    if (!limpio) return;
+    const producto = products.find(p => (p.barcode ?? '').trim() === limpio);
+
+    if (!producto) {
+      setAvisoEscaneo({ ok: false, texto: `Código ${limpio}: ningún producto activo lo tiene.` });
+      return;
+    }
+    if (producto.stock <= 0) {
+      // Se avisa pero se agrega igual: el mostrador sabe mejor que la ficha si
+      // le queda uno en la vitrina, y bloquear la venta aquí es peor.
+      setAvisoEscaneo({ ok: false, texto: `${producto.name} agregado, pero figura sin existencias.` });
+    } else {
+      setAvisoEscaneo({ ok: true, texto: `${producto.name} agregado.` });
+    }
+    addProduct(producto);
+    // Si se escaneó dentro del buscador, la caja queda limpia para el siguiente.
+    setCatalogSearch('');
+  }, [products]);
+
+  // El aviso del escaneo se borra solo: es una confirmación de un segundo, no
+  // un error que el cajero tenga que ir cerrando entre carro y carro.
+  useEffect(() => {
+    if (!avisoEscaneo) return;
+    const t = setTimeout(() => setAvisoEscaneo(null), 3500);
+    return () => clearTimeout(t);
+  }, [avisoEscaneo]);
+
+  // Se desactiva con un modal abierto o mientras se emite: ahí el escaneo no
+  // tiene dónde caer y el Enter del lector podría disparar otra cosa.
+  useLectorCodigoBarras(alEscanear, { activo: !ticketInvoice && !submitting });
 
   const changeQty = (key: string, delta: number) =>
     setLines(prev => prev.map(l =>
@@ -936,6 +988,22 @@ export const PosSupabaseView: React.FC = () => {
             ))}
           </div>
 
+          {/* Confirmación del escaneo. Va pegada al buscador —donde el cajero
+              ya está mirando— y no en una esquina que nadie ve con prisa. */}
+          {avisoEscaneo && (
+            <div role="status"
+              className={`rounded-lg px-3 py-2 text-xs font-semibold flex items-center gap-2 border ${
+                avisoEscaneo.ok
+                  ? 'bg-success/10 border-success/40 text-success'
+                  : 'bg-warning/10 border-warning/40 text-warning'
+              }`}>
+              {avisoEscaneo.ok
+                ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+              <span>{avisoEscaneo.texto}</span>
+            </div>
+          )}
+
           {/* Buscador del catálogo: filtra la pestaña activa por nombre. */}
           <div className="relative">
             <Search className="w-4 h-4 text-faint absolute left-2.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -943,7 +1011,8 @@ export const PosSupabaseView: React.FC = () => {
               type="search"
               value={catalogSearch}
               onChange={e => setCatalogSearch(e.target.value)}
-              placeholder={tab === 'services' ? 'Buscar servicio por nombre…' : 'Buscar producto por nombre…'}
+              data-escaneable
+              placeholder={tab === 'services' ? 'Buscar servicio por nombre…' : 'Buscar producto o escanear código…'}
               aria-label={tab === 'services' ? 'Buscar servicio' : 'Buscar producto'}
               autoComplete="off"
               className="w-full pl-8 pr-8 py-2 text-xs rounded-lg border border-input bg-transparent text-foreground placeholder:text-muted-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"

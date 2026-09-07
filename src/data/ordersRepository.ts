@@ -217,6 +217,12 @@ export interface CreateOrderParams {
   color?: string;
   priority?: 'normal' | 'alta' | 'vip_membego';
   notes?: string | null;
+  /**
+   * Los lavadores que atienden el carro, elegidos ya en la llegada. La orden
+   * nace entonces como «asignada» y su nombre sale impreso en la comanda que
+   * se le entrega al cliente. Vacío = se decide después, en el tablero.
+   */
+  assignees?: string[];
 }
 
 export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOrder> {
@@ -236,7 +242,8 @@ export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOr
     p_vehicle_model: params.model ?? '',
     p_vehicle_color: params.color ?? '',
     p_priority: params.priority ?? 'normal',
-    p_notes: params.notes ?? null
+    p_notes: params.notes ?? null,
+    p_assignees: params.assignees?.length ? params.assignees : null
   });
 
   if (error) throw new Error(translate(error.message));

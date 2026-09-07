@@ -2946,6 +2946,8 @@ export interface Database {
           p_vehicle_color?: string;
           p_priority?: string;
           p_notes?: string;
+          /** Lavadores asignados en la llegada. */
+          p_assignees?: string[] | null;
         };
         Returns: Database['public']['Tables']['work_orders']['Row'];
       };
