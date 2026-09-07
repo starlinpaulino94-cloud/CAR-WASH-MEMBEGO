@@ -36,6 +36,18 @@ interface CompanyDTO {
   moneda: string;
   zonaHoraria: string;
   idioma: string;
+  // Cabecera de comprobante (opcionales): se guardan en `raw` y los lee el
+  // comprobante del car wash para imprimir con la identidad de Membego.
+  razonSocial?: string | null;
+  direccion?: string | null;
+  ciudad?: string | null;
+  telefono?: string | null;
+  website?: string | null;
+  whatsapp?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  horario?: string | null;
+  colorPrimario?: string | null;
 }
 interface BranchDTO {
   id: string;

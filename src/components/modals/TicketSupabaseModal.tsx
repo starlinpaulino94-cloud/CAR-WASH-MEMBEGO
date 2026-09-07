@@ -6,6 +6,7 @@ import {
   Invoice, InvoiceItem, ComprobanteExtras
 } from '../../data/billingRepository';
 import { Tables } from '../../lib/database.types';
+import { fetchPerfilComprobanteMembego, PerfilComprobanteMembego } from '../../data/adminRepository';
 import { LogoMark } from '../common/Logo';
 import { QrCode } from '../common/QrCode';
 
@@ -54,6 +55,7 @@ const PAGINA_IMPRESION: Record<Formato, { size: string; margin: string }> = {
 export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch, onClose }) => {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [extras, setExtras] = useState<ComprobanteExtras>({ cashierName: null, vehicle: null });
+  const [perfil, setPerfil] = useState<PerfilComprobanteMembego | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formato, setFormato] = useState<Formato>(
@@ -74,6 +76,11 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
       .then(([rows, ex]) => { if (active) { setItems(rows); setExtras(ex); } })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'No se pudo cargar el detalle'); })
       .finally(() => { if (active) setLoading(false); });
+    // El perfil de Membego (logo + datos) es opcional: si no se ha sincronizado
+    // o falla, el comprobante cae a los datos locales y no se bloquea la impresión.
+    fetchPerfilComprobanteMembego()
+      .then(p => { if (active) setPerfil(p); })
+      .catch(() => { if (active) setPerfil(null); });
     return () => { active = false; };
   }, [invoice]);
 
@@ -132,6 +139,16 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
       (extras.vehicle.year ? ` (${extras.vehicle.year})` : '')
     : null;
   const cubierto = items.some(i => i.is_membego_covered);
+
+  // Cabecera y pie del comprobante: se prefiere el perfil de Membego (la
+  // identidad que la empresa mantiene allá) y se cae a los datos locales cuando
+  // no se ha sincronizado. El RNC SIEMPRE es el fiscal local (el registrado para
+  // los NCF), no el de Membego: es el que la DGII espera en el comprobante.
+  const negocioNombre = perfil?.nombre ?? company?.trade_name ?? '';
+  const negocioDireccion = perfil?.direccion
+    ? [perfil.direccion, perfil.ciudad].filter(Boolean).join(', ')
+    : branch?.address ?? null;
+  const negocioTelefono = perfil?.telefono ?? branch?.phone ?? null;
 
   // El QR codifica la referencia verificable de la operación (número, NCF, RNC
   // y total). No abre una web: es el archivo que Membego imprime como respaldo.
@@ -232,13 +249,26 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
                 </div>
               )}
 
-              {/* Logo redondo + datos del negocio. */}
+              {/* Logo + datos del negocio: el logo del car wash tal como está en
+                  Membego (en gris, para térmica); si no hay, la marca de la app. */}
               <div className="text-center space-y-1 pb-1">
-                <LogoMark className="w-12 h-12 mx-auto text-slate-900" simple mono />
-                <div className="font-extrabold text-base uppercase tracking-tight">{company?.trade_name}</div>
+                {perfil?.logoUrl ? (
+                  <img
+                    src={perfil.logoUrl}
+                    alt=""
+                    className="mx-auto max-h-14 object-contain grayscale"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <LogoMark className="w-12 h-12 mx-auto text-slate-900" simple mono />
+                )}
+                <div className="font-extrabold text-base uppercase tracking-tight">{negocioNombre}</div>
+                {perfil?.razonSocial && perfil.razonSocial !== negocioNombre && (
+                  <div className="text-[10px]">{perfil.razonSocial}</div>
+                )}
                 {branch?.name && <div className="text-[10px]">{branch.name}</div>}
-                {branch?.address && <div className="text-[10px]">{branch.address}</div>}
-                {branch?.phone && <div className="text-[10px]">Tel: {branch.phone}</div>}
+                {negocioDireccion && <div className="text-[10px]">{negocioDireccion}</div>}
+                {negocioTelefono && <div className="text-[10px]">Tel: {negocioTelefono}</div>}
                 <div className="text-[10px]">RNC: {company?.tax_id}</div>
               </div>
 
@@ -330,11 +360,17 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
                 <div className="text-[9px] text-center">Escanea para consultar esta operación</div>
               </div>
 
-              {/* Pie. */}
+              {/* Pie: mensaje + web y redes del perfil de Membego, como el
+                  comprobante de allá. */}
               <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
               <div className="text-center space-y-1 text-[10px]">
                 {company?.header_note && <div>{company.header_note}</div>}
                 <div className="font-bold">¡Gracias por tu preferencia!</div>
+                {perfil?.website && <div>{perfil.website}</div>}
+                {perfil?.instagram && <div>IG: {perfil.instagram}</div>}
+                {perfil?.facebook && <div>FB: {perfil.facebook}</div>}
+                {perfil?.whatsapp && <div>WhatsApp: {perfil.whatsapp}</div>}
+                {perfil?.horario && <div>{perfil.horario}</div>}
                 {company?.footer_note && <div>{company.footer_note}</div>}
               </div>
             </div>
