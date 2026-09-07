@@ -108,3 +108,28 @@ export function bpsToPercent(bps: number): string {
   const pct = bps / 100;
   return `${Number.isInteger(pct) ? pct : pct.toFixed(2)}%`;
 }
+
+/**
+ * La tasa de ITBIS que de verdad se aplicó en una factura, en puntos básicos.
+ *
+ * El importe del impuesto queda congelado en la factura, pero el PORCENTAJE que
+ * se imprime se leía de la empresa. Mientras la tasa nunca cambiara daba igual;
+ * en cuanto cambia, cada reimpresión de una factura vieja anuncia un porcentaje
+ * que no cuadra con su propio importe —«ITBIS (16%): RD$ 180» sobre una base de
+ * 1.000—, y es un comprobante que se contradice a sí mismo.
+ *
+ * Se deriva de las cifras de la propia factura: la base gravada es el total
+ * menos el impuesto, y eso vale IGUAL con precios que ya incluyen el ITBIS y
+ * con precios que lo suman encima (en los dos casos total = base + impuesto).
+ *
+ * `respaldoBps` cubre la factura sin base gravada —una cortesía, un lavado que
+ * cubrió entera la membresía—, donde no hay división posible: ahí no hay tasa
+ * que deducir y se enseña la vigente, que es lo único cierto disponible.
+ */
+export function tasaEfectivaBps(
+  totalCents: number, taxCents: number, respaldoBps: number
+): number {
+  const baseGravada = totalCents - taxCents;
+  if (baseGravada <= 0 || taxCents < 0) return respaldoBps;
+  return Math.round((taxCents / baseGravada) * 10000);
+}
