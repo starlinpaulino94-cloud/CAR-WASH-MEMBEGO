@@ -437,6 +437,7 @@ export const KanbanSupabaseView: React.FC = () => {
           busy={movingId === startTarget.id}
           onCancel={() => setStartTarget(null)}
           onConfirm={(bayId, ops) => void move(startTarget, 'en_proceso', bayId, ops)}
+          yaAsignados={assignees.get(startTarget.id) ?? []}
         />
       )}
 
@@ -465,6 +466,8 @@ interface StartProps {
   busy: boolean;
   onCancel: () => void;
   onConfirm: (bayId: string, operators: string[]) => void;
+  /** Los lavadores que ya trae la orden desde la llegada. */
+  yaAsignados: string[];
 }
 
 /**
@@ -475,11 +478,14 @@ interface StartProps {
  * bahías nunca reflejaban la realidad.
  */
 const StartServiceDialog: React.FC<StartProps> = ({
-  order, bays, operators, busy, onCancel, onConfirm
+  order, bays, operators, busy, onCancel, onConfirm, yaAsignados
 }) => {
   const available = bays.filter(b => b.status === 'disponible');
   const [bayId, setBayId] = useState(available[0]?.id ?? '');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Se parte de quien ya venía asignado desde la llegada. Arrancar en blanco
+  // BORRABA esa asignación al confirmar —el lavador impreso en la comanda del
+  // cliente dejaba de figurar en la orden, y con él su comisión al entregar.
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(yaAsignados));
 
   const toggle = (id: string) => setSelected(prev => {
     const next = new Set(prev);

@@ -4,7 +4,7 @@ import { X, Car, Loader2, AlertCircle, PlusCircle, Search, UserCheck, History, B
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import {
-  createWorkOrder, fetchServicesForCategory, VehicleCategory, WorkOrder
+  createWorkOrder, fetchOperators, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
 import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
@@ -13,6 +13,7 @@ import {
   CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
 import { PanelFichaMembego } from '../common/FichaMembego';
+import { ComandaOrdenModal } from './ComandaOrdenModal';
 
 interface Props {
   onClose: () => void;
@@ -78,6 +79,11 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Los lavadores de la sucursal y los elegidos para este carro. */
+  const [operarios, setOperarios] = useState<{ id: string; full_name: string }[]>([]);
+  const [lavadores, setLavadores] = useState<Set<string>>(new Set());
+  /** La orden recién registrada: mientras exista se enseña su comanda. */
+  const [creada, setCreada] = useState<WorkOrder | null>(null);
 
   // Cliente ya registrado. Mientras haya uno elegido, nombre y teléfono son los
   // de su ficha y no se escriben a mano: editarlos aquí daría la ilusión de
@@ -103,6 +109,17 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
       .then(setNiveles)
       .catch(() => { /* sin niveles se decide solo por placa: no es un fallo */ });
   }, []);
+
+  // Los lavadores de la sucursal. Si falla, la llegada se registra igual sin
+  // asignar: recibir el carro no puede depender de esta lista.
+  useEffect(() => {
+    if (!branch) return;
+    let activo = true;
+    fetchOperators(branch.id)
+      .then(rows => { if (activo) setOperarios(rows.map(r => ({ id: r.id, full_name: r.full_name }))); })
+      .catch(() => { if (activo) setOperarios([]); });
+    return () => { activo = false; };
+  }, [branch]);
 
   const [services, setServices] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,9 +313,13 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
         make: make.trim(),
         model: model.trim(),
         color: color.trim(),
-        notes: notes.trim() || null
+        notes: notes.trim() || null,
+        assignees: [...lavadores]
       });
-      onCreated(order);
+      // La comanda sale SOLA al registrar: si hubiera que ir a buscarla a
+      // otro sitio, el carro entraría al patio sin papel y el lavador sin
+      // saber que es suyo. El padre se entera al cerrarla.
+      setCreada(order);
     } catch (err) {
       // La clave NO se renueva: reintentar debe reconocerse como el mismo registro.
       setError(err instanceof Error ? err.message : 'No se pudo registrar la llegada');
@@ -306,6 +327,18 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
       setBusy(false);
     }
   };
+
+  if (creada) {
+    return (
+      <ComandaOrdenModal
+        order={creada}
+        company={company}
+        branch={branch}
+        lavadores={operarios.filter(o => lavadores.has(o.id)).map(o => o.full_name)}
+        onClose={() => onCreated(creada)}
+      />
+    );
+  }
 
   return (
     <div
@@ -567,6 +600,44 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                       <span className="block text-xs text-faint mt-0.5">
                         ~{s.estimated_minutes} min
                       </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Lavador. Se elige aquí, en la llegada, porque es lo que va impreso
+              en la comanda que el cliente le entrega. Es opcional: recibir el
+              carro no puede quedarse bloqueado porque aún no se sepa quién lo
+              lava — el tablero permite decidirlo al iniciar. */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold text-muted uppercase">
+              Lavador asignado
+              <span className="ml-1 normal-case font-normal text-faint">(opcional)</span>
+            </span>
+            {operarios.length === 0 ? (
+              <p className="text-xs text-faint italic">
+                No hay lavadores registrados en esta sucursal. Se dan de alta en
+                Equipo, con el rol «Operario (lavador)».
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {operarios.map(o => {
+                  const on = lavadores.has(o.id);
+                  return (
+                    <button key={o.id} type="button" disabled={busy}
+                      aria-pressed={on}
+                      onClick={() => setLavadores(prev => {
+                        const next = new Set(prev);
+                        if (next.has(o.id)) next.delete(o.id); else next.add(o.id);
+                        return next;
+                      })}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        on ? 'bg-brand text-on-accent border-brand'
+                           : 'bg-surface border-line text-body hover:border-brand'
+                      }`}>
+                      {o.full_name}
                     </button>
                   );
                 })}
