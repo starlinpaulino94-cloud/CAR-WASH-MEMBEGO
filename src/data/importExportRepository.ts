@@ -1,4 +1,5 @@
 import { requireSupabase } from '../lib/supabase';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Importación y exportación masiva.
@@ -47,7 +48,7 @@ export async function importBatch(
     p_rows: rows,
     p_apply: apply
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as ImportResult;
 }
 
@@ -77,7 +78,7 @@ export async function fetchAllRows<T>(
       .select(select)
       .order(order.column, { ascending: order.ascending ?? false })
       .range(from, from + CHUNK - 1);
-    if (error) throw error;
+    if (error) throw fallaDatos(error);
     const batch = (data ?? []) as unknown as T[];
     out.push(...batch);
     if (batch.length < CHUNK) return { rows: out, truncated: false };

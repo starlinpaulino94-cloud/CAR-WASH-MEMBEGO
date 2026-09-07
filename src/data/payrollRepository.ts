@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Turnos, asistencia y nómina.
@@ -46,7 +47,7 @@ export async function fetchStaff(): Promise<Profile[]> {
     .from('profiles').select('*')
     .eq('is_active', true)
     .order('full_name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -61,7 +62,7 @@ export async function setEmployeePay(input: {
     p_hourly_rate_cents: input.hourlyRateCents ?? 0,
     p_commission_bps: input.commissionBps ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Profile;
 }
 
@@ -69,11 +70,15 @@ export async function setEmployeePay(input: {
 
 export async function fetchShifts(fromIso: string, toIso: string): Promise<ShiftRow[]> {
   const { data, error } = await requireSupabase()
-    .from('work_shifts').select('*, profiles(full_name)')
+    // `profiles!work_shifts_profile_id_fkey`, no `profiles` a secas: hay DOS
+    // claves ajenas de work_shifts a profiles (profile_id y created_by), así que
+    // PostgREST no puede adivinar por cuál enlazar y rechaza la consulta entera
+    // con PGRST201. Nombrar la restricción es lo que lo desambigua.
+    .from('work_shifts').select('*, profiles!work_shifts_profile_id_fkey(full_name)')
     .gte('starts_at', fromIso)
     .lt('starts_at', toIso)
     .order('starts_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []).map(r => named(r as never)) as ShiftRow[];
 }
 
@@ -89,13 +94,13 @@ export async function scheduleShift(input: {
     p_notes: input.notes ?? null,
     p_shift_id: input.shiftId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as WorkShift;
 }
 
 export async function deleteShift(shiftId: string): Promise<void> {
   const { error } = await requireSupabase().rpc('delete_shift', { p_shift_id: shiftId });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 // ---------------------------------------------------------------- Asistencia
@@ -106,7 +111,7 @@ export async function fetchAttendance(fromIso: string, toIso: string): Promise<A
     .gte('checked_in_at', fromIso)
     .lt('checked_in_at', toIso)
     .order('checked_in_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []).map(r => named(r as never)) as AttendanceRow[];
 }
 
@@ -117,21 +122,21 @@ export async function fetchOpenAttendance(profileId: string): Promise<Attendance
     .eq('profile_id', profileId)
     .is('checked_out_at', null)
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
 export async function clockIn(profileId?: string | null): Promise<AttendanceRecord> {
   const { data, error } = await requireSupabase()
     .rpc('clock_in', { p_profile_id: profileId ?? null, p_notes: null });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as AttendanceRecord;
 }
 
 export async function clockOut(profileId?: string | null): Promise<AttendanceRecord> {
   const { data, error } = await requireSupabase()
     .rpc('clock_out', { p_profile_id: profileId ?? null, p_notes: null });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as AttendanceRecord;
 }
 
@@ -142,7 +147,7 @@ export async function fetchPendingAdvances(): Promise<PayrollAdvance[]> {
     .from('payroll_advances').select('*')
     .is('payroll_item_id', null)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -155,7 +160,7 @@ export async function registerAdvance(input: {
     p_reason: input.reason ?? null,
     p_cash_session_id: input.cashSessionId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as PayrollAdvance;
 }
 
@@ -166,7 +171,7 @@ export async function fetchPayrollPeriods(limit = 24): Promise<PayrollPeriod[]> 
     .from('payroll_periods').select('*')
     .order('period_from', { ascending: false })
     .limit(limit);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -174,7 +179,7 @@ export async function fetchPayrollItems(periodId: string): Promise<PayrollItemRo
   const { data, error } = await requireSupabase()
     .from('payroll_items').select('*, profiles(full_name)')
     .eq('period_id', periodId);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return ((data ?? []).map(r => named(r as never)) as PayrollItemRow[])
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }
@@ -188,7 +193,7 @@ export async function openPayrollPeriod(input: {
     p_branch_id: input.branchId ?? null,
     p_notes: input.notes ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as PayrollPeriod;
 }
 
@@ -201,13 +206,13 @@ export async function adjustPayrollItem(input: {
     p_deductions_cents: input.deductionsCents ?? 0,
     p_notes: input.notes ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as PayrollItem;
 }
 
 export async function approvePayroll(periodId: string): Promise<PayrollPeriod> {
   const { data, error } = await requireSupabase().rpc('approve_payroll', { p_period_id: periodId });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as PayrollPeriod;
 }
 
@@ -219,11 +224,11 @@ export async function payPayroll(input: {
     p_payment_method: input.method,
     p_cash_session_id: input.cashSessionId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as PayrollPeriod;
 }
 
 export async function deletePayrollPeriod(periodId: string): Promise<void> {
   const { error } = await requireSupabase().rpc('delete_payroll_period', { p_period_id: periodId });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }

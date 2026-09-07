@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Rangos NCF, notas de crédito y usuarios.
@@ -24,7 +25,7 @@ export async function fetchNcfSequences(): Promise<NcfSequence[]> {
     .from('ncf_sequences').select('*')
     .order('ncf_type')
     .order('authorized_until', { ascending: false });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -50,7 +51,7 @@ export async function saveNcfSequence(input: {
     // moverlo hacia atrás repetiría NCF ya emitidos.
     const { data, error } = await supabase
       .from('ncf_sequences').update(fila).eq('id', input.id).select();
-    if (error) throw error;
+    if (error) throw fallaDatos(error);
     if (!data || data.length === 0) {
       throw new Error('No se pudo guardar: puede que no tenga permiso.');
     }
@@ -61,7 +62,7 @@ export async function saveNcfSequence(input: {
     .from('ncf_sequences')
     .insert({ ...fila, next_value: input.rangeStart })
     .select().single();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
@@ -78,7 +79,7 @@ export async function fetchCreditNotes(limit = 100): Promise<Invoice[]> {
     .not('credits_invoice_id', 'is', null)
     .order('created_at', { ascending: false })
     .limit(limit);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -96,7 +97,7 @@ export async function searchCreditableInvoices(term: string): Promise<InvoiceWit
   const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(20);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []) as unknown as InvoiceWithItems[];
 }
 
@@ -112,7 +113,7 @@ export async function creditNoteInvoice(input: {
     p_reason: input.reason,
     p_client_request_id: input.clientRequestId
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Invoice;
 }
 
@@ -123,7 +124,7 @@ export async function fetchProfiles(): Promise<Profile[]> {
     .from('profiles').select('*')
     .order('is_active', { ascending: false })
     .order('full_name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -136,7 +137,7 @@ export async function updateProfileAccess(
 ): Promise<Profile> {
   const { data, error } = await requireSupabase()
     .from('profiles').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   // RLS filtra en silencio: 0 filas significa denegado, no éxito.
   if (!data || data.length === 0) {
     throw new Error('No se pudo actualizar: su rol no alcanza para este cambio.');
@@ -148,5 +149,5 @@ export async function resetEmployeePassword(profileId: string, password: string)
   const { error } = await requireSupabase().rpc('reset_employee_password', {
     p_profile_id: profileId, p_password: password
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }

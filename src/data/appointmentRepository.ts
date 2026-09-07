@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Agenda de citas.
@@ -26,7 +27,7 @@ export async function fetchDayAppointments(branchId: string, day: string): Promi
     .gte('scheduled_at', from.toISOString())
     .lt('scheduled_at', to.toISOString())
     .order('scheduled_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -36,7 +37,7 @@ export async function checkAvailability(
   const { data, error } = await requireSupabase().rpc('appointment_availability', {
     p_branch_id: branchId, p_start: startIso, p_minutes: minutes
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as Availability;
 }
 
@@ -56,7 +57,7 @@ export async function bookAppointment(input: {
     p_duration_minutes: input.durationMinutes ?? null,
     p_notes: input.notes ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Appointment;
 }
 
@@ -68,7 +69,7 @@ export async function updateAppointmentStatus(
     .from('appointments')
     .update({ status, cancel_reason: cancelReason ?? null })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 /** La cita se vuelve orden de servicio real. */
@@ -77,6 +78,6 @@ export async function convertAppointment(id: string): Promise<Tables<'work_order
     p_appointment_id: id,
     p_client_request_id: `cita-${id}`
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Tables<'work_orders'>;
 }

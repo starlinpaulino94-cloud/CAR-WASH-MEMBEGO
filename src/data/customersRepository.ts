@@ -1,5 +1,6 @@
 import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Reconocer al cliente que ya existe.
@@ -51,7 +52,7 @@ export async function searchCustomers(term: string, limit = 8): Promise<Customer
     .order('last_visit_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []) as CustomerMatch[];
 }
 
@@ -59,7 +60,7 @@ export async function searchCustomers(term: string, limit = 8): Promise<Customer
 export async function fetchCustomerById(id: string): Promise<CustomerMatch | null> {
   const { data, error } = await requireSupabase()
     .from('customers').select(CAMPOS).eq('id', id).maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data as CustomerMatch | null) ?? null;
 }
 
@@ -97,7 +98,7 @@ export async function lookupVehicleByPlate(plate: string): Promise<VehicleMatch 
     .eq('plate', p)
     .limit(1)
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!v) return null;
 
   let customer: CustomerMatch | null = null;

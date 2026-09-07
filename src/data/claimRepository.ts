@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Reclamos e incidentes.
@@ -27,7 +28,7 @@ export async function fetchClaimPage(
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -36,7 +37,7 @@ export async function fetchClaimEvents(claimId: string): Promise<ClaimEvent[]> {
     .from('claim_events').select('*')
     .eq('claim_id', claimId)
     .order('created_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -51,7 +52,7 @@ export async function openClaim(input: {
     p_work_order_id: input.workOrderId ?? null,
     p_customer_phone: input.customerPhone ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Claim;
 }
 
@@ -61,7 +62,7 @@ export async function addClaimNote(
   const { data, error } = await requireSupabase().rpc('add_claim_note', {
     p_claim_id: claimId, p_note: note, p_status: status ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Claim;
 }
 
@@ -77,6 +78,6 @@ export async function resolveClaim(input: {
     p_root_cause: input.rootCause ?? null,
     p_responsible_id: input.responsibleId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Claim;
 }
