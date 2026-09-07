@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums, Json } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Control de calidad.
@@ -30,7 +31,7 @@ export async function fetchChecklist(serviceId?: string | null): Promise<QcCheck
     ? query.or(`service_id.is.null,service_id.eq.${serviceId}`)
     : query.is('service_id', null);
   const { data, error } = await query.order('sort_order').order('label');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -43,13 +44,13 @@ export async function createChecklistItem(input: {
     service_id: input.serviceId ?? null,
     sort_order: input.sortOrder ?? 0
   }).select().single();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
 export async function deleteChecklistItem(id: string): Promise<void> {
   const { error } = await requireSupabase().from('qc_checklist_items').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 /** Revisiones anteriores de una orden (para ver los reprocesos). */
@@ -58,7 +59,7 @@ export async function fetchOrderReviews(orderId: string): Promise<QcReview[]> {
     .from('qc_reviews').select('*')
     .eq('work_order_id', orderId)
     .order('attempt', { ascending: false });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -82,6 +83,6 @@ export async function submitQcReview(input: {
     p_washer_id: input.washerId ?? null,
     p_notes: input.notes ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as QcReview;
 }

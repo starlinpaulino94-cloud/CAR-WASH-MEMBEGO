@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Sucursales y alcance del personal.
@@ -19,7 +20,7 @@ export async function fetchBranches(): Promise<Branch[]> {
     .from('branches').select('*')
     .order('is_main', { ascending: false })
     .order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -30,7 +31,7 @@ export async function fetchActiveBranches(): Promise<Branch[]> {
     .eq('is_active', true)
     .order('is_main', { ascending: false })
     .order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -46,7 +47,7 @@ export async function upsertBranch(input: {
     p_is_main: input.isMain ?? false,
     p_is_active: input.isActive ?? true
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Branch;
 }
 
@@ -58,6 +59,6 @@ export async function setEmployeeBranch(input: {
     p_branch_id: input.branchId,
     p_scope: input.scope
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Profile;
 }

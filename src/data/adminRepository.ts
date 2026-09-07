@@ -1,6 +1,7 @@
 import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Tables, Enums, Json, UpdateDto } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Acceso a datos del resto de vistas: catálogo, clientes, vehículos, equipo,
@@ -73,7 +74,7 @@ export async function fetchCustomerPage(
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -99,7 +100,7 @@ export async function fetchCustomerOriginSummary(
   const { data, error } = await requireSupabase().rpc('customer_origin_summary', {
     p_from: from ?? null, p_to: to ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as CustomerOriginSummary;
 }
 
@@ -125,8 +126,8 @@ export async function fetchCustomerMembego(customerId: string): Promise<Customer
     supabase.from('customer_promotions').select('*').eq('customer_id', customerId)
       .order('acquired_at', { ascending: false })
   ]);
-  if (m.error) throw m.error;
-  if (p.error) throw p.error;
+  if (m.error) throw fallaDatos(m.error);
+  if (p.error) throw fallaDatos(p.error);
   return { memberships: m.data ?? [], promotions: p.data ?? [] };
 }
 
@@ -139,7 +140,7 @@ export async function createCustomer(input: {
     phone: input.phone ?? null, email: input.email ?? null,
     tax_id: input.taxId ?? null, notes: input.notes ?? null
   }).select().single();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
@@ -152,7 +153,7 @@ export async function createCustomer(input: {
 export async function updateCustomer(id: string, patch: UpdateDto<'customers'>): Promise<Customer> {
   const { data, error } = await requireSupabase()
     .from('customers').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   // RLS filtra en silencio: 0 filas significa denegado, no éxito.
   if (!data || data.length === 0) throw new Error('No se pudo actualizar: puede que no tenga permiso.');
   return data[0];
@@ -177,7 +178,7 @@ export async function fetchVehiclePage(
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const rows = (data ?? []).map(row => {
     const { customers, ...vehicle } = row as Vehicle & { customers: { name: string } | null };
@@ -215,7 +216,7 @@ export async function fetchServicesWithPrices(): Promise<ServiceWithPrices[]> {
     .from('services')
     .select('*, service_prices(vehicle_category, price_cents)')
     .order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   return (data ?? []).map(row => {
     const { service_prices, ...service } = row as Service & {
@@ -234,13 +235,13 @@ export async function upsertServicePrice(
     .from('service_prices')
     .upsert({ service_id: serviceId, vehicle_category: category, price_cents: priceCents },
             { onConflict: 'service_id,vehicle_category' });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 export async function updateService(id: string, patch: Partial<Service>): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('services').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!data || data.length === 0) throw new Error('Su rol no permite modificar el catálogo.');
 }
 
@@ -293,7 +294,7 @@ export async function fetchProductPage(
   const { data, error, count } = await query
     .order('name')
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   // El filtro de bajo stock compara dos columnas entre sí, algo que PostgREST
   // no expresa directamente; se aplica sobre la página ya traída y se avisa en
@@ -305,7 +306,7 @@ export async function fetchProductPage(
 export async function updateProduct(id: string, patch: Omit<Partial<Product>, 'stock' | 'stock_frac'>): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('products').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!data || data.length === 0) throw new Error('Su rol no permite modificar el inventario.');
 }
 
@@ -318,7 +319,7 @@ export async function adjustStock(productId: string, newQty: number, reason: str
   const { data, error } = await requireSupabase().rpc('adjust_stock', {
     p_product_id: productId, p_new_qty: newQty, p_reason: reason
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Product;
 }
 
@@ -358,7 +359,7 @@ export async function fetchManagementReport(
   const { data, error } = await requireSupabase().rpc('management_report', {
     p_from: from, p_to: to, p_branch_id: branchId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as ManagementReport;
 }
 
@@ -374,7 +375,7 @@ export async function fetchServiceRecipes(serviceId: string): Promise<ServiceRec
     .select('*, products!service_recipes_product_same_company(name, code, unit, cost_cents)')
     .eq('service_id', serviceId)
     .order('created_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []) as ServiceRecipe[];
 }
 
@@ -394,7 +395,7 @@ export async function addRecipeLine(input: {
 
 export async function deleteRecipeLine(id: string): Promise<void> {
   const { error } = await requireSupabase().from('service_recipes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 /** Costo estimado de ejecutar el servicio hoy (recetas × último costo). */
@@ -404,7 +405,7 @@ export async function fetchRecipeCost(
   const { data, error } = await requireSupabase().rpc('service_recipe_cost', {
     p_service_id: serviceId, p_vehicle_category: category
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data as number) ?? 0;
 }
 
@@ -426,7 +427,7 @@ export async function fetchSupplierPage(
   const { data, error, count } = await query
     .order('name')
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -451,7 +452,7 @@ export async function updateSupplier(id: string, patch: {
 }): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('suppliers').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!data || data.length === 0) throw new Error('Su rol no permite administrar proveedores.');
 }
 
@@ -459,7 +460,7 @@ export async function updateSupplier(id: string, patch: {
 export async function fetchActiveSuppliers(): Promise<Supplier[]> {
   const { data, error } = await requireSupabase()
     .from('suppliers').select('*').eq('is_active', true).order('name').limit(200);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -486,7 +487,7 @@ export async function fetchPurchasePage(
     .order('purchase_date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   const rows = (data ?? []) as Purchase[];
   return {
     rows: pending === 'pending' ? rows.filter(p => p.paid_cents < p.total_cents) : rows,
@@ -522,7 +523,7 @@ export async function registerPurchase(input: {
     p_notes: input.notes ?? null,
     p_cash_session_id: input.cashSessionId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Tables<'purchases'>;
 }
 
@@ -535,7 +536,7 @@ export async function paySupplier(input: {
     p_payment_method: input.paymentMethod,
     p_reference: input.reference ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Tables<'purchases'>;
 }
 
@@ -554,7 +555,7 @@ export async function fetchInventoryMovementPage(
   const { data, error, count } = await query
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: (data ?? []) as InventoryMovement[], total: count ?? 0 };
 }
 
@@ -596,14 +597,14 @@ export type Branch = Tables<'branches'>;
 export async function fetchTeam(): Promise<Profile[]> {
   const { data, error } = await requireSupabase()
     .from('profiles').select('*').order('full_name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
 export async function fetchBranches(): Promise<Branch[]> {
   const { data, error } = await requireSupabase()
     .from('branches').select('*').eq('is_active', true).order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -658,7 +659,7 @@ export async function fetchCommissionSummary(
     .select('profile_id, amount_cents, is_paid')
     .gte('earned_on', fromDate)
     .lte('earned_on', toDate);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const map = new Map<string, CommissionSummary>();
   for (const row of data ?? []) {
@@ -687,7 +688,7 @@ export async function fetchExpensePage(
   const { data, error, count } = await query
     .order('expense_date', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -720,14 +721,14 @@ export async function createExpense(params: {
 export async function fetchAllBays(branchId: string): Promise<Bay[]> {
   const { data, error } = await requireSupabase()
     .from('bays').select('*').eq('branch_id', branchId).order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
 export async function setBayStatus(id: string, status: BayStatus): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('bays').update({ status }).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!data || data.length === 0) throw new Error('No se pudo cambiar el estado de la bahía.');
 }
 
@@ -783,7 +784,7 @@ export async function fetchAuditPage(
   const { data, error, count } = await query
     .order('occurred_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -802,7 +803,7 @@ export async function fetchDashboardMetrics(
     p_from: from.toISOString(),
     p_to: to.toISOString()
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as DashboardMetrics;
 }
 
@@ -821,7 +822,7 @@ export async function fetchMembegoLink(): Promise<MembegoLink | null> {
     .from('membego_company_links')
     .select('membego_company_id, is_active')
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ? { membegoCompanyId: data.membego_company_id, isActive: data.is_active } : null;
 }
 
@@ -840,7 +841,7 @@ export async function linkMembegoCompany(membegoCompanyId: string): Promise<void
 export async function updateCompany(id: string, patch: Partial<Company>): Promise<Company> {
   const { data, error } = await requireSupabase()
     .from('companies').update(patch).eq('id', id).select();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!data || data.length === 0) {
     throw new Error('Solo el propietario puede modificar los datos de la empresa.');
   }
@@ -853,7 +854,7 @@ export async function fetchMembegoLogs(limit = 50): Promise<MembegoSyncLog[]> {
   const { data, error } = await requireSupabase()
     .from('membego_sync_logs').select('*')
     .order('occurred_at', { ascending: false }).limit(limit);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -870,7 +871,7 @@ export async function recordMembegoLog(input: {
     request_payload: input.request ?? {}, response_payload: input.response ?? {},
     error_message: input.errorMessage ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 // ─────────────────────────────────── Sincronización del perfil de Membego
@@ -911,7 +912,7 @@ export async function sincronizarPerfilMembego(): Promise<ResultadoSyncPerfil> {
 export async function fetchPerfilMembego(): Promise<MembegoEmpresaPerfil | null> {
   const { data, error } = await requireSupabase()
     .from('membego_empresa_perfil').select('*').maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
@@ -965,7 +966,7 @@ export async function fetchPerfilComprobanteMembego(): Promise<PerfilComprobante
 export async function fetchSucursalesMembego(): Promise<MembegoSucursal[]> {
   const { data, error } = await requireSupabase()
     .from('membego_sucursales').select('*').order('nombre');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -985,7 +986,7 @@ export async function fetchVehicleCategories(incluirInactivas = false): Promise<
   let q = requireSupabase().from('vehicle_categories').select('*').order('sort_order');
   if (!incluirInactivas) q = q.eq('is_active', true);
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -993,7 +994,7 @@ export async function fetchVehicleCategories(incluirInactivas = false): Promise<
 export async function createVehicleCategory(label: string): Promise<VehicleCategoryRow> {
   const { data, error } = await requireSupabase()
     .rpc('create_vehicle_category', { p_label: label });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as VehicleCategoryRow;
 }
 
@@ -1008,7 +1009,7 @@ export async function updateVehicleCategory(
     p_sort_order: patch.sort_order ?? undefined,
     p_is_active: patch.is_active ?? undefined
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as VehicleCategoryRow;
 }
 
@@ -1045,21 +1046,21 @@ export async function sincronizarCatalogoMembego(): Promise<ResultadoSyncCatalog
 export async function fetchPromocionesMembego(): Promise<MembegoPromocion[]> {
   const { data, error } = await requireSupabase()
     .from('membego_promociones').select('*').order('titulo');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
 export async function fetchCitasMembego(): Promise<MembegoCita[]> {
   const { data, error } = await requireSupabase()
     .from('membego_citas').select('*').order('inicio');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
 export async function fetchMembresiasMembego(): Promise<MembegoMembresia[]> {
   const { data, error } = await requireSupabase()
     .from('membego_membresias').select('*').order('plan_nombre');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -1085,7 +1086,7 @@ export async function fetchVehicleCategoryLevels(): Promise<NivelesPorCategoria>
   const { data, error } = await requireSupabase()
     .from('vehicle_category_levels')
     .select('category, level');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const mapa: NivelesPorCategoria = {};
   for (const fila of data ?? []) mapa[fila.category as VehicleCategory] = fila.level;

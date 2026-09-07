@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Crédito de clientes y cuentas por cobrar.
@@ -78,7 +79,7 @@ export async function fetchReceivablePage(
   const { data, error, count } = await query
     .order('due_on', { ascending: true })
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: (data ?? []).map(r => flatten(r as unknown as JoinedRow)), total: count ?? 0 };
 }
 
@@ -87,7 +88,7 @@ export async function fetchReceivablePayments(receivableId: string): Promise<Rec
     .from('receivable_payments').select('*')
     .eq('receivable_id', receivableId)
     .order('created_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -97,21 +98,21 @@ export async function fetchCreditCustomers(): Promise<Customer[]> {
     .from('customers').select('*')
     .eq('credit_enabled', true)
     .order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
 export async function fetchCreditStatus(customerId: string): Promise<CreditStatus> {
   const { data, error } = await requireSupabase()
     .rpc('customer_credit_status', { p_customer_id: customerId });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as CreditStatus;
 }
 
 export async function fetchAging(asOf?: string): Promise<Aging> {
   const { data, error } = await requireSupabase()
     .rpc('receivables_aging', asOf ? { p_as_of: asOf } : {});
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as Aging;
 }
 
@@ -124,7 +125,7 @@ export async function setCustomerCredit(input: {
     p_limit_cents: input.limitCents ?? 0,
     p_terms_days: input.termsDays ?? 0
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Customer;
 }
 
@@ -139,6 +140,6 @@ export async function collectReceivable(input: {
     p_reference: input.reference ?? null,
     p_cash_session_id: input.cashSessionId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Receivable;
 }

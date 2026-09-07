@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Acceso a datos de Órdenes y Kanban.
@@ -95,7 +96,7 @@ export async function fetchOrderPage(params: OrderPageParams): Promise<OrderPage
     .order('arrival_at', { ascending: false })
     .range(from, from + params.pageSize - 1);
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -119,15 +120,15 @@ export async function fetchBoardOrders(branchId: string, deliveredLimit = 15): P
       .order('delivered_at', { ascending: false }).limit(deliveredLimit)
   ]);
 
-  if (active.error) throw active.error;
-  if (delivered.error) throw delivered.error;
+  if (active.error) throw fallaDatos(active.error);
+  if (delivered.error) throw fallaDatos(delivered.error);
   return [...(active.data ?? []), ...(delivered.data ?? [])];
 }
 
 export async function fetchOrderItems(orderId: string): Promise<WorkOrderItem[]> {
   const { data, error } = await requireSupabase()
     .from('work_order_items').select('*').eq('work_order_id', orderId).order('created_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -136,7 +137,7 @@ export async function fetchItemsForOrders(orderIds: string[]): Promise<Map<strin
   if (orderIds.length === 0) return new Map();
   const { data, error } = await requireSupabase()
     .from('work_order_items').select('*').in('work_order_id', orderIds);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const map = new Map<string, WorkOrderItem[]>();
   for (const item of data ?? []) {
@@ -150,7 +151,7 @@ export async function fetchItemsForOrders(orderIds: string[]): Promise<Map<strin
 export async function fetchBays(branchId: string): Promise<Bay[]> {
   const { data, error } = await requireSupabase()
     .from('bays').select('*').eq('branch_id', branchId).eq('is_active', true).order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -160,7 +161,7 @@ export async function fetchOperators(branchId: string): Promise<Profile[]> {
     .eq('branch_id', branchId).eq('is_active', true)
     .in('role', ['operario', 'supervisor'])
     .order('full_name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -168,7 +169,7 @@ export async function fetchAssignees(orderIds: string[]): Promise<Map<string, st
   if (orderIds.length === 0) return new Map();
   const { data, error } = await requireSupabase()
     .from('work_order_assignees').select('work_order_id, profile_id').in('work_order_id', orderIds);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const map = new Map<string, string[]>();
   for (const row of data ?? []) {
@@ -186,7 +187,7 @@ export async function fetchServicesForCategory(category: VehicleCategory) {
     .eq('is_active', true)
     .eq('service_prices.vehicle_category', category)
     .order('name');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   return (data ?? []).map(row => {
     const { service_prices, ...service } = row as Tables<'services'> & {

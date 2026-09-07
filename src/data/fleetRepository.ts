@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Flotillas y contratos corporativos.
@@ -60,7 +61,7 @@ export async function fetchFleetPage(
   const { data, error, count } = await query
     .order('name')
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const rows = (data ?? []).map(raw => {
     const f = raw as unknown as JoinedFleet;
@@ -78,7 +79,7 @@ export async function fetchFleetVehicles(fleetId: string): Promise<Vehicle[]> {
     .from('vehicles').select('*')
     .eq('fleet_id', fleetId)
     .order('plate');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -87,7 +88,7 @@ export async function fetchFleetRates(fleetId: string): Promise<FleetRate[]> {
     .from('fleet_rates').select('*')
     .eq('fleet_id', fleetId)
     .order('service_id');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -98,7 +99,7 @@ export async function searchFreeVehicles(term: string, limit = 15): Promise<Vehi
     query = query.ilike('plate', `%${term.trim().replace(/[%,()]/g, '').toUpperCase()}%`);
   }
   const { data, error } = await query.order('plate').limit(limit);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -120,7 +121,7 @@ export async function upsertFleet(input: {
     p_notes: input.notes ?? null,
     p_is_active: input.isActive ?? true
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Fleet;
 }
 
@@ -131,7 +132,7 @@ export async function assignVehicleToFleet(
   const { data, error } = await requireSupabase().rpc('assign_vehicle_to_fleet', {
     p_vehicle_id: vehicleId, p_fleet_id: fleetId
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Vehicle;
 }
 
@@ -145,13 +146,13 @@ export async function setFleetRate(input: {
     p_price_cents: input.priceCents,
     p_vehicle_category: input.vehicleCategory ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as FleetRate;
 }
 
 export async function deleteFleetRate(rateId: string): Promise<void> {
   const { error } = await requireSupabase().rpc('delete_fleet_rate', { p_rate_id: rateId });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 export async function fetchFleetStatement(
@@ -160,7 +161,7 @@ export async function fetchFleetStatement(
   const { data, error } = await requireSupabase().rpc('fleet_statement', {
     p_fleet_id: fleetId, p_from: from, p_to: to
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as FleetStatement;
 }
 
@@ -175,6 +176,6 @@ export async function invoiceFleetPeriod(input: {
     p_client_request_id: input.clientRequestId,
     p_ncf_type: input.ncfType ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Invoice;
 }

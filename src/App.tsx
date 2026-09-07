@@ -8,11 +8,15 @@ import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { ModulePage } from './components/layout/ModulePage';
 import type { ViewKey } from './lib/navigation';
+import { importarVista } from './lib/cargaDiferida';
 
 // Todas las vistas se cargan bajo demanda. Antes se importaban las 16 de forma
 // estática y viajaban íntegras en el bundle inicial (hallazgo H5).
+// `importarVista` recarga la página cuando la vista pedida ya no existe en el
+// servidor: es lo que pasa a quien tenía el mostrador abierto durante un
+// despliegue, y antes acababa en la pantalla roja de error.
 const lazyView = <K extends string>(loader: () => Promise<Record<string, React.ComponentType<Record<string, unknown>>>>, key: K) =>
-  lazy(() => loader().then(m => ({ default: m[key] })));
+  lazy(() => importarVista(loader).then(m => ({ default: m[key] })));
 
 // --- Vistas migradas a Supabase
 const DashboardSupabaseView = lazyView(() => import('./components/views/DashboardSupabaseView'), 'DashboardSupabaseView');
@@ -55,7 +59,8 @@ const AppearanceSettingsView = lazyView(() => import('./components/views/Appeara
 // --- Vistas de demostración (sin base de datos conectada)
 
 const PhaseArchitectureReportModal = lazy(() =>
-  import('./components/modals/PhaseArchitectureReportModal').then(m => ({ default: m.PhaseArchitectureReportModal })));
+  importarVista(() => import('./components/modals/PhaseArchitectureReportModal'))
+    .then(m => ({ default: m.PhaseArchitectureReportModal })));
 
 /**
  * Registro de vistas: clave de navegación → componente real y de demo.

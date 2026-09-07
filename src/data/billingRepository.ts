@@ -1,5 +1,6 @@
 import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Acceso a datos de POS y Caja.
@@ -76,7 +77,7 @@ export async function fetchServices(category: VehicleCategory): Promise<ServiceW
     .eq('service_prices.vehicle_category', category)
     .order('name');
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   return (data ?? []).map(row => {
     const { service_prices, ...service } = row as Service & {
@@ -103,7 +104,7 @@ export async function fetchServicePricesForCategory(
     .select('service_id, price_cents')
     .eq('vehicle_category', category);
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   const mapa: Record<string, number> = {};
   for (const fila of data ?? []) mapa[fila.service_id] = fila.price_cents;
@@ -118,7 +119,7 @@ export async function fetchProducts(): Promise<Product[]> {
     .eq('is_for_sale', true)
     .order('name');
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -132,7 +133,7 @@ export async function fetchOpenCashSession(branchId: string): Promise<CashSessio
     .eq('status', 'open')
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
@@ -144,7 +145,7 @@ export async function fetchCashSessionHistory(branchId: string, limit = 20): Pro
     .order('opened_at', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -155,7 +156,7 @@ export async function fetchCashMovements(sessionId: string): Promise<CashMovemen
     .eq('cash_session_id', sessionId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -183,7 +184,7 @@ export async function openCashSession(params: {
     if (error.code === '23505') {
       throw new Error('Ya hay una caja abierta en esta sucursal.');
     }
-    throw error;
+    throw fallaDatos(error);
   }
   return data;
 }
@@ -207,7 +208,7 @@ export async function closeCashSession(params: {
     .eq('status', 'open')      // no se cierra dos veces
     .select();
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   // RLS filtra en silencio: un UPDATE denegado devuelve 0 filas SIN error.
   // Sin esta comprobación, al cajero se le mostraría un cierre que no ocurrió.
@@ -235,7 +236,7 @@ export async function registerCashMovement(params: {
     amount_cents: params.amountCents,
     reason: params.reason
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 // -------------------------------------------------------- Beneficios Membego
@@ -267,7 +268,7 @@ export async function lookupMembegoByPhone(phone: string): Promise<MembegoBenefi
     .not('membego_customer_id', 'is', null)
     .limit(1)
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   if (!cust) return null;
 
   const [m, p] = await Promise.all([
@@ -276,8 +277,8 @@ export async function lookupMembegoByPhone(phone: string): Promise<MembegoBenefi
     supabase.from('customer_promotions').select('id', { count: 'exact', head: true })
       .eq('customer_id', cust.id).eq('status', 'available')
   ]);
-  if (m.error) throw m.error;
-  if (p.error) throw p.error;
+  if (m.error) throw fallaDatos(m.error);
+  if (p.error) throw fallaDatos(p.error);
 
   return {
     customerId: cust.id,
@@ -311,7 +312,7 @@ export async function fetchFiscalStatus(): Promise<FiscalStatus> {
   // "No se pudo cargar". El cobro se reactiva solo cuando la función responde.
   try {
     const { data, error } = await requireSupabase().rpc('fiscal_status');
-    if (error) throw error;
+    if (error) throw fallaDatos(error);
     const parsed = (data ?? {}) as { ready?: boolean; types?: NcfType[] };
     return { ready: parsed.ready === true, types: parsed.types ?? [] };
   } catch (err) {
@@ -403,7 +404,7 @@ export async function fetchInvoiceItems(invoiceId: string): Promise<InvoiceItem[
     .eq('invoice_id', invoiceId)
     .order('created_at');
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -503,7 +504,7 @@ export async function fetchInvoicePage(params: InvoicePageParams): Promise<Invoi
     .order('created_at', { ascending: false })
     .range(from, to);
 
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -523,7 +524,7 @@ export async function fetchInvoiceTotals(
   if (toDate)   query = query.lte('created_at', toDate);
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 
   let issued = 0, annulled = 0;
   for (const row of data ?? []) {
@@ -631,7 +632,7 @@ export async function fetchChargeableOrders(
     q = q.or(`vehicle_plate.ilike.%${t}%,order_number.ilike.%${t}%,customer_name.ilike.%${t}%`);
   }
   const { data, error } = await q;
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []) as unknown as ChargeableOrder[];
 }
 
@@ -656,7 +657,7 @@ export async function fetchChargeableOrderById(
     .eq('payment_status', 'pendiente')
     .not('status', 'in', '(cancelado)')
     .maybeSingle();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data as unknown as ChargeableOrder) ?? null;
 }
 

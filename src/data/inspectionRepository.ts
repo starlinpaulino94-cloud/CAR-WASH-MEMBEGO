@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Inspección de recepción y entrega del vehículo.
@@ -28,7 +29,7 @@ export async function fetchOrderInspections(orderId: string): Promise<Inspection
     .select('*, inspection_damages(*)')
     .eq('work_order_id', orderId)
     .order('created_at');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return (data ?? []).map(row => {
     const { inspection_damages, ...insp } = row as Inspection & { inspection_damages: InspectionDamage[] };
     return { ...insp, damages: inspection_damages ?? [] };
@@ -55,7 +56,7 @@ export async function createInspection(input: {
     valuables: input.valuables,
     notes: input.notes
   }).select().single();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
@@ -65,7 +66,7 @@ export async function updateInspection(id: string, patch: {
 }): Promise<void> {
   const { error } = await requireSupabase()
     .from('vehicle_inspections').update(patch).eq('id', id);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 export async function addDamage(input: {
@@ -83,13 +84,13 @@ export async function addDamage(input: {
     pos_x: input.posX,
     pos_y: input.posY
   }).select().single();
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data;
 }
 
 export async function removeDamage(id: string): Promise<void> {
   const { error } = await requireSupabase().from('inspection_damages').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
 }
 
 /** Cierra la evidencia. Después de esto la inspección es inmutable. */
@@ -99,6 +100,6 @@ export async function signInspection(
   const { data, error } = await requireSupabase().rpc('sign_inspection', {
     p_inspection_id: inspectionId, p_signature: signature, p_signed_by: signedBy
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Inspection;
 }

@@ -1,6 +1,7 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
 import { PagedResult } from '../hooks/usePagedQuery';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Equipos y mantenimiento.
@@ -27,7 +28,7 @@ export async function fetchEquipmentPage(
   const { data, error, count } = await query
     .order('name')
     .range(page * pageSize, page * pageSize + pageSize - 1);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return { rows: data ?? [], total: count ?? 0 };
 }
 
@@ -57,7 +58,7 @@ export async function createEquipment(input: {
     if ((error as { code?: string }).code === '23505') {
       throw new Error('Ya existe un equipo con ese código.');
     }
-    throw error;
+    throw fallaDatos(error);
   }
   return data;
 }
@@ -68,7 +69,7 @@ export async function fetchMaintenanceHistory(equipmentId: string): Promise<Main
     .from('maintenance_orders').select('*')
     .eq('equipment_id', equipmentId)
     .order('started_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -81,7 +82,7 @@ export async function openMaintenance(input: {
     p_description: input.description,
     p_supplier_id: input.supplierId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as MaintenanceOrder;
 }
 
@@ -94,6 +95,6 @@ export async function completeMaintenance(input: {
     p_resolution: input.resolution ?? null,
     p_parts: input.parts ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as MaintenanceOrder;
 }

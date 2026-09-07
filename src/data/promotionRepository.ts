@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Promociones y descuentos.
@@ -38,7 +39,7 @@ export async function fetchPromotions(): Promise<Promotion[]> {
     .from('promotions').select('*')
     .order('is_active', { ascending: false })
     .order('code');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -48,7 +49,7 @@ export async function fetchRedemptions(promotionId: string): Promise<PromotionRe
     .eq('promotion_id', promotionId)
     .order('created_at', { ascending: false })
     .limit(50);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -68,7 +69,7 @@ export async function validatePromotion(input: {
     p_lines: (input.lines ?? []) as never,
     p_customer_id: input.customerId ?? null
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as PromotionPreview;
 }
 
@@ -100,6 +101,6 @@ export async function upsertPromotion(input: {
     p_max_uses_per_customer: input.maxUsesPerCustomer ?? null,
     p_is_active: input.isActive ?? true
   });
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as Promotion;
 }

@@ -1,5 +1,6 @@
 import { requireSupabase } from '../lib/supabase';
 import { Tables, Enums } from '../lib/database.types';
+import { fallaDatos } from './errorDatos';
 
 /**
  * Avisos: bandeja de salida.
@@ -36,7 +37,7 @@ export async function fetchNotifications(
   const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(200);
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data ?? [];
 }
 
@@ -45,13 +46,13 @@ export async function countPendingNotifications(): Promise<number> {
   const { count, error } = await requireSupabase()
     .from('notifications').select('id', { count: 'exact', head: true })
     .eq('status', 'pendiente');
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return count ?? 0;
 }
 
 export async function refreshAlerts(): Promise<AlertsSummary> {
   const { data, error } = await requireSupabase().rpc('refresh_alerts', {});
-  if (error) throw error;
+  if (error) throw fallaDatos(error);
   return data as unknown as AlertsSummary;
 }
 

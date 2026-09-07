@@ -2,6 +2,7 @@ import React from 'react';
 import { reportarError } from '../lib/observabilidad';
 import { AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { resetAppStorage } from '../lib/storage';
+import { esFalloDeVersion } from '../lib/cargaDiferida';
 
 interface Props {
   children: React.ReactNode;
@@ -53,6 +54,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
     const { error } = this.state;
     if (!error) return this.props.children;
 
+    /*
+     * Un despliegue no es un dato dañado.
+     *
+     * Cuando la pestaña pide una vista que el despliegue nuevo ya borró, el
+     * texto genérico decía que «los datos locales están dañados» y ofrecía
+     * restablecerlos. Es un consejo equivocado: apartaría la sesión y las
+     * preferencias del cajero para arreglar algo que solo necesita recargar.
+     * Aquí se dice lo que de verdad pasó y se ofrece únicamente la salida que
+     * sirve.
+     */
+    const porVersion = esFalloDeVersion(error);
+
     return (
       <div className="min-h-screen bg-canvas text-strong flex items-center justify-center p-6 font-sans">
         <div className="w-full max-w-lg bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden">
@@ -61,16 +74,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-bold text-strong">La aplicación no pudo continuar</h1>
-              <p className="text-xs text-muted">Se detuvo para no seguir operando en un estado incoherente</p>
+              <h1 className="font-bold text-strong">
+                {porVersion ? 'Hay una versión nueva' : 'La aplicación no pudo continuar'}
+              </h1>
+              <p className="text-xs text-muted">
+                {porVersion
+                  ? 'Esta pestaña quedó con la versión anterior'
+                  : 'Se detuvo para no seguir operando en un estado incoherente'}
+              </p>
             </div>
           </div>
 
           <div className="p-6 space-y-5">
             <p className="text-sm text-body leading-relaxed">
-              Ocurrió un error inesperado. Los datos guardados en este dispositivo no se han
-              borrado. Intente recargar; si el problema se repite al abrir la aplicación, es
-              probable que los datos locales estén dañados y haya que restablecerlos.
+              {porVersion
+                ? 'Se publicó una actualización mientras tenía la aplicación abierta, y la ' +
+                  'pantalla que intentó abrir ya no existe en esta versión. No se perdió ' +
+                  'ningún dato: basta con recargar para pasar a la versión nueva.'
+                : 'Ocurrió un error inesperado. Los datos guardados en este dispositivo no se han ' +
+                  'borrado. Intente recargar; si el problema se repite al abrir la aplicación, es ' +
+                  'probable que los datos locales estén dañados y haya que restablecerlos.'}
             </p>
 
             <div className="p-3 bg-canvas rounded-xl border border-line">
@@ -89,19 +112,23 @@ export class ErrorBoundary extends React.Component<Props, State> {
               >
                 <RefreshCw className="w-4 h-4" /> Recargar la aplicación
               </button>
-              <button
-                onClick={this.handleReset}
-                className="flex-1 py-2.5 px-4 bg-surface-2 hover:bg-surface-3 text-body border border-line-strong font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2"
-              >
-                <Trash2 className="w-4 h-4 text-danger" /> Restablecer datos locales
-              </button>
+              {!porVersion && (
+                <button
+                  onClick={this.handleReset}
+                  className="flex-1 py-2.5 px-4 bg-surface-2 hover:bg-surface-3 text-body border border-line-strong font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4 text-danger" /> Restablecer datos locales
+                </button>
+              )}
             </div>
 
-            <p className="text-xs text-faint leading-relaxed">
-              Restablecer aparta los datos actuales bajo un nombre de respaldo en el
-              almacenamiento del navegador en lugar de eliminarlos, de modo que un técnico
-              todavía pueda recuperarlos.
-            </p>
+            {!porVersion && (
+              <p className="text-xs text-faint leading-relaxed">
+                Restablecer aparta los datos actuales bajo un nombre de respaldo en el
+                almacenamiento del navegador en lugar de eliminarlos, de modo que un técnico
+                todavía pueda recuperarlos.
+              </p>
+            )}
           </div>
         </div>
       </div>
