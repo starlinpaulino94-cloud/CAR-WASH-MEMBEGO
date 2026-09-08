@@ -287,7 +287,13 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
           ))}
         </div>
 
-        <div className="p-6 bg-slate-950 flex justify-center overflow-y-auto max-h-[60vh]">
+        {/* `items-start` NO es cosmético: sin él, el papel es un hijo flex que se
+            estira a la altura del contenedor en vez de a la de su contenido. El
+            fondo blanco cubría solo lo que cabía en la ventana y el resto del
+            ticket salía sobre el fondo oscuro — el comprobante partido en dos
+            colores. Con `items-start` el papel mide lo que mide y se desplaza
+            entero dentro del contenedor. */}
+        <div className="p-6 bg-slate-950 flex justify-center items-start overflow-y-auto max-h-[60vh]">
           {loading ? (
             <div className="py-10 flex items-center gap-2 text-xs text-slate-400" aria-busy="true">
               <Loader2 className="w-4 h-4 animate-spin" /> Cargando detalle…
