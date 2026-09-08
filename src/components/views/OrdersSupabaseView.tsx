@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Button } from '../ui/button';
 import {
   Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight,
-  ClipboardCheck
+  ClipboardCheck, Printer, PackageCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
@@ -14,6 +14,8 @@ import {
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { InspectionModal } from '../modals/InspectionModal';
+import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
+import { fetchAssignees, fetchOperators } from '../../data/ordersRepository';
 import { ExportButton } from '../common/ExportButton';
 import { ordersExport } from '../../lib/exportSpecs';
 
@@ -62,6 +64,27 @@ export const OrdersSupabaseView: React.FC = () => {
   const [status, setStatus] = useState<OrderStatus | 'all' | 'active'>('active');
 
   const [inspecting, setInspecting] = useState<WorkOrder | null>(null);
+  /** Qué orden se está imprimiendo y en cuál de sus dos formas. */
+  const [imprimiendo, setImprimiendo] =
+    useState<{ order: WorkOrder; variante: 'llegada' | 'entrega' } | null>(null);
+  /** Nombres de los lavadores de la orden que se imprime. */
+  const [lavadoresImpresion, setLavadoresImpresion] = useState<string[]>([]);
+
+  // Los nombres se resuelven al abrir: el listado no los trae, y el papel sin
+  // el nombre del lavador no sirve para lo que existe.
+  useEffect(() => {
+    if (!imprimiendo) { setLavadoresImpresion([]); return; }
+    let activo = true;
+    const orden = imprimiendo.order;
+    Promise.all([fetchAssignees([orden.id]), fetchOperators(orden.branch_id)])
+      .then(([mapa, gente]) => {
+        if (!activo) return;
+        const ids = new Set(mapa.get(orden.id) ?? []);
+        setLavadoresImpresion(gente.filter(p => ids.has(p.id)).map(p => p.full_name));
+      })
+      .catch(() => { if (activo) setLavadoresImpresion([]); });
+    return () => { activo = false; };
+  }, [imprimiendo]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -221,13 +244,36 @@ export const OrdersSupabaseView: React.FC = () => {
                       : formatCents(order.total_cents, symbol)}
                   </TableCell>
                   <TableCell className="p-3 text-right">
-                    <button
-                      onClick={() => setInspecting(order)}
-                      aria-label={`Inspección de ${order.vehicle_plate}`}
-                      title="Estado del vehículo al recibirlo y entregarlo"
-                      className="p-1.5 text-info hover:text-info rounded-lg hover:bg-surface-2">
-                      <ClipboardCheck className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Reimprimir. La comanda salía SOLO al registrar: si se
+                          cerraba, o la llegada era de antes, no había forma de
+                          volver a sacarla — y es el papel que el cliente le
+                          entrega al lavador. */}
+                      <button
+                        onClick={() => setImprimiendo({ order, variante: 'llegada' })}
+                        aria-label={`Imprimir comanda de ${order.order_number}`}
+                        title="Comanda de llegada (para el lavador)"
+                        className="p-1.5 text-body hover:text-strong rounded-lg hover:bg-surface-2">
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      {/* La entrega solo tiene sentido con el carro ya entregado. */}
+                      {order.status === 'entregado' && (
+                        <button
+                          onClick={() => setImprimiendo({ order, variante: 'entrega' })}
+                          aria-label={`Imprimir comprobante de entrega de ${order.order_number}`}
+                          title="Comprobante de entrega (firma del cliente)"
+                          className="p-1.5 text-success hover:text-success rounded-lg hover:bg-surface-2">
+                          <PackageCheck className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setInspecting(order)}
+                        aria-label={`Inspección de ${order.vehicle_plate}`}
+                        title="Estado del vehículo al recibirlo y entregarlo"
+                        className="p-1.5 text-info hover:text-info rounded-lg hover:bg-surface-2">
+                        <ClipboardCheck className="w-4 h-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -266,6 +312,17 @@ export const OrdersSupabaseView: React.FC = () => {
             void load();
             refreshQueue();
           }}
+        />
+      )}
+
+      {imprimiendo && (
+        <ComandaOrdenModal
+          order={imprimiendo.order}
+          company={company}
+          branch={branch}
+          lavadores={lavadoresImpresion}
+          variante={imprimiendo.variante}
+          onClose={() => setImprimiendo(null)}
         />
       )}
 

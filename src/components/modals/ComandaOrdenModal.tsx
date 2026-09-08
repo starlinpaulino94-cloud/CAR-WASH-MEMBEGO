@@ -14,6 +14,12 @@ interface Props {
   lavadores: string[];
   /** Aviso a enseñar sobre la comanda (p. ej. que el lavador no se asignó). */
   aviso?: string | null;
+  /**
+   * Qué papel es. Son los DOS extremos del lavado y el lavador se queda con
+   * los dos: el de llegada dice qué hay que hacerle al carro, el de entrega
+   * prueba que el cliente se lo llevó conforme.
+   */
+  variante?: 'llegada' | 'entrega';
   onClose: () => void;
 }
 
@@ -48,8 +54,9 @@ type Formato = (typeof FORMATOS)[number]['id'];
 const ANCHO_PANTALLA: Record<Formato, number> = { '58mm': 220, '80mm': 300 };
 
 export const ComandaOrdenModal: React.FC<Props> = ({
-  order, company, branch, lavadores, aviso, onClose
+  order, company, branch, lavadores, aviso, variante = 'llegada', onClose
 }) => {
+  const esEntrega = variante === 'entrega';
   const [items, setItems] = useState<WorkOrderItem[]>([]);
   const [perfil, setPerfil] = useState<PerfilComprobanteMembego | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,6 +124,13 @@ export const ComandaOrdenModal: React.FC<Props> = ({
   const fechaStr = fecha.toLocaleDateString('es-DO', { day: '2-digit', month: 'short', year: 'numeric' });
   const horaStr = fecha.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' });
 
+  // La entrega puede no tener sello aún (se imprime justo al cobrar): en ese
+  // caso se usa la hora actual, que es cuando el cliente se lleva el carro.
+  const entrega = order.delivered_at ? new Date(order.delivered_at) : new Date();
+  const entregaStr = esEntrega
+    ? entrega.toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' })
+    : null;
+
   const negocioNombre = perfil?.nombre ?? company?.trade_name ?? '';
   const negocioDireccion = perfil?.direccion
     ? [perfil.direccion, perfil.ciudad].filter(Boolean).join(', ')
@@ -144,13 +158,13 @@ export const ComandaOrdenModal: React.FC<Props> = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={`Comanda de la orden ${order.order_number}`}
+        aria-label={`${esEntrega ? 'Comprobante de entrega' : 'Comanda'} de la orden ${order.order_number}`}
         className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
         <div className="print-hide bg-slate-800 px-5 py-3 border-b border-slate-700 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-white font-bold text-sm">
             <Car className="w-4 h-4 text-indigo-400" />
-            Comanda · {order.order_number}
+            {esEntrega ? 'Entrega' : 'Comanda'} · {order.order_number}
           </h2>
           <button
             ref={closeRef}
@@ -218,7 +232,9 @@ export const ComandaOrdenModal: React.FC<Props> = ({
 
               <div className="text-center space-y-0.5">
                 <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
-                <div className="font-extrabold tracking-[0.2em]">ORDEN DE LAVADO</div>
+                <div className="font-extrabold tracking-[0.2em]">
+                  {esEntrega ? 'COMPROBANTE DE ENTREGA' : 'ORDEN DE LAVADO'}
+                </div>
                 {/* La línea que evita que este papel se confunda con una venta. */}
                 <div className="text-[9px] font-bold">NO ES COMPROBANTE FISCAL</div>
                 <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
@@ -234,6 +250,7 @@ export const ComandaOrdenModal: React.FC<Props> = ({
               <div className="space-y-0.5">
                 {fila('Fecha:', fechaStr)}
                 {fila('Hora de llegada:', horaStr)}
+                {esEntrega && entregaStr && fila('Hora de entrega:', entregaStr, true)}
                 {order.priority !== 'normal' && fila('Prioridad:', order.priority.toUpperCase(), true)}
               </div>
 
@@ -282,11 +299,13 @@ export const ComandaOrdenModal: React.FC<Props> = ({
               <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
               <div className="space-y-0.5">
                 <div className="flex justify-between font-bold">
-                  <span>ESTIMADO</span>
-                  <span>{formatCents(estimado, symbol)}</span>
+                  <span>{esEntrega ? 'TOTAL DEL SERVICIO' : 'ESTIMADO'}</span>
+                  <span>{formatCents(esEntrega ? order.total_cents : estimado, symbol)}</span>
                 </div>
                 <div className="text-[9px]">
-                  Importe estimado, sin impuestos. El total se factura al entregar el vehículo.
+                  {esEntrega
+                    ? 'El comprobante fiscal de esta venta es la factura, que se entrega aparte.'
+                    : 'Importe estimado, sin impuestos. El total se factura al entregar el vehículo.'}
                 </div>
               </div>
 
@@ -301,11 +320,24 @@ export const ComandaOrdenModal: React.FC<Props> = ({
               )}
 
               <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="text-center space-y-1 text-[10px]">
-                <div className="font-bold">Entregue este papel al lavador</div>
-                <div>para que inicie el lavado de su vehículo.</div>
-                <div className="pt-2">Conserve su copia para retirar el vehículo.</div>
-              </div>
+              {esEntrega ? (
+                <div className="space-y-1 text-[10px]">
+                  <div className="text-center font-bold">Vehículo entregado al cliente</div>
+                  {/* La firma es el punto del papel: prueba que el carro salió
+                      conforme. Sin línea donde firmar, no prueba nada. */}
+                  <div className="pt-6 text-center">
+                    <div className="border-t border-slate-900 mx-4" />
+                    <div className="pt-1">Recibí conforme mi vehículo</div>
+                  </div>
+                  <div className="text-center pt-2">¡Gracias por su preferencia!</div>
+                </div>
+              ) : (
+                <div className="text-center space-y-1 text-[10px]">
+                  <div className="font-bold">Entregue este papel al lavador</div>
+                  <div>para que inicie el lavado de su vehículo.</div>
+                  <div className="pt-2">Conserve su copia para retirar el vehículo.</div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -319,7 +351,7 @@ export const ComandaOrdenModal: React.FC<Props> = ({
             disabled={loading || Boolean(error)}
             className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2"
           >
-            <Printer className="w-4 h-4" /> Imprimir comanda
+            <Printer className="w-4 h-4" /> {esEntrega ? 'Imprimir entrega' : 'Imprimir comanda'}
           </button>
         </div>
       </div>
