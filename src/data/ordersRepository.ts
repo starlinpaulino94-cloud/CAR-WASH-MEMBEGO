@@ -155,10 +155,22 @@ export async function fetchBays(branchId: string): Promise<Bay[]> {
   return data ?? [];
 }
 
+/**
+ * Los lavadores que pueden atender un carro en esta sucursal.
+ *
+ * Incluye a los que NO tienen sucursal asignada, y eso no es un descuido: el
+ * alta de empleados ofrece «Sin asignar» para la sucursal, así que un lavadero
+ * de un solo local da de alta a toda su gente sin tocar ese campo. Exigiendo
+ * coincidencia exacta, esos empleados no aparecían por ningún lado —ni aquí ni
+ * en el tablero— y el mostrador veía «No hay lavadores registrados» justo
+ * después de haberlos creado. RLS ya acota a la empresa, así que sumarlos no
+ * abre nada: son de la misma casa.
+ */
 export async function fetchOperators(branchId: string): Promise<Profile[]> {
   const { data, error } = await requireSupabase()
     .from('profiles').select('*')
-    .eq('branch_id', branchId).eq('is_active', true)
+    .or(`branch_id.eq.${branchId},branch_id.is.null`)
+    .eq('is_active', true)
     .in('role', ['operario', 'supervisor'])
     .order('full_name');
   if (error) throw fallaDatos(error);

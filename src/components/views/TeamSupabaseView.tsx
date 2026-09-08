@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, bpsToPercent } from '../../lib/money';
 import {
-  fetchTeam, fetchCommissionSummary, fetchBranches, createEmployee,
+  fetchTeam, fetchCommissionSummary, fetchBranches, createEmployee, createStaffNoLogin,
   Profile, CommissionSummary, Branch, UserRole
 } from '../../data/adminRepository';
 import {
@@ -27,7 +27,9 @@ const ROLE_OPTIONS: { id: UserRole; label: string }[] = [
 
 const emptyEmployeeForm = {
   fullName: '', email: '', password: '', role: 'cajero' as UserRole,
-  branchId: '', phone: '', commission: ''
+  branchId: '', phone: '', commission: '',
+  /** true = ficha de lavador: sin correo, sin contraseña, sin acceso. */
+  sinAcceso: false
 };
 
 const RANGES: { id: RangeId; label: string }[] = [
@@ -102,24 +104,36 @@ export const TeamSupabaseView: React.FC = () => {
   };
 
   const submitCreate = async () => {
-    if (!form.fullName.trim() || !form.email.trim() || !form.password) {
-      setCreateError('Nombre, correo y contraseña son obligatorios.'); return;
+    if (!form.fullName.trim()) { setCreateError('El nombre es obligatorio.'); return; }
+    // Un lavador no lleva credencial: pedirle correo y contraseña sería inventar
+    // un acceso que nadie va a usar.
+    if (!form.sinAcceso) {
+      if (!form.email.trim() || !form.password) {
+        setCreateError('Nombre, correo y contraseña son obligatorios.'); return;
+      }
+      if (form.password.length < 6) { setCreateError('La contraseña debe tener al menos 6 caracteres.'); return; }
     }
-    if (form.password.length < 6) { setCreateError('La contraseña debe tener al menos 6 caracteres.'); return; }
     const commissionPct = form.commission.trim() ? Number(form.commission) : null;
     if (commissionPct !== null && (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100)) {
       setCreateError('La comisión debe estar entre 0 y 100 %.'); return;
     }
     setCreateBusy(true); setCreateError(null);
     try {
-      const created = await createEmployee({
-        email: form.email.trim(), password: form.password, fullName: form.fullName,
-        role: form.role, branchId: form.branchId || null,
-        phone: form.phone.trim() || null,
-        commissionBps: commissionPct !== null ? Math.round(commissionPct * 100) : null
-      });
+      const commissionBps = commissionPct !== null ? Math.round(commissionPct * 100) : null;
+      const created = form.sinAcceso
+        ? await createStaffNoLogin({
+            fullName: form.fullName.trim(), branchId: form.branchId || null,
+            phone: form.phone.trim() || null, commissionBps
+          })
+        : await createEmployee({
+            email: form.email.trim(), password: form.password, fullName: form.fullName,
+            role: form.role, branchId: form.branchId || null,
+            phone: form.phone.trim() || null, commissionBps
+          });
       setShowCreate(false);
-      setNotice(`${created.full_name} dado de alta como ${created.role}. Ya puede iniciar sesión con su correo y contraseña.`);
+      setNotice(form.sinAcceso
+        ? `${created.full_name} registrado como lavador. No tiene acceso al sistema: ya puedes asignarle vehículos.`
+        : `${created.full_name} dado de alta como ${created.role}. Ya puede iniciar sesión con su correo y contraseña.`);
       await load();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'No se pudo dar de alta al empleado');
@@ -210,6 +224,11 @@ export const TeamSupabaseView: React.FC = () => {
                     <TableCell className="p-3">
                       <span className="bg-brand-soft text-brand-hi font-bold px-2 py-0.5 rounded text-xs uppercase">
                         {person.role ?? 'sin rol'}
+                        {person.has_login === false && (
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded bg-surface-2 border border-line text-faint text-[10px] font-semibold">
+                            sin acceso
+                          </span>
+                        )}
                       </span>
                       {!person.is_active && <span className="ml-1 text-xs text-faint">inactivo</span>}
                     </TableCell>
@@ -263,20 +282,48 @@ export const TeamSupabaseView: React.FC = () => {
               placeholder="María Pérez" />
           </Field>
 
+          {/* El caso del lavador: entra a trabajar, no al sistema. Va arriba
+              porque decide qué campos hacen falta debajo. */}
+          <label className="flex items-start gap-2.5 bg-canvas border border-line rounded-lg p-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.sinAcceso}
+              disabled={createBusy}
+              onChange={e => setForm(f => ({ ...f, sinAcceso: e.target.checked }))}
+              className="mt-0.5 h-4 w-4 accent-brand shrink-0"
+            />
+            <span className="text-xs text-strong">
+              Sin acceso al sistema <strong>(lavador)</strong>
+              <span className="block text-faint font-normal mt-0.5">
+                Se registra para asignarle vehículos y pagarle comisiones, pero no
+                inicia sesión: no lleva correo ni contraseña.
+              </span>
+            </span>
+          </label>
+
           <div className="grid grid-cols-2 gap-3">
+            {!form.sinAcceso && (
             <Field label="Correo *" htmlFor="emp-email" hint="Con esto inicia sesión.">
               <input id="emp-email" type="email" className={textInputClass} value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="maria@correo.com" />
             </Field>
+          )}
+            {!form.sinAcceso && (
             <Field label="Contraseña *" htmlFor="emp-pass" hint="Mínimo 6 caracteres.">
               <input id="emp-pass" type="text" className={textInputClass} value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 placeholder="clave temporal" />
             </Field>
+          )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
+            {form.sinAcceso ? (
+            <Field label="Rol" htmlFor="emp-role-fijo">
+              <p id="emp-role-fijo" className={textInputClass}>Operario (lavador)</p>
+            </Field>
+          ) : (
             <Field label="Rol" htmlFor="emp-role">
               <select id="emp-role" className={textInputClass} value={form.role}
                 onChange={e => setForm(f => ({ ...f, role: e.target.value as UserRole }))}>
@@ -285,6 +332,7 @@ export const TeamSupabaseView: React.FC = () => {
                 ))}
               </select>
             </Field>
+          )}
             <Field label="Sucursal" htmlFor="emp-branch">
               <select id="emp-branch" className={textInputClass} value={form.branchId}
                 onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}>

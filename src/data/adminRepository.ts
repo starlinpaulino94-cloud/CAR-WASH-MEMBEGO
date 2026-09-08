@@ -638,6 +638,30 @@ export async function createEmployee(input: {
   return data as unknown as Profile;
 }
 
+/**
+ * Alta de un empleado SIN cuenta: el lavador.
+ *
+ * Un lavador no usa la aplicación —recibe un papel, lava el carro y cobra su
+ * comisión—, así que inventarle un correo y una contraseña para poder
+ * asignarle trabajo es crear una credencial que nadie va a usar y que sí se
+ * puede filtrar. Esta ficha existe para asignarle órdenes y pagarle, nada más.
+ */
+export async function createStaffNoLogin(input: {
+  fullName: string;
+  branchId?: string | null;
+  phone?: string | null;
+  commissionBps?: number | null;
+}): Promise<Profile> {
+  const { data, error } = await requireSupabase().rpc('create_staff_no_login', {
+    p_full_name: input.fullName,
+    p_branch_id: input.branchId ?? undefined,
+    p_phone: input.phone ?? undefined,
+    p_commission_bps: input.commissionBps ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as Profile;
+}
+
 export interface CommissionSummary {
   profileId: string;
   totalCents: number;

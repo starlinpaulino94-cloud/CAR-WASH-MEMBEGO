@@ -630,8 +630,9 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
             </span>
             {operarios.length === 0 ? (
               <p className="text-xs text-faint italic">
-                No hay lavadores registrados en esta sucursal. Se dan de alta en
-                Equipo, con el rol «Operario (lavador)».
+                Todavía no hay lavadores. Se dan de alta en <strong>Personal →
+                Empleados</strong>, con el botón «Nuevo empleado» y el rol
+                «Operario (lavador)».
               </p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
