@@ -12,6 +12,8 @@ interface Props {
   branch: Tables<'branches'> | null;
   /** Nombres de los lavadores asignados, para que el cliente sepa a quién dárselo. */
   lavadores: string[];
+  /** Aviso a enseñar sobre la comanda (p. ej. que el lavador no se asignó). */
+  aviso?: string | null;
   onClose: () => void;
 }
 
@@ -46,7 +48,7 @@ type Formato = (typeof FORMATOS)[number]['id'];
 const ANCHO_PANTALLA: Record<Formato, number> = { '58mm': 220, '80mm': 300 };
 
 export const ComandaOrdenModal: React.FC<Props> = ({
-  order, company, branch, lavadores, onClose
+  order, company, branch, lavadores, aviso, onClose
 }) => {
   const [items, setItems] = useState<WorkOrderItem[]>([]);
   const [perfil, setPerfil] = useState<PerfilComprobanteMembego | null>(null);
@@ -159,6 +161,13 @@ export const ComandaOrdenModal: React.FC<Props> = ({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {aviso && (
+          <div role="alert" className="print-hide bg-amber-950/50 border-b border-amber-500/40 px-4 py-2.5 flex items-start gap-2 text-xs text-amber-200">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{aviso}</span>
+          </div>
+        )}
 
         <div className="print-hide bg-slate-800/60 px-4 py-2.5 border-b border-slate-700 flex flex-wrap gap-1.5">
           {FORMATOS.map(f => (

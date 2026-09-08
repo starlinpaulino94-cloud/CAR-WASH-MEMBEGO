@@ -84,6 +84,8 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [lavadores, setLavadores] = useState<Set<string>>(new Set());
   /** La orden recién registrada: mientras exista se enseña su comanda. */
   const [creada, setCreada] = useState<WorkOrder | null>(null);
+  /** Aviso cuando la llegada entró pero el lavador no se pudo asignar. */
+  const [avisoLavador, setAvisoLavador] = useState<string | null>(null);
 
   // Cliente ya registrado. Mientras haya uno elegido, nombre y teléfono son los
   // de su ficha y no se escriben a mano: editarlos aquí daría la ilusión de
@@ -297,7 +299,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     setBusy(true);
     setError(null);
     try {
-      const order = await createWorkOrder({
+      const { order, lavadoresOmitidos } = await createWorkOrder({
         branchId: branch.id,
         clientRequestId: requestId.current,
         plate: plate.trim(),
@@ -316,6 +318,15 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
         notes: notes.trim() || null,
         assignees: [...lavadores]
       });
+      // Si la base aún no acepta lavadores, la llegada entró igual pero SIN
+      // asignar. Se dice claramente, porque la comanda va a salir sin nombre y
+      // el mostrador tiene que saber por qué antes de entregársela al cliente.
+      if (lavadoresOmitidos) {
+        setAvisoLavador(
+          'La llegada se registró, pero el lavador no quedó asignado: falta aplicar ' +
+          'una actualización pendiente en la base de datos. Asígnalo en el tablero.'
+        );
+      }
       // La comanda sale SOLA al registrar: si hubiera que ir a buscarla a
       // otro sitio, el carro entraría al patio sin papel y el lavador sin
       // saber que es suyo. El padre se entera al cerrarla.
@@ -331,6 +342,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   if (creada) {
     return (
       <ComandaOrdenModal
+        aviso={avisoLavador}
         order={creada}
         company={company}
         branch={branch}
