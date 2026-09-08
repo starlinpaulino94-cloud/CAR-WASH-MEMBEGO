@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatCents, parseAmountToCents, centsToInput } from '../../lib/money';
 import { fetchOpenCashSession } from '../../data/billingRepository';
 import {
-  fetchStaff, setEmployeePay, fetchPendingAdvances, registerAdvance,
+  fetchStaff, setEmployeePay, fetchPendingAdvances, registerAdvance, type TipoComision,
   fetchPayrollPeriods, fetchPayrollItems, openPayrollPeriod, adjustPayrollItem,
   approvePayroll, payPayroll, deletePayrollPeriod,
   Profile, PayrollAdvance, PayrollPeriod, PayrollItemRow, PayrollType, PaymentMethod
@@ -146,12 +146,19 @@ export const PayrollSupabaseView: React.FC = () => {
   const [payType, setPayType] = useState<PayrollType>('solo_comision');
   const [payBase, setPayBase] = useState('');
   const [payHour, setPayHour] = useState('');
+  /** Cómo se le paga la comisión y cuánto. */
+  const [comTipo, setComTipo] = useState<TipoComision>('porcentaje');
+  const [comPct, setComPct] = useState('');
+  const [comMonto, setComMonto] = useState('');
 
   const openPay = (p: Profile) => {
     setPayTarget(p);
     setPayType(p.payroll_type);
     setPayBase(p.base_salary_cents > 0 ? centsToInput(p.base_salary_cents) : '');
     setPayHour(p.hourly_rate_cents > 0 ? centsToInput(p.hourly_rate_cents) : '');
+    setComTipo(p.commission_kind ?? 'porcentaje');
+    setComPct(p.commission_bps ? String(p.commission_bps / 100) : '');
+    setComMonto(p.commission_amount_cents > 0 ? centsToInput(p.commission_amount_cents) : '');
     setError(null);
   };
 
@@ -159,11 +166,22 @@ export const PayrollSupabaseView: React.FC = () => {
     if (!payTarget || busy) return;
     setBusy(true); setError(null);
     try {
+      // El porcentaje se teclea en %, que es como lo piensa quien lo fija; la
+      // base lo guarda en puntos básicos. La conversión vive en un solo sitio.
+      const pct = comPct.trim() ? Number(comPct.replace(',', '.')) : null;
+      if (pct !== null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) {
+        setError('La comisión debe estar entre 0 y 100 %.');
+        setBusy(false);
+        return;
+      }
       await setEmployeePay({
         profileId: payTarget.id,
         payrollType: payType,
         baseSalaryCents: parseAmountToCents(payBase) ?? 0,
-        hourlyRateCents: parseAmountToCents(payHour) ?? 0
+        hourlyRateCents: parseAmountToCents(payHour) ?? 0,
+        commissionBps: pct !== null ? Math.round(pct * 100) : null,
+        commissionKind: comTipo,
+        commissionAmountCents: comTipo === 'monto' ? (parseAmountToCents(comMonto) ?? 0) : 0
       });
       setPayTarget(null);
       setNotice(`Sueldo de ${payTarget.full_name} actualizado.`);
@@ -490,6 +508,11 @@ export const PayrollSupabaseView: React.FC = () => {
                   {TIPOS.find(t => t.id === p.payroll_type)?.label}
                   {p.payroll_type === 'mensual' && ` · ${formatCents(p.base_salary_cents, symbol)} al mes`}
                   {p.payroll_type === 'por_hora' && ` · ${formatCents(p.hourly_rate_cents, symbol)} la hora`}
+                  {p.commission_kind === 'monto' && p.commission_amount_cents > 0
+                    ? ` · ${formatCents(p.commission_amount_cents, symbol)} por lavado`
+                    : p.commission_bps
+                      ? ` · ${p.commission_bps / 100} % de comisión`
+                      : ''}
                 </div>
               </div>
               <Button variant="secondary" size="sm" onClick={() => openPay(p)}
@@ -587,10 +610,29 @@ export const PayrollSupabaseView: React.FC = () => {
                 inputMode="decimal" onChange={e => setPayHour(e.target.value)} />
             </Field>
           )}
-          <p className="text-xs text-faint">
-            La comisión por servicio se configura en el catálogo y en la ficha del
-            empleado; esto fija la parte fija de su pago.
-          </p>
+          {/* La comisión. Su tarifa MANDA sobre la del servicio: lo que se
+              ponga aquí es lo que cobra este lavador, gane lo que gane el
+              servicio por su cuenta. */}
+          <Field label="Cómo se le paga la comisión" htmlFor="pay-comkind">
+            <select id="pay-comkind" className={textInputClass} value={comTipo}
+              onChange={e => setComTipo(e.target.value as TipoComision)}>
+              <option value="porcentaje">Porcentaje de lo facturado</option>
+              <option value="monto">Monto fijo por lavado</option>
+            </select>
+          </Field>
+          {comTipo === 'porcentaje' ? (
+            <Field label="Porcentaje (%)" htmlFor="pay-compct"
+              hint="Sobre lo que se factura por su parte del lavado. Vacío = usa la del servicio.">
+              <input id="pay-compct" className={textInputClass} value={comPct}
+                inputMode="decimal" onChange={e => setComPct(e.target.value)} />
+            </Field>
+          ) : (
+            <Field label="Monto por lavado" htmlFor="pay-commonto"
+              hint="Por el CARRO, no por cada servicio. Si dos lavadores lo comparten, se reparte entre ellos.">
+              <input id="pay-commonto" className={textInputClass} value={comMonto}
+                inputMode="decimal" onChange={e => setComMonto(e.target.value)} />
+            </Field>
+          )}
         </FormModal>
       )}
 
