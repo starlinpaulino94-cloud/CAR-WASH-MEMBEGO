@@ -226,8 +226,41 @@ export interface CreateOrderParams {
   assignees?: string[];
 }
 
-export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOrder> {
-  const { data, error } = await requireSupabase().rpc('create_work_order', {
+/**
+ * ¿Este error es «la base todavía no tiene la versión con lavadores»?
+ *
+ * PostgREST responde PGRST202 cuando ninguna función encaja con los parámetros
+ * enviados. Aquí solo puede significar una cosa: la migración que añadió
+ * `p_assignees` no está aplicada en esta base.
+ */
+function faltaElParametroDeLavadores(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return e?.code === 'PGRST202' || /could not find the function/i.test(e?.message ?? '');
+}
+
+/**
+ * Registra la llegada.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * RECIBIR EL CARRO NUNCA PUEDE DEPENDER DE UN AÑADIDO
+ *
+ * Asignar el lavador en la llegada es opcional y llegó después; la base puede
+ * ir por detrás del despliegue —o al revés—. Si se manda `p_assignees` a una
+ * base que aún no lo conoce, PostgREST rechaza la llamada ENTERA y el mostrador
+ * se queda sin poder registrar llegadas: una función accesoria tumbando la
+ * operación principal del negocio, con el cliente esperando delante.
+ *
+ * Así que se reintenta sin el parámetro. La llegada entra —que es lo que no
+ * puede fallar— y el llamador se entera de que el lavador quedó sin asignar
+ * para poder decírselo a quien está en el mostrador.
+ *
+ * La clave de idempotencia es la MISMA en los dos intentos, así que aunque el
+ * primero hubiera llegado a ejecutarse no se crea una orden duplicada.
+ */
+export async function createWorkOrder(
+  params: CreateOrderParams
+): Promise<{ order: WorkOrder; lavadoresOmitidos: boolean }> {
+  const base = {
     p_branch_id: params.branchId,
     p_client_request_id: params.clientRequestId,
     p_vehicle_plate: params.plate,
@@ -243,12 +276,23 @@ export async function createWorkOrder(params: CreateOrderParams): Promise<WorkOr
     p_vehicle_model: params.model ?? '',
     p_vehicle_color: params.color ?? '',
     p_priority: params.priority ?? 'normal',
-    p_notes: params.notes ?? null,
-    p_assignees: params.assignees?.length ? params.assignees : null
-  });
+    p_notes: params.notes ?? null
+  };
+  const asignados = params.assignees?.length ? params.assignees : null;
 
-  if (error) throw new Error(translate(error.message));
-  return data as unknown as WorkOrder;
+  const { data, error } = await requireSupabase()
+    .rpc('create_work_order', { ...base, p_assignees: asignados });
+
+  if (!error) return { order: data as unknown as WorkOrder, lavadoresOmitidos: false };
+
+  // Sin lavadores que mandar no hay nada que reintentar: el fallo es otro.
+  if (!asignados || !faltaElParametroDeLavadores(error)) {
+    throw new Error(translate(error.message));
+  }
+
+  const reintento = await requireSupabase().rpc('create_work_order', base);
+  if (reintento.error) throw new Error(translate(reintento.error.message));
+  return { order: reintento.data as unknown as WorkOrder, lavadoresOmitidos: true };
 }
 
 export async function advanceOrder(
