@@ -2327,6 +2327,8 @@ export interface Database {
           // Alcance de sucursal (0031). Junto con branch_id decide qué ve. Lo
           // cambia solo set_employee_branch(), nunca sobre uno mismo.
           branch_scope: Database['public']['Enums']['branch_scope'];
+          /** false = empleado sin cuenta (lavador): no puede entrar al sistema. */
+          has_login: boolean;
           promotion_kind: "porcentaje" | "importe";
           promotion_scope: "total" | "servicio" | "categoria";
           notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";
@@ -2962,6 +2964,16 @@ export interface Database {
       fiscal_status: {
         Args: Record<string, never>;
         Returns: Json;
+      };
+      create_staff_no_login: {
+        Args: {
+          p_full_name: string;
+          p_role?: "operario";
+          p_branch_id?: string | null;
+          p_phone?: string | null;
+          p_commission_bps?: number | null;
+        };
+        Returns: Database['public']['Tables']['profiles']['Row'];
       };
       create_employee: {
         Args: {
