@@ -25,7 +25,7 @@ export type ViewKey =
   | 'cash' | 'expenses'
   | 'customers' | 'vehicles' | 'claims' | 'receivables' | 'fleets'
   | 'products' | 'inventory-moves' | 'purchases' | 'suppliers'
-  | 'team' | 'shifts' | 'attendance' | 'payroll'
+  | 'team' | 'shifts' | 'attendance' | 'payroll' | 'commissions'
   | 'reports' | 'report-sales' | 'report-margin'
   | 'settings-empresa' | 'settings-apariencia' | 'settings-impresion' | 'settings-membego'
   | 'branches' | 'users';
@@ -136,6 +136,7 @@ export const NAVIGATION: Module[] = [
       { slug: 'empleados', label: 'Empleados', view: 'team' },
       { slug: 'horarios', label: 'Horarios', view: 'shifts' },
       { slug: 'asistencia', label: 'Asistencia', view: 'attendance' },
+      { slug: 'comisiones', label: 'Comisiones y metas', view: 'commissions' },
       { slug: 'nomina', label: 'Nómina', view: 'payroll', permission: 'runPayroll' }
     ]
   },
@@ -230,6 +231,7 @@ export const LEGACY_TABS: Record<string, string> = {
   membego: '/clientes/directorio',
   products: '/inventario/productos',
   team: '/personal/empleados',
+  commissions: '/personal/comisiones',
   reports: '/reportes/auditoria',
   settings: '/configuracion/empresa'
 };

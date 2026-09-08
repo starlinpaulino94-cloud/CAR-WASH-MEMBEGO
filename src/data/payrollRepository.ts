@@ -51,19 +51,68 @@ export async function fetchStaff(): Promise<Profile[]> {
   return data ?? [];
 }
 
+export type TipoComision = 'porcentaje' | 'monto';
+
 export async function setEmployeePay(input: {
   profileId: string; payrollType: PayrollType;
   baseSalaryCents?: number; hourlyRateCents?: number; commissionBps?: number | null;
+  /** Cómo se le paga: un porcentaje de lo facturado, o un monto por lavado. */
+  commissionKind?: TipoComision;
+  /** Monto fijo POR LAVADO (por el carro, no por cada servicio). */
+  commissionAmountCents?: number;
 }): Promise<Profile> {
   const { data, error } = await requireSupabase().rpc('set_employee_pay', {
     p_profile_id: input.profileId,
     p_payroll_type: input.payrollType,
     p_base_salary_cents: input.baseSalaryCents ?? 0,
     p_hourly_rate_cents: input.hourlyRateCents ?? 0,
-    p_commission_bps: input.commissionBps ?? null
+    p_commission_bps: input.commissionBps ?? null,
+    p_commission_kind: input.commissionKind ?? 'porcentaje',
+    p_commission_amount_cents: input.commissionAmountCents ?? 0
   });
   if (error) throw fallaDatos(error);
   return data as Profile;
+}
+
+// ------------------------------------------------- Rendimiento y metas
+
+/** Una fila del informe: lo que el lavador produce contra lo que cuesta. */
+export interface RendimientoLavador {
+  profile_id: string;
+  full_name: string;
+  lavados: number;
+  /** Lo que el negocio facturó por SUS lavados (servicios, no productos). */
+  generado_cents: number;
+  comision_cents: number;
+  comision_pagada_cents: number;
+  /** Qué parte de lo generado se lleva, en puntos base. */
+  costo_bps: number;
+  meta_lavados: number | null;
+  meta_generado_cents: number | null;
+}
+
+export async function fetchRendimientoLavadores(
+  desde: string, hasta: string
+): Promise<RendimientoLavador[]> {
+  const { data, error } = await requireSupabase()
+    .rpc('washer_performance', { p_from: desde, p_to: hasta });
+  if (error) throw fallaDatos(error);
+  return (data ?? []) as unknown as RendimientoLavador[];
+}
+
+export async function upsertMetaLavador(input: {
+  profileId: string; desde: string; hasta: string;
+  metaLavados?: number | null; metaGeneradoCents?: number | null; notas?: string | null;
+}): Promise<void> {
+  const { error } = await requireSupabase().rpc('upsert_washer_goal', {
+    p_profile_id: input.profileId,
+    p_period_from: input.desde,
+    p_period_to: input.hasta,
+    p_target_washes: input.metaLavados ?? null,
+    p_target_revenue_cents: input.metaGeneradoCents ?? null,
+    p_notes: input.notas ?? null
+  });
+  if (error) throw fallaDatos(error);
 }
 
 // -------------------------------------------------------------------- Turnos

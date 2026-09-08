@@ -42,6 +42,7 @@ const FleetsView            = lazyView(() => import('./components/views/FleetsSu
 const ShiftsView            = lazyView(() => import('./components/views/ShiftsSupabaseView'), 'ShiftsSupabaseView');
 const AttendanceView        = lazyView(() => import('./components/views/AttendanceSupabaseView'), 'AttendanceSupabaseView');
 const PayrollView           = lazyView(() => import('./components/views/PayrollSupabaseView'), 'PayrollSupabaseView');
+const CommissionsView       = lazyView(() => import('./components/views/CommissionsSupabaseView'), 'CommissionsSupabaseView');
 const BranchesView          = lazyView(() => import('./components/views/BranchesSupabaseView'), 'BranchesSupabaseView');
 const PromotionsView        = lazyView(() => import('./components/views/PromotionsSupabaseView'), 'PromotionsSupabaseView');
 const AlertsView            = lazyView(() => import('./components/views/AlertsSupabaseView'), 'AlertsSupabaseView');
@@ -81,6 +82,7 @@ const VIEW_REGISTRY: Record<ViewKey, React.ReactElement> = {
   shifts: <ShiftsView />,
   attendance: <AttendanceView />,
   payroll: <PayrollView />,
+  commissions: <CommissionsView />,
   branches: <BranchesView />,
   promotions: <PromotionsView />,
   alerts: <AlertsView />,

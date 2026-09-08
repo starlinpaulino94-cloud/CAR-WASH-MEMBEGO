@@ -2319,6 +2319,10 @@ export interface Database {
           avatar_url: string | null;
           cash_pin_hash: string | null;
           commission_bps: number | null;
+          /** Cómo se le paga la comisión: por porcentaje o por monto fijo. */
+          commission_kind: "porcentaje" | "monto";
+          /** Monto fijo por LAVADO (no por línea) cuando kind = monto. */
+          commission_amount_cents: number;
           // Datos de pago (0030). Protegidos por un guardia: solo los cambia
           // set_employee_pay(), por eso no aparecen en Update.
           payroll_type: Database['public']['Enums']['payroll_type'];
@@ -2965,6 +2969,43 @@ export interface Database {
         Args: Record<string, never>;
         Returns: Json;
       };
+      upsert_washer_goal: {
+        Args: {
+          p_profile_id: string;
+          p_period_from: string;
+          p_period_to: string;
+          p_target_washes?: number | null;
+          p_target_revenue_cents?: number | null;
+          p_notes?: string | null;
+        };
+        Returns: {
+          id: string;
+          company_id: string;
+          profile_id: string;
+          period_from: string;
+          period_to: string;
+          target_washes: number | null;
+          target_revenue_cents: number | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+      };
+      washer_performance: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          profile_id: string;
+          full_name: string;
+          lavados: number;
+          generado_cents: number;
+          comision_cents: number;
+          comision_pagada_cents: number;
+          costo_bps: number;
+          meta_lavados: number | null;
+          meta_generado_cents: number | null;
+        }[];
+      };
       create_staff_no_login: {
         Args: {
           p_full_name: string;
@@ -2984,6 +3025,8 @@ export interface Database {
           p_branch_id?: string;
           p_phone?: string;
           p_commission_bps?: number;
+          p_commission_kind?: "porcentaje" | "monto";
+          p_commission_amount_cents?: number;
         };
         Returns: Database['public']['Tables']['profiles']['Row'];
       };
