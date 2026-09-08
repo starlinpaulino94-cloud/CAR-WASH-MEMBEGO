@@ -963,6 +963,13 @@ export interface PerfilComprobanteMembego {
   facebook: string | null;
   horario: string | null;
   colorPrimario: string | null;
+  /**
+   * La personalización del comprobante que la empresa configuró EN MEMBEGO
+   * (ancho de papel, orden de bloques, campos visibles, textos del pie). Se usa
+   * tal cual para que el ticket salga igual en los dos sistemas. `null` = no la
+   * ha tocado y vale el formato por defecto.
+   */
+  plantilla: Record<string, unknown> | null;
 }
 
 export async function fetchPerfilComprobanteMembego(): Promise<PerfilComprobanteMembego | null> {
@@ -983,6 +990,10 @@ export async function fetchPerfilComprobanteMembego(): Promise<PerfilComprobante
     facebook: str(raw.facebook),
     horario: str(raw.horario),
     colorPrimario: str(raw.colorPrimario),
+    plantilla:
+      raw.receiptTemplate && typeof raw.receiptTemplate === 'object'
+        ? (raw.receiptTemplate as Record<string, unknown>)
+        : null,
   };
 }
 

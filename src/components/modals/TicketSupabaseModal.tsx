@@ -8,6 +8,8 @@ import {
 import { Tables } from '../../lib/database.types';
 import { fetchPerfilComprobanteMembego, PerfilComprobanteMembego } from '../../data/adminRepository';
 import { LogoMark } from '../common/Logo';
+import { construirComprobante } from '../../lib/comprobante/constructor';
+import { TicketComprobante } from '../common/TicketComprobante';
 import { QrCode } from '../common/QrCode';
 
 interface Props {
@@ -168,6 +170,66 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
     : branch?.address ?? null;
   const negocioTelefono = perfil?.telefono ?? branch?.phone ?? null;
 
+  /*
+   * EL DOCUMENTO SE ARMA CON EL MOTOR DE MEMBEGO, NO CON MARCAS SUELTAS.
+   *
+   * Antes el ticket se pintaba a mano aquí: cada bloque escrito en JSX, con sus
+   * separadores y sus rótulos. Salía PARECIDO al de MembeGo y se separaba de él
+   * en cada cambio. Ahora se construye el mismo `ReceiptDoc` con el mismo
+   * constructor, alimentado con la plantilla que la empresa configuró en
+   * MembeGo — ancho de papel, orden de bloques, campos visibles y textos del
+   * pie incluidos. El resultado no se parece: es el mismo.
+   */
+  const doc = construirComprobante({
+    empresa: {
+      nombre: negocioNombre,
+      sucursal: branch?.name ?? null,
+      direccion: negocioDireccion,
+      telefono: negocioTelefono,
+      web: perfil?.website ?? null,
+      logoUrl: perfil?.logoUrl ?? null
+    },
+    template: {
+      ...(perfil?.plantilla as Record<string, unknown> | null ?? {}),
+      // El papel manda la elección del cajero en esta pantalla, no la plantilla:
+      // está imprimiendo AHORA y sabe qué impresora tiene delante.
+      ...(isPage ? {} : { paperWidthMm: formato === '58mm' ? 58 : 80 }),
+      // El RNC es SIEMPRE el fiscal local: es el registrado para estos NCF, no
+      // el que la empresa tenga puesto en MembeGo.
+      rnc: company?.tax_id ?? undefined
+    },
+    transaccion: {
+      codigo: invoice.invoice_number,
+      ticketNumero: invoice.ncf ?? '',
+      fecha,
+      empleado: extras.cashierName,
+      cliente: invoice.customer_name,
+      vehiculo: vehiculoStr,
+      placa: invoice.vehicle_plate,
+      membresia: cubierto ? 'Cubre este servicio' : null,
+      lineas: items.map(i => ({
+        texto: `${i.quantity}x ${i.name}`,
+        importe: i.is_membego_covered
+          ? 'Gratis'
+          : formatCents(i.unit_price_cents * i.quantity - i.discount_cents, symbol)
+      })),
+      descuento: invoice.discount_cents > 0
+        ? `-${formatCents(invoice.discount_cents, symbol)}` : null,
+      subtotal: formatCents(invoice.subtotal_cents, symbol),
+      impuesto: {
+        etiqueta: `ITBIS (${bpsToPercent(tasaDeEstaFactura)})`,
+        importe: formatCents(invoice.tax_cents, symbol)
+      },
+      total: formatCents(invoice.total_cents, symbol),
+      cambio: invoice.change_cents > 0 ? formatCents(invoice.change_cents, symbol) : null,
+      observaciones: invoice.is_annulled ? (invoice.annulled_reason ?? 'Anulada') : null
+    },
+    esCopia: false,
+    esEntrega: esRegalo && !isCreditNote,
+    timeZone: undefined
+  });
+
+
   // El QR codifica la referencia verificable de la operación (número, NCF, RNC
   // y total). No abre una web: es el archivo que Membego imprime como respaldo.
   const qrValue = [
@@ -179,14 +241,6 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
     fecha.toISOString()
   ].filter(Boolean).join(' | ');
 
-  const banda = '*'.repeat(37);
-  const linea = '-'.repeat(37);
-  const fila = (etiqueta: string, valor: React.ReactNode, fuerte = false) => (
-    <div className="flex justify-between gap-2">
-      <span>{etiqueta}</span>
-      <span className={`text-right ${fuerte ? 'font-bold' : ''}`}>{valor}</span>
-    </div>
-  );
 
   return (
     <div
@@ -252,145 +306,25 @@ export const TicketSupabaseModal: React.FC<Props> = ({ invoice, company, branch,
                 ['--ticket-width' as string]: formato === '58mm' ? '58mm' : '80mm'
               }}
             >
-              {/* Banda superior + COPIA, como el comprobante de Membego. */}
-              <div className="text-center space-y-0.5">
-                <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
-                <div className="font-extrabold tracking-[0.3em]">COPIA</div>
-                <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
-              </div>
+              {/* El documento completo, tal como lo arma el motor de MembeGo:
+                  encabezado, cliente, servicio, QR y pie, en el orden y con los
+                  campos que la empresa configuró allá. Aquí no se decide nada
+                  del contenido — solo se pinta. */}
+              <TicketComprobante doc={doc} logoUrl={perfil?.logoUrl ?? null} />
 
-              {esRegalo && !isCreditNote && (
-                <div className="text-center space-y-0.5">
-                  <div className="font-bold">COMPROBANTE DE ENTREGA</div>
-                  <div className="text-[10px]">Sin valor comercial</div>
-                  <div className="tracking-tighter overflow-hidden whitespace-nowrap">{banda}</div>
-                </div>
-              )}
-
-              {/* Logo + datos del negocio: el logo del car wash tal como está en
-                  Membego (en gris, para térmica); si no hay, la marca de la app. */}
-              <div className="text-center space-y-1 pb-1">
-                {perfil?.logoUrl ? (
-                  <img
-                    src={perfil.logoUrl}
-                    alt=""
-                    className="mx-auto max-h-14 object-contain grayscale"
-                    crossOrigin="anonymous"
-                  />
-                ) : (
-                  <LogoMark className="w-12 h-12 mx-auto text-slate-900" simple mono />
-                )}
-                <div className="font-extrabold text-base uppercase tracking-tight">{negocioNombre}</div>
-                {perfil?.razonSocial && perfil.razonSocial !== negocioNombre && (
-                  <div className="text-[10px]">{perfil.razonSocial}</div>
-                )}
-                {branch?.name && <div className="text-[10px]">{branch.name}</div>}
-                {negocioDireccion && <div className="text-[10px]">{negocioDireccion}</div>}
-                {negocioTelefono && <div className="text-[10px]">Tel: {negocioTelefono}</div>}
-                <div className="text-[10px]">RNC: {company?.tax_id}</div>
-              </div>
-
+              {/* Lo que el motor no conoce porque es FISCAL de aquí: el ITBIS
+                  con su tasa y el NCF ya viajan en el documento; esto es el
+                  sello de anulación, que no puede faltar en una reimpresión. */}
               {isCreditNote && (
-                <div className="text-center font-extrabold border border-slate-900 py-1">NOTA DE CRÉDITO</div>
+                <div className="text-center font-extrabold border border-slate-900 py-1">
+                  NOTA DE CRÉDITO
+                </div>
               )}
               {invoice.is_annulled && (
-                <div className="text-center font-extrabold border border-slate-900 py-1">*** ANULADA ***</div>
-              )}
-
-              {/* Datos de la operación. */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="space-y-0.5">
-                {fila('Fecha:', fechaStr)}
-                {fila('Hora:', horaStr)}
-                {extras.cashierName && fila('Empleado:', extras.cashierName)}
-                {fila('Comprobante:', invoice.invoice_number, true)}
-                {invoice.ncf && fila('NCF:', invoice.ncf, true)}
-              </div>
-
-              {/* Cliente. */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="space-y-0.5">
-                <div className="font-bold">CLIENTE</div>
-                {fila('Nombre:', invoice.customer_name, true)}
-                {invoice.customer_tax_id && fila('RNC/Cédula:', invoice.customer_tax_id)}
-                {vehiculoStr && fila('Vehículo:', vehiculoStr)}
-                {invoice.vehicle_plate && fila('Placa:', invoice.vehicle_plate, true)}
-                {cubierto && fila('Membresía:', 'Cubre este servicio')}
-              </div>
-
-              {/* Servicio(s). */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="space-y-1">
-                <div className="font-bold">{items.length > 1 ? 'SERVICIOS' : 'SERVICIO'}</div>
-                {items.map(item => (
-                  <div key={item.id} className="space-y-0.5">
-                    <div className="flex justify-between gap-2">
-                      <span className="truncate">{item.quantity}x {item.name}</span>
-                      <span className="font-bold whitespace-nowrap">
-                        {item.is_membego_covered
-                          ? 'Gratis'
-                          : formatCents(item.unit_price_cents * item.quantity - item.discount_cents, symbol)}
-                      </span>
-                    </div>
-                    {item.is_membego_covered && (
-                      <div className="text-[9px] font-bold pl-2">✔ Cubierto por Membego</div>
-                    )}
-                    {item.discount_cents > 0 && !item.is_membego_covered && (
-                      <div className="text-[9px] pl-2">Desc: −{formatCents(item.discount_cents, symbol)}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Totales / pago. */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              {esRegalo ? (
-                <div className="space-y-0.5">{fila('Pago:', 'Regalo · sin costo', true)}</div>
-              ) : (
-                <div className="space-y-0.5">
-                  {fila('Subtotal:', formatCents(invoice.subtotal_cents, symbol))}
-                  {invoice.discount_cents > 0 &&
-                    fila('Descuento:', `−${formatCents(invoice.discount_cents, symbol)}`)}
-                  {fila(`ITBIS (${bpsToPercent(tasaDeEstaFactura)}):`,
-                    formatCents(invoice.tax_cents, symbol))}
-                  <div className="flex justify-between font-extrabold text-sm border-t border-b border-slate-900 py-1 my-1">
-                    <span>{isCreditNote ? 'TOTAL ACREDITADO' : 'TOTAL'}</span>
-                    <span>{formatCents(invoice.total_cents, symbol)}</span>
-                  </div>
-                  {invoice.change_cents > 0 && fila('Cambio:', formatCents(invoice.change_cents, symbol), true)}
+                <div className="text-center font-extrabold border border-slate-900 py-1">
+                  *** ANULADA ***
                 </div>
               )}
-
-              {invoice.is_annulled && invoice.annulled_reason && (
-                <>
-                  <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-                  <div className="text-[9px]">
-                    <div className="font-bold">MOTIVO DE ANULACIÓN:</div>
-                    <div>{invoice.annulled_reason}</div>
-                  </div>
-                </>
-              )}
-
-              {/* QR de la operación. */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="flex flex-col items-center gap-1 pt-1">
-                <QrCode value={qrValue} size={isPage ? 132 : 104} />
-                <div className="text-[9px] text-center">Escanea para consultar esta operación</div>
-              </div>
-
-              {/* Pie: mensaje + web y redes del perfil de Membego, como el
-                  comprobante de allá. */}
-              <div className="text-slate-500 overflow-hidden whitespace-nowrap">{linea}</div>
-              <div className="text-center space-y-1 text-[10px]">
-                {company?.header_note && <div>{company.header_note}</div>}
-                <div className="font-bold">¡Gracias por tu preferencia!</div>
-                {perfil?.website && <div>{perfil.website}</div>}
-                {perfil?.instagram && <div>IG: {perfil.instagram}</div>}
-                {perfil?.facebook && <div>FB: {perfil.facebook}</div>}
-                {perfil?.whatsapp && <div>WhatsApp: {perfil.whatsapp}</div>}
-                {perfil?.horario && <div>{perfil.horario}</div>}
-                {company?.footer_note && <div>{company.footer_note}</div>}
-              </div>
             </div>
           )}
         </div>
