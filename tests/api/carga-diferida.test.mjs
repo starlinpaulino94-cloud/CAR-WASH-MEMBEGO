@@ -53,3 +53,32 @@ test('aguanta lo que no es un Error sin romperse', () => {
   assert.equal(esFalloDeVersion(undefined), false)
   assert.equal(esFalloDeVersion('Failed to fetch dynamically imported module'), true)
 })
+
+// ── La guarda contra el bucle de recargas ───────────────────────────────────
+// La primera versión limpiaba la marca en cuanto CUALQUIER vista cargaba bien.
+// Bastaba un archivo realmente inaccesible para que la vista buena limpiara la
+// marca, la mala recargara otra vez, y el mostrador quedara parpadeando sin
+// poder trabajar. Ahora la guarda es el tiempo.
+
+const { debeRecargar } = await import('../../src/lib/cargaDiferida.ts')
+
+test('la primera vez que falla por versión, recarga', () => {
+  const err = new TypeError('Failed to fetch dynamically imported module: /assets/X.js')
+  assert.equal(debeRecargar(err, 1_000_000, 0), true)
+})
+
+test('NO recarga otra vez dentro del minuto: eso era el bucle', () => {
+  const err = new TypeError('Failed to fetch dynamically imported module: /assets/X.js')
+  assert.equal(debeRecargar(err, 1_000_000, 1_000_000 - 5_000), false, '5 s después')
+  assert.equal(debeRecargar(err, 1_000_000, 1_000_000 - 59_000), false, '59 s después')
+})
+
+test('pasada la ventana, un despliegue posterior sí recarga', () => {
+  const err = new TypeError('Failed to fetch dynamically imported module: /assets/X.js')
+  assert.equal(debeRecargar(err, 5_000_000, 1_000_000), true, 'una hora después')
+})
+
+test('un error real nunca recarga, por mucho tiempo que pase', () => {
+  const err = new TypeError("Cannot read properties of undefined (reading 'id')")
+  assert.equal(debeRecargar(err, 9_000_000, 0), false)
+})

@@ -30,19 +30,25 @@
 
 const CLAVE_REINTENTO = 'cw:recarga-por-version';
 
+/**
+ * Cuánto tiene que pasar para permitir OTRA recarga.
+ *
+ * Es lo único que separa «recargar para tomar la versión nueva» de «recargar en
+ * bucle». Un despliegue ocurre cada muchos minutos; un bucle, cada segundo.
+ */
+const VENTANA_MS = 60_000;
+
 /** `sessionStorage` puede lanzar (modo privado, cookies bloqueadas). */
-function leerMarca(): boolean {
+function ultimaRecarga(): number {
   try {
-    return sessionStorage.getItem(CLAVE_REINTENTO) !== null;
+    const v = sessionStorage.getItem(CLAVE_REINTENTO);
+    return v ? Number(v) || 0 : 0;
   } catch {
-    return false;
+    return 0;
   }
 }
-function ponerMarca(): void {
-  try { sessionStorage.setItem(CLAVE_REINTENTO, String(Date.now())); } catch { /* sin marca: se recarga una vez más y ya */ }
-}
-function quitarMarca(): void {
-  try { sessionStorage.removeItem(CLAVE_REINTENTO); } catch { /* nada que limpiar */ }
+function anotarRecarga(): void {
+  try { sessionStorage.setItem(CLAVE_REINTENTO, String(Date.now())); } catch { /* sin marca: se recargará una vez más y ya */ }
 }
 
 /**
@@ -65,26 +71,38 @@ export function esFalloDeVersion(error: unknown): boolean {
   );
 }
 
+/** ¿Toca recargar, o ya se recargó hace nada y hay que enseñar el error? */
+export function debeRecargar(error: unknown, ahoraMs: number, ultimaMs: number): boolean {
+  if (!esFalloDeVersion(error)) return false;
+  return ahoraMs - ultimaMs > VENTANA_MS;
+}
+
 /**
  * Envuelve la carga de una vista: si falla por versión caducada, recarga.
  *
- * Devuelve una promesa que nunca resuelve cuando va a recargar, a propósito:
- * la página se está yendo y resolver con algo a medias haría que React
- * intentara pintar durante la descarga.
+ * ────────────────────────────────────────────────────────────────────────────
+ * LA GUARDA ES EL TIEMPO, NO «SI YA SE RECARGÓ UNA VEZ»
+ *
+ * La primera versión limpiaba la marca en cuanto CUALQUIER vista cargaba bien.
+ * Parecía razonable —«esta pestaña ya está sana»— y era una trampa: basta con
+ * que un solo archivo quede inaccesible de verdad (una subida a medias, un
+ * bloqueo del proxy) para que la vista buena limpie la marca, la mala vuelva a
+ * recargar, y el mostrador entre en un bucle de recargas del que no se sale.
+ *
+ * Con una ventana de tiempo eso no puede pasar: como mucho una recarga por
+ * minuto, pase lo que pase. Un despliegue de dentro de una hora sigue teniendo
+ * la suya, y un archivo roto se enseña como error en el segundo intento en vez
+ * de dejar la pantalla parpadeando.
+ *
+ * Devuelve una promesa que nunca resuelve cuando va a recargar, a propósito: la
+ * página se está yendo y resolver con algo a medias haría que React intentara
+ * pintar durante la descarga.
  */
 export function importarVista<T>(cargar: () => Promise<T>): Promise<T> {
-  return cargar().then(
-    modulo => {
-      // Una carga buena significa que la versión de esta pestaña sirve: se
-      // limpia la marca para que un despliegue POSTERIOR pueda recargar otra vez.
-      quitarMarca();
-      return modulo;
-    },
-    error => {
-      if (!esFalloDeVersion(error) || leerMarca()) throw error;
-      ponerMarca();
-      window.location.reload();
-      return new Promise<T>(() => { /* la página se recarga */ });
-    }
-  );
+  return cargar().catch((error: unknown) => {
+    if (!debeRecargar(error, Date.now(), ultimaRecarga())) throw error;
+    anotarRecarga();
+    window.location.reload();
+    return new Promise<T>(() => { /* la página se recarga */ });
+  });
 }
