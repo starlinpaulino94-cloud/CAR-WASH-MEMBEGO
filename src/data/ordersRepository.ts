@@ -125,6 +125,17 @@ export async function fetchBoardOrders(branchId: string, deliveredLimit = 15): P
   return [...(active.data ?? []), ...(delivered.data ?? [])];
 }
 
+/** Una orden completa por id. El listado de cobro (`ChargeableOrder`) trae solo
+ *  lo que la caja necesita —sin llegada, sin color, sin observaciones—, y el
+ *  comprobante de entrega los imprime: con esa forma recortada saldría con la
+ *  fecha inválida y los campos vacíos. */
+export async function fetchWorkOrderById(id: string): Promise<WorkOrder | null> {
+  const { data, error } = await requireSupabase()
+    .from('work_orders').select('*').eq('id', id).maybeSingle();
+  if (error) throw fallaDatos(error);
+  return data;
+}
+
 export async function fetchOrderItems(orderId: string): Promise<WorkOrderItem[]> {
   const { data, error } = await requireSupabase()
     .from('work_order_items').select('*').eq('work_order_id', orderId).order('created_at');

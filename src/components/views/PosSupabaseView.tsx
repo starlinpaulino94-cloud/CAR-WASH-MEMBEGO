@@ -27,7 +27,9 @@ import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { useLectorCodigoBarras } from '../../hooks/useLectorCodigoBarras';
 import { TicketSupabaseModal } from '../modals/TicketSupabaseModal';
+import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
 import { fetchChargeableOrderById, tomarOrdenPendientePos } from '../../data/billingRepository';
+import { fetchAssignees, fetchOperators, fetchWorkOrderById, type WorkOrder } from '../../data/ordersRepository';
 
 const ESTADO_ORDEN: Record<string, string> = {
   pendiente: 'Recién llegado', en_espera: 'En espera', asignada: 'Asignada',
@@ -108,6 +110,14 @@ export const PosSupabaseView: React.FC = () => {
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
   // El comprobante recién emitido, para abrirlo listo para imprimir.
   const [ticketInvoice, setTicketInvoice] = useState<Invoice | null>(null);
+  /**
+   * La orden que se acaba de cobrar, para sacar su comprobante de ENTREGA
+   * detrás de la factura. Son dos papeles distintos: la factura es el
+   * comprobante fiscal de la venta; la entrega prueba que el cliente se llevó
+   * el carro conforme, y es la que cierra el ciclo que abrió la comanda.
+   */
+  const [entregaOrden, setEntregaOrden] = useState<WorkOrder | null>(null);
+  const [lavadoresEntrega, setLavadoresEntrega] = useState<string[]>([]);
 
   // --- La membresía del cliente, aplicada al cobro
   // Esto es lo que convierte el aviso en dinero: hasta aquí la caja sabía que
@@ -770,6 +780,21 @@ export const PosSupabaseView: React.FC = () => {
       setLastInvoice(invoice);
       // El comprobante sale de una vez, listo para imprimir.
       setTicketInvoice(invoice);
+      // Se guarda la orden AQUÍ porque el cierre de la venta la limpia unas
+      // líneas más abajo, y para entonces ya no habría de qué sacar la entrega.
+      if (orden) {
+        // La orden COMPLETA: el listado de cobro no trae llegada, color ni
+        // observaciones, y el papel de entrega los imprime.
+        setEntregaOrden(await fetchWorkOrderById(orden.id).catch(() => null));
+        const ids = new Set(await fetchAssignees([orden.id]).then(m => m.get(orden.id) ?? []).catch(() => []));
+        setLavadoresEntrega(
+          ids.size > 0
+            ? await fetchOperators(branch.id)
+                .then(g => g.filter(p => ids.has(p.id)).map(p => p.full_name))
+                .catch(() => [])
+            : []
+        );
+      }
 
       /*
        * Avisar a Membego DESPUÉS de facturar, y nunca antes.
@@ -1604,6 +1629,21 @@ export const PosSupabaseView: React.FC = () => {
           company={company}
           branch={branch}
           onClose={() => setTicketInvoice(null)}
+        />
+      )}
+
+      {/* Encadenado a propósito: cerrada la factura sale la entrega, para que
+          el mostrador no tenga que acordarse de ir a buscarla. Solo cuando la
+          venta venía de una orden — una venta de mostrador sin lavado no tiene
+          vehículo que entregar. */}
+      {!ticketInvoice && entregaOrden && (
+        <ComandaOrdenModal
+          order={entregaOrden}
+          company={company}
+          branch={branch}
+          lavadores={lavadoresEntrega}
+          variante="entrega"
+          onClose={() => { setEntregaOrden(null); setLavadoresEntrega([]); }}
         />
       )}
     </div>
