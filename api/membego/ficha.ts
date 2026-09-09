@@ -73,7 +73,8 @@ interface Beneficio {
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    await exigirEmpleado(request);
+    // Solo LEE: la recepción también la necesita para recibir el carro.
+    await exigirEmpleado(request, { soloLectura: true });
   } catch (e) {
     const r = respuestaDeAuth(e);
     if (r) return r;

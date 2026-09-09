@@ -35,6 +35,17 @@
  *      leído también con su token bajo RLS. El `companyId` fijo del servidor
  *      dice a QUÉ empresa de Membego se llama; esto dice QUIÉN puede llamar.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * EL PASO 3 DEPENDE DE UNA POLÍTICA RLS. NO LA ESTRECHE.
+ *
+ * `membego_company_links` se lee con el token de quien llama, así que su
+ * política de SELECT decide, sin quererlo, quién pasa el paso 3. Cuando esa
+ * política filtraba además por rol —propietario/administrador/superadmin— a los
+ * cajeros les llegaban cero filas y el guard los acusaba de ser otra empresa.
+ * La política es hoy `belongs_to_tenant` a secas y así debe seguir: quién puede
+ * operar se decide AQUÍ, en el paso 2. `tests/api/auth-membego.test.mjs` lo
+ * comprueba contra las migraciones.
+ *
  * Se usa la `anon key`, que no es secreta (viaja en el bundle del navegador);
  * la `service_role` NO se trae aquí a propósito: ampliar su superficie a cuatro
  * bordes más sería regalar poder que estas funciones no necesitan.
@@ -45,7 +56,11 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? '';
 /** La empresa de Membego que este despliegue atiende. El candado del paso 3. */
 const MEMBEGO_COMPANY_ID = process.env.MEMBEGO_COMPANY_ID ?? '';
 
-/** Roles que pueden operar el mostrador. `operario` no cobra, así que no entra. */
+/**
+ * Roles que pueden OPERAR: canjear un lavado, revertirlo, registrar una
+ * transacción, sincronizar el catálogo. Mueven saldo o configuración.
+ * `operario` no cobra, así que no entra.
+ */
 const ROLES_MOSTRADOR = new Set([
   'cajero',
   'supervisor',
@@ -53,6 +68,21 @@ const ROLES_MOSTRADOR = new Set([
   'propietario',
   'superadmin',
 ]);
+
+/**
+ * Roles que pueden CONSULTAR la ficha de un cliente: los de arriba más
+ * `recepcionista`, que es quien recibe los carros.
+ *
+ * Negarle la ficha a la recepción no protegía nada: las membresías y las
+ * promociones ya están en NUESTRA base y su política RLS (migración 0014) las
+ * deja leer a cualquier empleado del tenant. Lo único que se conseguía era que
+ * quien registra la llegada viera el distintivo «Membresía activa» sin poder
+ * ver cuántos lavados le quedan — justo el dato que hace falta en la puerta.
+ *
+ * Consultar no gasta nada: `/benefits/evaluate` devuelve `reserved: false`.
+ * Canjear sigue siendo de los roles de arriba.
+ */
+const ROLES_CONSULTA = new Set([...ROLES_MOSTRADOR, 'recepcionista']);
 
 export class ErrorAuth extends Error {
   constructor(
@@ -88,11 +118,22 @@ export interface UsuarioAutenticado {
   rol: string;
 }
 
+export interface OpcionesGuard {
+  /**
+   * `true` en los bordes que solo LEEN (la ficha del cliente). Admite además a
+   * la recepción. Los que canjean, revierten o cobran no lo ponen.
+   */
+  soloLectura?: boolean;
+}
+
 /**
  * Exige que quien llama sea un empleado autenticado y con rol de mostrador.
  * Lanza `ErrorAuth` (401/403/503) si no. Devuelve el usuario si todo va bien.
  */
-export async function exigirEmpleado(request: Request): Promise<UsuarioAutenticado> {
+export async function exigirEmpleado(
+  request: Request,
+  opciones: OpcionesGuard = {}
+): Promise<UsuarioAutenticado> {
   const faltan = faltaConfiguracionAuth();
   if (faltan.length > 0) {
     throw new ErrorAuth('SIN_CONFIGURAR', `Falta configurar en Vercel: ${faltan.join(', ')}.`, 503);
@@ -132,9 +173,10 @@ export async function exigirEmpleado(request: Request): Promise<UsuarioAutentica
     if (!res.ok) {
       throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el perfil.', 403);
     }
+    const admitidos = opciones.soloLectura ? ROLES_CONSULTA : ROLES_MOSTRADOR;
     const filas = (await res.json()) as Array<{ role?: string; is_active?: boolean }>;
     const perfil = filas[0];
-    if (!perfil || perfil.is_active === false || !perfil.role || !ROLES_MOSTRADOR.has(perfil.role)) {
+    if (!perfil || perfil.is_active === false || !perfil.role || !admitidos.has(perfil.role)) {
       throw new ErrorAuth('SIN_PERMISO', 'Su usuario no puede operar el mostrador.', 403);
     }
     rolDelPaso2 = perfil.role;
@@ -147,6 +189,14 @@ export async function exigirEmpleado(request: Request): Promise<UsuarioAutentica
   //    empresa; se exige que ese vínculo apunte a la empresa de Membego de este
   //    despliegue y esté activo. Así un empleado de otro inquilino del mismo
   //    Supabase —que sí pasa los pasos 1 y 2— no alcanza a este local.
+  //
+  //    Los tres motivos por los que esto falla se dicen POR SEPARADO. Antes los
+  //    tres daban «Su empresa no es la vinculada a este local», y como la
+  //    política RLS de la tabla filtraba además por rol, a un cajero le salía
+  //    ese mensaje aunque el vínculo estuviera perfecto: el sistema acusaba de
+  //    ser otra empresa a quien solo no tenía permiso de lectura. Un mensaje
+  //    exacto sobre lo que el código ve y falso sobre lo que pasa es lo que
+  //    convierte un fallo de diez minutos en uno de tres días.
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/membego_company_links?select=membego_company_id,is_active`,
@@ -156,10 +206,39 @@ export async function exigirEmpleado(request: Request): Promise<UsuarioAutentica
       throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el vínculo con Membego.', 403);
     }
     const filas = (await res.json()) as Array<{ membego_company_id?: string; is_active?: boolean }>;
-    const vinculo = filas.find((f) => f.is_active !== false && f.membego_company_id === MEMBEGO_COMPANY_ID);
-    if (!vinculo) {
-      throw new ErrorAuth('SIN_PERMISO', 'Su empresa no es la vinculada a este local.', 403);
+
+    // Ninguna fila: su empresa no tiene vínculo (o la migración que abre esta
+    // lectura al mostrador todavía no se aplicó).
+    if (filas.length === 0) {
+      throw new ErrorAuth(
+        'SIN_PERMISO',
+        'Este local todavía no está vinculado con Membego. Un propietario o administrador puede vincularlo en Ajustes → Membego.',
+        403
+      );
     }
+
+    const delLocal = filas.find((f) => f.membego_company_id === MEMBEGO_COMPANY_ID);
+
+    // Hay vínculo, pero apunta a otra empresa de Membego. Eso es un despliegue
+    // mal apuntado, no un empleado intruso: quien lo lee es un dato de SU
+    // empresa, así que decirlo no filtra nada de nadie.
+    if (!delLocal) {
+      throw new ErrorAuth(
+        'SIN_PERMISO',
+        'Su empresa está vinculada a otra empresa de Membego, no a la de este local. Revise la vinculación en Ajustes → Membego.',
+        403
+      );
+    }
+
+    // Existe y es la correcta, pero alguien la apagó a mano.
+    if (delLocal.is_active === false) {
+      throw new ErrorAuth(
+        'SIN_PERMISO',
+        'El vínculo con Membego de este local está desactivado. Vuelva a activarlo en Ajustes → Membego.',
+        403
+      );
+    }
+
     return { userId, rol: rolDelPaso2 };
   } catch (e) {
     if (e instanceof ErrorAuth) throw e;
