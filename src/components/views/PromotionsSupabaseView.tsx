@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, ShieldAlert } from 'lucide-react';
@@ -18,6 +18,9 @@ import { ExportButton } from '../common/ExportButton';
 import { ImportButton } from '../common/ImportModal';
 import { promotionsExport } from '../../lib/exportSpecs';
 import { can } from '../../lib/auth';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { agruparPorCategoria } from '../../lib/filtroServicios';
+import { OpcionesAgrupadas } from '../common/FiltroCategoriaServicio';
 
 const KINDS: { id: PromotionKind; label: string }[] = [
   { id: 'porcentaje', label: 'Porcentaje' },
@@ -59,6 +62,13 @@ export const PromotionsSupabaseView: React.FC = () => {
 
   const [rows, setRows] = useState<Promotion[]>([]);
   const [services, setServices] = useState<ServiceWithPrices[]>([]);
+  const { categorias: catsServicio } = useCategoriasServicio();
+  /** El catálogo repartido en grupos para el desplegable, solo activos. */
+  const gruposDeServicio = useMemo(
+    () => agruparPorCategoria(services.filter(s => s.is_active), catsServicio),
+    [services, catsServicio]
+  );
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -352,7 +362,10 @@ export const PromotionsSupabaseView: React.FC = () => {
               <select id="promo-service" className={textInputClass} value={form.serviceId}
                 onChange={e => setForm(f => ({ ...f, serviceId: e.target.value }))}>
                 <option value="">Elija el servicio…</option>
-                {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {/* Agrupado por tipo de trabajo, y solo los activos: ofrecer un
+                    servicio archivado creaba una promoción que no se puede
+                    aplicar a nada. */}
+                <OpcionesAgrupadas grupos={gruposDeServicio} />
               </select>
             </Field>
           )}

@@ -8,6 +8,9 @@ import {
   VehicleCategory, WorkOrder, WorkOrderItem
 } from '../../data/ordersRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { filtrarServicios, categoriasConServicios, TODAS } from '../../lib/filtroServicios';
+import { FiltroCategoriaServicio } from '../common/FiltroCategoriaServicio';
 
 interface Props {
   order: WorkOrder;
@@ -18,6 +21,9 @@ interface Props {
 interface ServiceOption {
   id: string;
   name: string;
+  /** El `code` de su categoría de servicio. Vacío = sin clasificar. */
+  category: string;
+  description: string;
   price_cents: number;
   estimated_minutes: number;
 }
@@ -62,10 +68,26 @@ export const EditOrderSupabaseModal: React.FC<Props> = ({ order, onClose, onSave
   const [quantities, setQuantities] = useState<Map<string, number>>(new Map());
 
   const [services, setServices] = useState<ServiceOption[]>([]);
+  const { categorias: catsServicio } = useCategoriasServicio();
+  /** Tipo de trabajo por el que está filtrada la rejilla. */
+  const [filtroTipo, setFiltroTipo] = useState<string>(TODAS);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warn, setWarn] = useState<string | null>(null);
+
+  // Lo filtrado MÁS lo que ya lleva cantidad, aunque sea de otro tipo: una
+  // línea escondida por el filtro sumaría al total sin poder quitarse.
+  const serviciosVisibles = useMemo(() => {
+    const filtrados = filtrarServicios(services, { categoria: filtroTipo });
+    const dentro = new Set(filtrados.map(s => s.id));
+    return [...filtrados, ...services.filter(s => (quantities.get(s.id) ?? 0) > 0 && !dentro.has(s.id))];
+  }, [services, filtroTipo, quantities]);
+
+  const tiposDeServicio = useMemo(
+    () => categoriasConServicios(services, catsServicio),
+    [services, catsServicio]
+  );
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstFieldRef = useRef<HTMLSelectElement>(null);
@@ -295,8 +317,16 @@ export const EditOrderSupabaseModal: React.FC<Props> = ({ order, onClose, onSave
                 No hay servicios con precio para esta categoría.
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {services.map(s => {
+              <>
+              <FiltroCategoriaServicio
+                categorias={tiposDeServicio}
+                valor={filtroTipo}
+                onCambiar={setFiltroTipo}
+                total={services.length}
+                disabled={busy}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                {serviciosVisibles.map(s => {
                   const qty = quantities.get(s.id) ?? 0;
                   const on = qty > 0;
                   return (
@@ -339,6 +369,7 @@ export const EditOrderSupabaseModal: React.FC<Props> = ({ order, onClose, onSave
                   );
                 })}
               </div>
+              </>
             )}
           </div>
 

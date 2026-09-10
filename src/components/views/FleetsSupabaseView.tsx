@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
 import { Plus, Car, Tags, FileText, X } from 'lucide-react';
@@ -19,6 +19,9 @@ import {
   InlineAlert, ReadOnlyNotice, FilterChips, StatCard
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { agruparPorCategoria } from '../../lib/filtroServicios';
+import { OpcionesAgrupadas } from '../common/FiltroCategoriaServicio';
 
 const PAGE_SIZE = 25;
 
@@ -145,6 +148,13 @@ export const FleetsSupabaseView: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rates, setRates] = useState<FleetRate[]>([]);
   const [services, setServices] = useState<ServiceWithPrices[]>([]);
+  const { categorias: catsServicio } = useCategoriasServicio();
+  /** El catálogo repartido en grupos para el desplegable, solo activos. */
+  const gruposDeServicio = useMemo(
+    () => agruparPorCategoria(services.filter(s => s.is_active), catsServicio),
+    [services, catsServicio]
+  );
+
   const [statement, setStatement] = useState<FleetStatement | null>(null);
   const [range, setRange] = useState<RangeId>('month');
   const [detailNonce, setDetailNonce] = useState(0);
@@ -637,7 +647,9 @@ export const FleetsSupabaseView: React.FC = () => {
             <select id="rate-service" className={textInputClass} value={rateService}
               onChange={e => setRateService(e.target.value)}>
               <option value="">Elija el servicio…</option>
-              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {/* Agrupado por tipo de trabajo, y solo los activos: una tarifa de
+                  flota sobre un servicio archivado no se puede cobrar. */}
+              <OpcionesAgrupadas grupos={gruposDeServicio} />
             </select>
           </Field>
           <Field label="Aplica a" htmlFor="rate-category">

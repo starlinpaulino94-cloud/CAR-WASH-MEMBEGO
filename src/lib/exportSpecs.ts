@@ -1,5 +1,6 @@
 import { CsvColumn } from './csv';
 import { fetchAllRows } from '../data/importExportRepository';
+import { fetchCategoriasServicio } from '../data/adminRepository';
 
 /**
  * Qué se exporta de cada módulo, y cómo se escribe.
@@ -109,6 +110,8 @@ interface ServiceExport {
   code: string; name: string; description: string; category: string;
   estimated_minutes: number; commission_bps: number; is_active: boolean;
   service_prices: { vehicle_category: string; price_cents: number }[] | null;
+  /** Etiqueta de su categoría, resuelta al exportar (no es una columna). */
+  categoria_label?: string;
 }
 
 const CATEGORIAS = ['sedan', 'suv', 'jeep', 'pickup', 'van', 'truck', 'motorcycle', 'special'];
@@ -118,7 +121,9 @@ export const servicesExport = (): ExportSpec<ServiceExport> => ({
   columns: [
     { header: 'codigo',      value: r => text(r.code) },
     { header: 'nombre',      value: r => text(r.name) },
-    { header: 'categoria',   value: r => text(r.category) },
+    // La ETIQUETA y no el código: el archivo lo abre una persona en Excel. Al
+    // reimportarlo, la base lo vuelve a traducir a su código.
+    { header: 'categoria',   value: r => text(r.categoria_label ?? r.category) },
     { header: 'descripcion', value: r => text(r.description) },
     { header: 'minutos',     value: r => String(r.estimated_minutes) },
     { header: 'comision',    value: r => (r.commission_bps / 100).toFixed(2) },
@@ -131,11 +136,29 @@ export const servicesExport = (): ExportSpec<ServiceExport> => ({
         money(r.service_prices?.find(p => p.vehicle_category === c)?.price_cents)
     }))
   ],
-  fetchRows: () => fetchAllRows<ServiceExport>(
-    'services',
-    'code,name,description,category,estimated_minutes,commission_bps,is_active,' +
-    'service_prices(vehicle_category,price_cents)',
-    { column: 'name', ascending: true })
+  /**
+   * Las etiquetas se resuelven aquí y no con un `embed` de PostgREST: no hay
+   * clave foránea entre `services` y `service_categories` —el servicio guarda
+   * el código como texto, a propósito, para que borrar una categoría no se
+   * lleve por delante servicios que se siguen vendiendo— y sin foránea
+   * PostgREST no sabe enlazarlas. Son dos consultas y una tabla en memoria.
+   */
+  fetchRows: async () => {
+    const [servicios, categorias] = await Promise.all([
+      fetchAllRows<ServiceExport>(
+        'services',
+        'code,name,description,category,estimated_minutes,commission_bps,is_active,' +
+        'service_prices(vehicle_category,price_cents)',
+        { column: 'name', ascending: true }),
+      fetchCategoriasServicio(false).catch(() => [] as { code: string; label: string }[])
+    ]);
+    const porCodigo = new Map<string, string>(
+      categorias.map(c => [c.code, c.label] as [string, string]));
+    return {
+      ...servicios,
+      rows: servicios.rows.map(r => ({ ...r, categoria_label: porCodigo.get(r.category) }))
+    };
+  }
 });
 
 // -------------------------------------------------------------- Productos
