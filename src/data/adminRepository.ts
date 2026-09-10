@@ -1349,3 +1349,53 @@ export async function fetchServiciosIncluiblesMembego(): Promise<ServicioIncluib
     return { id: r.id, name: r.name, categorias: (r.service_prices ?? []).map(p => p.vehicle_category) };
   });
 }
+
+
+// ─────────────────────────────────────────── Categorías de servicio (el filtro)
+
+export interface CategoriaServicio {
+  id: string;
+  code: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+/**
+ * Los tipos de trabajo de la empresa: lavados, brillado, encerado…
+ *
+ * Agrupan el catálogo en las seis pantallas donde se elige un servicio. El
+ * servicio guarda el `code` en `services.category`; aquí están la etiqueta, el
+ * orden y si se sigue enseñando.
+ */
+export async function fetchCategoriasServicio(soloActivas = true): Promise<CategoriaServicio[]> {
+  let q = requireSupabase()
+    .from('service_categories')
+    .select('id, code, label, sort_order, is_active')
+    .order('sort_order');
+  if (soloActivas) q = q.eq('is_active', true);
+  const { data, error } = await q;
+  if (error) throw fallaDatos(error);
+  return (data ?? []) as CategoriaServicio[];
+}
+
+export async function crearCategoriaServicio(label: string): Promise<CategoriaServicio> {
+  const { data, error } = await requireSupabase()
+    .rpc('create_service_category', { p_label: label });
+  if (error) throw fallaDatos(error);
+  return data as unknown as CategoriaServicio;
+}
+
+export async function actualizarCategoriaServicio(
+  id: string,
+  cambios: { label?: string; sortOrder?: number; isActive?: boolean }
+): Promise<CategoriaServicio> {
+  const { data, error } = await requireSupabase().rpc('update_service_category', {
+    p_id: id,
+    p_label: cambios.label ?? undefined,
+    p_sort_order: cambios.sortOrder ?? undefined,
+    p_is_active: cambios.isActive ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as CategoriaServicio;
+}

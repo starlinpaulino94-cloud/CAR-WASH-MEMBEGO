@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
-import { Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore } from 'lucide-react';
+import {
+  Loader2, Check, X, Pencil, Plus, FlaskConical, Trash2, Archive, ArchiveRestore,
+  Search, Tags
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, bpsToPercent } from '../../lib/money';
@@ -10,6 +13,12 @@ import {
   eliminarFila, archivarFila, ServiceWithPrices, VehicleCategory
 } from '../../data/adminRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import {
+  filtrarServicios, categoriasConServicios, TODAS, SIN_CATEGORIA
+} from '../../lib/filtroServicios';
+import { FiltroCategoriaServicio } from '../common/FiltroCategoriaServicio';
+import { CategoriasServicioModal } from '../modals/CategoriasServicioModal';
 import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import { ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, HelpNote } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
@@ -20,7 +29,7 @@ import { servicesExport } from '../../lib/exportSpecs';
 
 const emptyServiceForm = {
   name: '', code: '', description: '', minutes: '30', commission: '0',
-  membego: false, prices: {} as Record<string, string>
+  categoria: '', membego: false, prices: {} as Record<string, string>
 };
 
 /**
@@ -36,6 +45,14 @@ export const ServicesSupabaseView: React.FC = () => {
   const symbol = company?.currency_symbol ?? 'RD$';
   const editable = can(profile, 'manageCatalog');
   const [recipeFor, setRecipeFor] = useState<{ id: string; name: string } | null>(null);
+
+  const { categorias, recargar: recargarCategorias } = useCategoriasServicio();
+  const [filtroCat, setFiltroCat] = useState<string>(TODAS);
+  const [busqueda, setBusqueda] = useState('');
+  const [gestionandoCats, setGestionandoCats] = useState(false);
+  /** Nombre que se está editando en la tabla, y su borrador. */
+  const [editandoNombre, setEditandoNombre] = useState<string | null>(null);
+  const [borradorNombre, setBorradorNombre] = useState('');
 
   const [rows, setRows] = useState<ServiceWithPrices[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,7 +72,7 @@ export const ServicesSupabaseView: React.FC = () => {
   const puedeBorrar = can(profile, 'deleteRecords');
   const [fichaDe, setFichaDe] = useState<ServiceWithPrices | null>(null);
   const [borrando, setBorrando] = useState<ServiceWithPrices | null>(null);
-  const [ficha, setFicha] = useState({ name: '', code: '', description: '', minutes: '', commission: '', membego: false });
+  const [ficha, setFicha] = useState({ name: '', code: '', description: '', minutes: '', commission: '', categoria: '', membego: false });
   const [fichaBusy, setFichaBusy] = useState(false);
   const [fichaError, setFichaError] = useState<string | null>(null);
 
@@ -64,6 +81,7 @@ export const ServicesSupabaseView: React.FC = () => {
       name: s.name, code: s.code, description: s.description ?? '',
       minutes: String(s.estimated_minutes),
       commission: bpsToPercent(s.commission_bps).replace('%', '').trim(),
+      categoria: s.category ?? '',
       membego: s.included_in_membego
     });
     setFichaError(null);
@@ -93,6 +111,7 @@ export const ServicesSupabaseView: React.FC = () => {
         // y no 12,5 — con decimales de por medio, el redondeo se hace aquí una
         // vez y no en cada lectura.
         commission_bps: Math.round(pct * 100),
+        category: ficha.categoria,
         included_in_membego: ficha.membego
       });
       setFichaDe(null);
@@ -147,6 +166,7 @@ export const ServicesSupabaseView: React.FC = () => {
         companyId: company.id, code: form.code, name: form.name,
         description: form.description, estimatedMinutes: minutes,
         commissionBps: Math.round(commissionPct * 100),
+        category: form.categoria,
         includedInMembego: form.membego, prices
       });
       setShowCreate(false); setForm(emptyServiceForm);
@@ -165,6 +185,48 @@ export const ServicesSupabaseView: React.FC = () => {
     setActionError(null);
   };
 
+  /**
+   * Guardar el nombre editado en la tabla.
+   *
+   * El nombre se podía cambiar, pero solo abriendo la ficha: tres clics y un
+   * modal para corregir una letra. La pista de arriba decía «toque un precio
+   * para editarlo», así que la mitad del catálogo parecía de solo lectura.
+   */
+  const empezarNombre = (s2: ServiceWithPrices) => {
+    if (!editable) return;
+    setEditandoNombre(s2.id);
+    setBorradorNombre(s2.name);
+    setActionError(null);
+  };
+
+  const guardarNombre = async (id: string) => {
+    const nombre = borradorNombre.trim();
+    if (!nombre) { setActionError('El nombre no puede quedar vacío.'); return; }
+    setBusy(true);
+    try {
+      await updateService(id, { name: nombre });
+      setEditandoNombre(null);
+      await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo guardar el nombre');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Reasignar la categoría desde la tabla, sin abrir la ficha. */
+  const cambiarCategoria = async (id: string, code: string) => {
+    setBusy(true);
+    try {
+      await updateService(id, { category: code });
+      await load();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo cambiar la categoría');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const commit = async () => {
     if (!editing || busy) return;
     const cents = parseAmountToCents(draft);
@@ -180,6 +242,19 @@ export const ServicesSupabaseView: React.FC = () => {
       setBusy(false);
     }
   };
+
+  // Las categorías que se ofrecen y lo que hay dentro de cada una. Se calculan
+  // sobre el catálogo ENTERO, no sobre lo ya filtrado: si no, elegir una
+  // categoría haría desaparecer a las demás del filtro y no habría vuelta.
+  const catsConServicios = categoriasConServicios(rows, categorias);
+  const cuentas = catsConServicios.reduce<Record<string, number>>((acc, c) => {
+    acc[c.code] = c.code === SIN_CATEGORIA
+      ? rows.filter(r => !r.category).length
+      : rows.filter(r => r.category === c.code).length;
+    return acc;
+  }, {});
+  const visibles = filtrarServicios(rows, { categoria: filtroCat, texto: busqueda });
+  const etiquetaDe = (code: string) => categorias.find(c => c.code === code)?.label ?? null;
 
   if (error) return <ErrorState message={error} onRetry={() => void load()} title="No se pudo cargar el catálogo" />;
 
@@ -212,9 +287,43 @@ export const ServicesSupabaseView: React.FC = () => {
       {actionError && <InlineAlert tone="error" onDismiss={() => setActionError(null)}>{actionError}</InlineAlert>}
       {editable && (
         <p className="text-xs text-faint">
-          Toque un precio para editarlo. Enter guarda, Escape cancela.
+          Toque el nombre o un precio para editarlo. Enter guarda, Escape cancela.
         </p>
       )}
+
+      {/* Filtro por tipo de trabajo + buscador. Con 17 servicios en una matriz
+          de ocho columnas, encontrar uno era recorrer la tabla a ojo. */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2 justify-between">
+          <FiltroCategoriaServicio
+            categorias={catsConServicios}
+            valor={filtroCat}
+            onCambiar={setFiltroCat}
+            cuentas={cuentas}
+            total={rows.length}
+            disabled={busy}
+          />
+          {editable && (
+            <Button variant="outline" size="sm" onClick={() => setGestionandoCats(true)}>
+              <Tags className="w-4 h-4" /> Categorías
+            </Button>
+          )}
+        </div>
+        <div className="relative max-w-sm">
+          <Search className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
+          <input
+            type="search" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o descripción…"
+            aria-label="Buscar servicio"
+            className="w-full bg-canvas border border-line rounded-xl pl-9 pr-4 py-2 text-sm text-strong placeholder-faint focus:outline-none focus:border-brand"
+          />
+        </div>
+        <p className="text-xs text-faint" aria-live="polite">
+          {visibles.length === rows.length
+            ? `${rows.length} ${rows.length === 1 ? 'servicio' : 'servicios'}`
+            : `${visibles.length} de ${rows.length} servicios`}
+        </p>
+      </div>
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -223,6 +332,7 @@ export const ServicesSupabaseView: React.FC = () => {
             <TableHeader>
               <TableRow className="border-b border-line text-muted bg-canvas/50">
                 <TableHead scope="col" className="p-3 font-semibold">SERVICIO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold">CATEGORÍA</TableHead>
                 {COLUMNS.map(c => (
                   <TableHead key={c.id} scope="col" className="p-3 font-semibold text-right whitespace-nowrap">
                     {c.label.toUpperCase()}
@@ -236,25 +346,91 @@ export const ServicesSupabaseView: React.FC = () => {
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i} aria-hidden="true">
-                    <TableCell colSpan={COLUMNS.length + 3} className="p-3">
+                    <TableCell colSpan={COLUMNS.length + 4} className="p-3">
                       <div className="h-5 bg-surface-2/60 rounded animate-pulse" />
                     </TableCell>
                   </TableRow>
                 ))
-              ) : rows.length === 0 ? (
+              ) : visibles.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={COLUMNS.length + 3} className="p-10 text-center text-faint italic">
-                    Todavía no hay servicios en el catálogo.
+                  <TableCell colSpan={COLUMNS.length + 4} className="p-10 text-center text-faint italic">
+                    {rows.length === 0
+                      ? 'Todavía no hay servicios en el catálogo.'
+                      : 'Ningún servicio coincide con el filtro.'}
                   </TableCell>
                 </TableRow>
-              ) : rows.map(s => (
+              ) : visibles.map(s => (
                 <TableRow key={s.id} className={`hover:bg-surface-2/40 ${s.is_active ? '' : 'opacity-50'}`}>
                   <TableCell className="p-3">
-                    <div className="font-bold text-strong">{s.name}</div>
+                    {editandoNombre === s.id ? (
+                      <span className="flex items-center gap-1">
+                        <input
+                          autoFocus type="text" value={borradorNombre} disabled={busy}
+                          onChange={e => setBorradorNombre(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') void guardarNombre(s.id);
+                            if (e.key === 'Escape') setEditandoNombre(null);
+                          }}
+                          aria-label={`Nombre de ${s.name}`}
+                          className="w-48 bg-canvas border border-brand rounded p-1 text-strong font-bold"
+                        />
+                        <Button variant="ghost" size="icon-xs" className="text-success hover:text-success"
+                          onClick={() => void guardarNombre(s.id)} disabled={busy} aria-label="Guardar nombre">
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        </Button>
+                        <Button variant="ghost" size="icon-xs" className="text-faint"
+                          onClick={() => setEditandoNombre(null)} disabled={busy} aria-label="Cancelar">
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => empezarNombre(s)}
+                        disabled={!editable}
+                        aria-label={`Nombre de ${s.name}`}
+                        className={`font-bold text-strong text-left ${
+                          editable ? 'hover:bg-surface-2 rounded px-1 -mx-1' : 'cursor-default'
+                        }`}
+                      >
+                        {s.name}
+                        {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
+                      </button>
+                    )}
                     <div className="text-xs text-muted">
                       {s.code} · {s.estimated_minutes} min
                       {!s.is_active && ' · inactivo'}
                     </div>
+                  </TableCell>
+
+                  {/* La categoría se cambia aquí mismo: mandar a abrir la ficha
+                      para reclasificar diecisiete servicios es diecisiete
+                      modales, y entonces no se reclasifica ninguno. */}
+                  <TableCell className="p-3">
+                    {editable ? (
+                      <select
+                        value={s.category ?? ''}
+                        disabled={busy}
+                        onChange={e => void cambiarCategoria(s.id, e.target.value)}
+                        aria-label={`Categoría de ${s.name}`}
+                        className={`bg-canvas border border-line rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand disabled:opacity-50 ${
+                          s.category ? 'text-body' : 'text-faint italic'
+                        }`}
+                      >
+                        <option value="">Sin categoría</option>
+                        {categorias.map(c => (
+                          <option key={c.code} value={c.code}>{c.label}</option>
+                        ))}
+                        {/* Su categoría fue desactivada o borrada: se enseña
+                            igual, porque el servicio la sigue guardando. */}
+                        {s.category && !categorias.some(c => c.code === s.category) && (
+                          <option value={s.category}>{s.category} (inactiva)</option>
+                        )}
+                      </select>
+                    ) : (
+                      <span className={etiquetaDe(s.category) ? 'text-body' : 'text-faint italic'}>
+                        {etiquetaDe(s.category) ?? 'Sin categoría'}
+                      </span>
+                    )}
                   </TableCell>
                   {COLUMNS.map(c => {
                     const price = s.prices[c.id];
@@ -341,9 +517,23 @@ export const ServicesSupabaseView: React.FC = () => {
       </div>
 
       <HelpNote summary="Qué pasa si falta un precio">
-        Un servicio sin precio para una categoría no se ofrece en el punto de venta
-        ni al registrar la llegada: facturarlo fallaría.
+        Un servicio sin precio para una categoría de vehículo no se ofrece en el
+        punto de venta ni al registrar la llegada: facturarlo fallaría.
       </HelpNote>
+
+      <HelpNote summary="Para qué sirve la categoría del servicio">
+        Agrupa el catálogo por tipo de trabajo —lavados, brillado, encerado— en
+        el filtro de esta tabla, en el punto de venta, al registrar una llegada y
+        al editar una orden. No cambia precios ni comisiones: solo ordena. Con el
+        botón «Categorías» se crean las suyas.
+      </HelpNote>
+
+      {gestionandoCats && (
+        <CategoriasServicioModal
+          onClose={() => setGestionandoCats(false)}
+          onCambio={() => { recargarCategorias(); void load(); }}
+        />
+      )}
 
       {recipeFor && (
         <RecipeModal serviceId={recipeFor.id} serviceName={recipeFor.name}
@@ -375,6 +565,14 @@ export const ServicesSupabaseView: React.FC = () => {
           <Field label="Descripción" htmlFor="ed-srv-desc">
             <textarea id="ed-srv-desc" rows={2} className={textInputClass} value={ficha.description}
               onChange={e => setFicha(f => ({ ...f, description: e.target.value }))} />
+          </Field>
+          <Field label="Categoría" htmlFor="ed-srv-cat"
+            hint="Agrupa el servicio en la caja y en la recepción.">
+            <select id="ed-srv-cat" className={textInputClass} value={ficha.categoria}
+              onChange={e => setFicha(f => ({ ...f, categoria: e.target.value }))}>
+              <option value="">Sin categoría</option>
+              {categorias.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+            </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Minutos estimados" htmlFor="ed-srv-min">
@@ -436,6 +634,15 @@ export const ServicesSupabaseView: React.FC = () => {
                 placeholder="LAV-01" />
             </Field>
           </div>
+
+          <Field label="Categoría" htmlFor="svc-cat"
+            hint="Agrupa el servicio en la caja y en la recepción.">
+            <select id="svc-cat" className={textInputClass} value={form.categoria}
+              onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
+              <option value="">Sin categoría</option>
+              {categorias.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+            </select>
+          </Field>
 
           <Field label="Descripción" htmlFor="svc-desc">
             <input id="svc-desc" className={textInputClass} value={form.description}

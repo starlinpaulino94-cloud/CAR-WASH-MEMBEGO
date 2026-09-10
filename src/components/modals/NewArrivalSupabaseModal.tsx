@@ -11,6 +11,9 @@ import {
 } from '../../data/ordersRepository';
 import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { filtrarServicios, categoriasConServicios, TODAS } from '../../lib/filtroServicios';
+import { FiltroCategoriaServicio } from '../common/FiltroCategoriaServicio';
 import {
   lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
   CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
@@ -26,6 +29,9 @@ interface Props {
 interface ServiceOption {
   id: string;
   name: string;
+  /** El `code` de su categoría de servicio. Vacío = sin clasificar. */
+  category: string;
+  description: string;
   price_cents: number;
   estimated_minutes: number;
 }
@@ -90,6 +96,9 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
 
   const [plate, setPlate] = useState('');
   const CATEGORIES = useVehicleCategories();
+  const { categorias: catsServicio } = useCategoriasServicio();
+  /** Tipo de trabajo por el que está filtrada la rejilla de servicios. */
+  const [filtroTipo, setFiltroTipo] = useState<string>(TODAS);
   const [category, setCategory] = useState<VehicleCategory>('sedan');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
@@ -334,6 +343,20 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
       return next;
     });
   }, []);
+
+  // Lo filtrado, MÁS lo que ya esté marcado aunque sea de otro tipo. Si el
+  // filtro escondiera un servicio ya elegido, el pie sumaría un importe cuya
+  // línea no se ve por ninguna parte: el mostrador no podría quitarla.
+  const serviciosVisibles = useMemo(() => {
+    const filtrados = filtrarServicios(services, { categoria: filtroTipo });
+    const dentro = new Set(filtrados.map(s => s.id));
+    return [...filtrados, ...services.filter(s => selected.has(s.id) && !dentro.has(s.id))];
+  }, [services, filtroTipo, selected]);
+
+  const tiposDeServicio = useMemo(
+    () => categoriasConServicios(services, catsServicio),
+    [services, catsServicio]
+  );
 
   const preview = useMemo(() => {
     const chosen = services.filter(s => selected.has(s.id));
@@ -737,6 +760,17 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
 
           {/* =============================================== 3 · EL SERVICIO */}
           <Zona n={3} titulo="El servicio" resumen={`Precios de ${categoriaLabel}`}>
+            {!loading && services.length > 0 && (
+              <FiltroCategoriaServicio
+                categorias={tiposDeServicio}
+                valor={filtroTipo}
+                onCambiar={setFiltroTipo}
+                total={services.length}
+                disabled={busy}
+                grande
+              />
+            )}
+
             <div ref={serviciosRef}>
               {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-busy="true">
@@ -750,7 +784,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                 </p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="Servicios">
-                  {services.map(s => {
+                  {serviciosVisibles.map(s => {
                     const on = selected.has(s.id);
                     return (
                       <button

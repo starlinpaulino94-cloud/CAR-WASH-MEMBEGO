@@ -203,6 +203,35 @@ export interface Database {
         };
         Relationships: [];
       };
+      service_categories: {
+        Row: {
+          id: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          code: string;
+          label: string;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          label?: string;
+          sort_order?: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       vehicle_categories: {
         Row: {
           id: string;
@@ -2831,6 +2860,23 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_service_category: {
+        Args: {
+          p_label: string;
+          p_code?: string;
+          p_sort_order?: number;
+        };
+        Returns: Database['public']['Tables']['service_categories']['Row'];
+      };
+      update_service_category: {
+        Args: {
+          p_id: string;
+          p_label?: string;
+          p_sort_order?: number;
+          p_is_active?: boolean;
+        };
+        Returns: Database['public']['Tables']['service_categories']['Row'];
+      };
       create_vehicle_category: {
         Args: {
           p_label: string;

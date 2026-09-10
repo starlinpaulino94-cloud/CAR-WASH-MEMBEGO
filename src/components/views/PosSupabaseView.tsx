@@ -31,6 +31,9 @@ import {
 } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { filtrarServicios, categoriasConServicios, normalizar, TODAS } from '../../lib/filtroServicios';
+import { FiltroCategoriaServicio } from '../common/FiltroCategoriaServicio';
 import { useLectorCodigoBarras } from '../../hooks/useLectorCodigoBarras';
 import { TicketSupabaseModal } from '../modals/TicketSupabaseModal';
 import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
@@ -66,6 +69,7 @@ const METHODS: { id: PaymentMethod; label: string; icon: typeof Banknote }[] = [
  */
 export const PosSupabaseView: React.FC = () => {
   const { profile, company, branch } = useAuth();
+  const { categorias: catsServicio } = useCategoriasServicio();
 
   const CATEGORIES = useVehicleCategories();
   const [category, setCategory] = useState<VehicleCategory>('sedan');
@@ -75,6 +79,8 @@ export const PosSupabaseView: React.FC = () => {
   const [catalogSearch, setCatalogSearch] = useState('');
 
   const [services, setServices] = useState<ServiceWithPrice[]>([]);
+  /** Tipo de trabajo por el que está filtrado el catálogo de servicios. */
+  const [filtroTipo, setFiltroTipo] = useState<string>(TODAS);
   const [products, setProducts] = useState<Product[]>([]);
   const [session, setSession] = useState<CashSession | null>(null);
   // Facturación fiscal: mientras no haya rangos NCF cargados, el cobro queda
@@ -257,14 +263,18 @@ export const PosSupabaseView: React.FC = () => {
    * nombre y en la descripción del servicio / categoría del producto, que es
    * donde el cajero espera acertar.
    */
-  const normalizar = (t: string) =>
-    t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const q = normalizar(catalogSearch.trim());
 
-  const serviciosFiltrados = useMemo(() => {
-    if (!q) return services;
-    return services.filter(s => normalizar(`${s.name} ${s.description}`).includes(q));
-  }, [services, q]);
+  // El buscador y el tipo de trabajo se aplican JUNTOS: elegir «Brillado» y
+  // teclear «faro» deja los brillados de faroles, no todo lo que diga faro.
+  const serviciosFiltrados = useMemo(
+    () => filtrarServicios(services, { categoria: filtroTipo, texto: catalogSearch }),
+    [services, filtroTipo, catalogSearch]
+  );
+  const tiposDeServicio = useMemo(
+    () => categoriasConServicios(services, catsServicio),
+    [services, catsServicio]
+  );
 
   const productosFiltrados = useMemo(() => {
     if (!q) return products;
@@ -1073,6 +1083,17 @@ export const PosSupabaseView: React.FC = () => {
               </button>
             )}
           </div>
+
+          {/* Tipo de trabajo. Solo en servicios: los productos tienen su propia
+              agrupación y mezclar las dos en una fila confunde más que ayuda. */}
+          {tab === 'services' && (
+            <FiltroCategoriaServicio
+              categorias={tiposDeServicio}
+              valor={filtroTipo}
+              onCambiar={setFiltroTipo}
+              total={services.length}
+            />
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
             {tab === 'services' ? (

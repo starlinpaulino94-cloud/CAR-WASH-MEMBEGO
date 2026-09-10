@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { Button } from '../ui/button';
 import { Plus, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CarFront, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,9 @@ import {
   ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
+import { agruparPorCategoria } from '../../lib/filtroServicios';
+import { OpcionesAgrupadas } from '../common/FiltroCategoriaServicio';
 
 const STATUS_TONE: Record<string, string> = {
   pendiente: 'bg-surface-3/60 text-body',
@@ -45,6 +48,13 @@ export const AppointmentsSupabaseView: React.FC = () => {
   const [day, setDay] = useState(() => isoDay(new Date()));
   const [rows, setRows] = useState<Appointment[]>([]);
   const [services, setServices] = useState<ServiceWithPrices[]>([]);
+  const { categorias: catsServicio } = useCategoriasServicio();
+  /** El catálogo repartido en grupos para el desplegable. */
+  const gruposDeServicio = useMemo(
+    () => agruparPorCategoria(services.filter(s => s.is_active), catsServicio),
+    [services, catsServicio]
+  );
+
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -333,9 +343,12 @@ export const AppointmentsSupabaseView: React.FC = () => {
             <select id="ap-service" className={textInputClass} value={serviceId}
               onChange={e => setServiceId(e.target.value)}>
               <option value="">— Sin servicio (1 hora) —</option>
-              {services.filter(s => s.is_active).map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.estimated_minutes} min)</option>
-              ))}
+              {/* Agrupado por tipo de trabajo: un desplegable no admite botones
+                  de filtro, pero sí grupos, y son la misma agrupación. */}
+              <OpcionesAgrupadas
+                grupos={gruposDeServicio}
+                etiqueta={s => `${s.name} (${s.estimated_minutes} min)`}
+              />
             </select>
           </Field>
 
