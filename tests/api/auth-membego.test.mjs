@@ -12,7 +12,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 // El módulo lee las variables al importarse, así que se ponen ANTES.
 process.env.SUPABASE_URL = 'https://proyecto.supabase.co'
@@ -134,11 +134,118 @@ const BORDES = ['ficha', 'canjear', 'revertir', 'tipos-vehiculo']
 for (const nombre of BORDES) {
   test(`el borde ${nombre} llama a exigirEmpleado antes de llamar a Membego`, () => {
     const src = readFileSync(new URL(`../../api/membego/${nombre}.ts`, import.meta.url), 'utf8')
-    assert.match(src, /exigirEmpleado\(request\)/, `${nombre} debe llamar exigirEmpleado(request)`)
-    const posGuard = src.indexOf('exigirEmpleado(request)')
+    assert.match(src, /exigirEmpleado\(request[,)]/, `${nombre} debe llamar exigirEmpleado(request)`)
+    const posGuard = src.search(/exigirEmpleado\(request[,)]/)
     const posLlamar = src.indexOf('llamar<')
     assert.ok(posGuard > 0, `${nombre}: falta el guard`)
     assert.ok(posLlamar > 0, `${nombre}: falta la llamada a Membego`)
     assert.ok(posGuard < posLlamar, `${nombre}: el guard va ANTES de tocar Membego`)
   })
 }
+
+// `soloLectura` abre el borde a la recepción. Solo puede llevarlo el que LEE:
+// si mañana se le pone a `canjear`, un recepcionista gastaría lavados.
+test('solo el borde de la ficha se abre a la recepción', () => {
+  const conLectura = readdirSync(new URL('../../api/membego/', import.meta.url))
+    .filter((f) => f.endsWith('.ts'))
+    .filter((f) =>
+      /soloLectura:\s*true/.test(
+        readFileSync(new URL(`../../api/membego/${f}`, import.meta.url), 'utf8')
+      )
+    )
+  assert.deepEqual(conLectura, ['ficha.ts'])
+})
+
+// ── El paso 3 y la política RLS que lo sostiene ─────────────────────────────
+//
+// El guard lee `membego_company_links` con el token de quien llama. Si la
+// política de SELECT de esa tabla filtra por rol, el filtro se convierte en un
+// segundo control de acceso invisible: a un cajero le devuelve cero filas y el
+// guard —que no distingue «no puedes leerlo» de «no es tuyo»— responde «Su
+// empresa no es la vinculada a este local». Pasó en producción.
+
+test('la política de lectura del vínculo NO filtra por rol', () => {
+  const migraciones = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
+    .filter((f) => f.endsWith('.sql'))
+    .sort()
+
+  // La última que la define es la que manda.
+  let ultima = null
+  for (const f of migraciones) {
+    const sql = readFileSync(new URL(`../../supabase/migrations/${f}`, import.meta.url), 'utf8')
+    for (const m of sql.matchAll(
+      /create policy membego_company_links_select[\s\S]*?;/g
+    )) {
+      ultima = m[0]
+    }
+  }
+
+  assert.ok(ultima, 'ninguna migración define membego_company_links_select')
+  assert.ok(
+    /belongs_to_tenant/.test(ultima),
+    'la política debe seguir acotando al tenant'
+  )
+  assert.ok(
+    !/has_role/.test(ultima),
+    'la política no puede filtrar por rol: dejaría fuera del paso 3 a roles que ' +
+      'el guard sí admite. Quién puede operar se decide en ROLES_MOSTRADOR.'
+  )
+})
+
+// ── Quién puede consultar la ficha ──────────────────────────────────────────
+
+for (const rol of ['cajero', 'supervisor', 'administrador', 'propietario', 'superadmin']) {
+  test(`${rol} pasa el guard con el vínculo correcto`, async () => {
+    fingirSupabase({ perfil: { role: rol, is_active: true } })
+    const u = await exigirEmpleado(pet({ Authorization: 'Bearer ok' }))
+    assert.equal(u.rol, rol)
+  })
+}
+
+test('recepcionista puede CONSULTAR la ficha (recibe los carros)', async () => {
+  fingirSupabase({ perfil: { role: 'recepcionista', is_active: true } })
+  const u = await exigirEmpleado(pet({ Authorization: 'Bearer ok' }), { soloLectura: true })
+  assert.equal(u.rol, 'recepcionista')
+})
+
+test('recepcionista NO puede canjear: consultar no es gastar', async () => {
+  fingirSupabase({ perfil: { role: 'recepcionista', is_active: true } })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' })),
+    (e) => e.status === 403 && e.codigo === 'SIN_PERMISO'
+  )
+})
+
+test('operario no entra ni siquiera a consultar', async () => {
+  fingirSupabase({ perfil: { role: 'operario', is_active: true } })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' }), { soloLectura: true }),
+    (e) => e.status === 403
+  )
+})
+
+// ── Los tres motivos del paso 3 se dicen por separado ───────────────────────
+
+test('sin vínculo: dice que falta vincular, no que sea otra empresa', async () => {
+  fingirSupabase({ vinculo: null })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' })),
+    (e) => e.status === 403 && /todavía no está vinculado/.test(e.message)
+  )
+})
+
+test('vínculo a otra empresa de Membego: lo dice tal cual', async () => {
+  fingirSupabase({ vinculo: { membego_company_id: 'otra-empresa', is_active: true } })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' })),
+    (e) => e.status === 403 && /otra empresa de Membego/.test(e.message)
+  )
+})
+
+test('vínculo correcto pero apagado: dice que está desactivado', async () => {
+  fingirSupabase({ vinculo: { membego_company_id: 'cmre-esta-empresa', is_active: false } })
+  await assert.rejects(
+    exigirEmpleado(pet({ Authorization: 'Bearer ok' })),
+    (e) => e.status === 403 && /desactivado/.test(e.message)
+  )
+})

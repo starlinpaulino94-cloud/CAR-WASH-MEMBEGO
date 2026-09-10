@@ -54,11 +54,16 @@ export const PanelFichaMembego: React.FC<Props> = ({
 
       {/* Si Membego no contesta se avisa y se sigue: un lavadero no deja de
           trabajar porque la fidelización esté caída. Por eso el aviso vive
-          junto al cliente y no encima del botón que cierra la operación. */}
+          junto al cliente y no encima del botón que cierra la operación.
+
+          El motivo se enseña TAL CUAL. Antes todo se envolvía en «Membego no
+          respondió», y eso convertía un problema de permisos o de vinculación
+          —que tiene arreglo y dice cuál— en una caída ajena que solo cabe
+          esperar. Los mensajes del borde ya vienen en frases completas. */}
       {error && !buscando && (
         <p className="text-xs text-warning flex items-start gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span>Membego no respondió ({error}). Puede continuar igual.</span>
+          <span>{error} Puede continuar igual.</span>
         </p>
       )}
 

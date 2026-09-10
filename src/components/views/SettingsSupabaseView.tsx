@@ -18,6 +18,7 @@ import {
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
 import { NivelesMembego } from '../settings/NivelesMembego';
+import { ServiciosIncluibles } from '../settings/ServiciosIncluibles';
 
 /**
  * Configuración de la empresa.
@@ -467,6 +468,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           para hablar con Membego, y es donde alguien los va a buscar cuando una
           membresía no cubra lo que debería. */}
       {show('membego') && canManageMembego && <NivelesMembego editable={editable} />}
+      {show('membego') && canManageMembego && <ServiciosIncluibles />}
 
       {/* Perfil de la empresa traído de Membego (Fase 1): datos maestros y
           sucursales. Es un snapshot informativo; no pisa los datos fiscales ni

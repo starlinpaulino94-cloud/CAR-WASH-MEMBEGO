@@ -21,8 +21,14 @@ import {
   fetchCustomerById, searchCustomers, fetchFichaMembego,
   CustomerMatch, FichaMembego, ErrorFichaMembego
 } from '../../data/customersRepository';
-import { fetchVehicleCategoryLevels, NivelesPorCategoria } from '../../data/adminRepository';
-import { aplicarCobertura, categoriaTopeDelPlan, descuentoPromocion, type EfectoPromocion } from '../../lib/coberturaMembego';
+import {
+  fetchVehicleCategoryLevels, fetchServiciosIncluiblesMembego,
+  NivelesPorCategoria, ServicioIncluible
+} from '../../data/adminRepository';
+import {
+  aplicarCobertura, categoriaTopeDelPlan, descuentoPromocion, decidirAplicarMembresia,
+  type EfectoPromocion
+} from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { useLectorCodigoBarras } from '../../hooks/useLectorCodigoBarras';
@@ -107,6 +113,16 @@ export const PosSupabaseView: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  /**
+   * Aviso de una comprobación, NO de un cobro que falló.
+   *
+   * Va aparte de `submitError` porque ese recuadro remata siempre con «puede
+   * reintentar sin miedo a cobrar dos veces», que es cierto de una emisión
+   * caída y desconcertante en un aviso de catálogo: no se intentó cobrar nada.
+   */
+  const [avisoBeneficio, setAvisoBeneficio] = useState<string | null>(null);
+  /** Servicios marcados como incluibles en Membego, de TODAS las categorías. */
+  const [incluiblesCatalogo, setIncluiblesCatalogo] = useState<ServicioIncluible[]>([]);
   const [lastInvoice, setLastInvoice] = useState<Invoice | null>(null);
   // El comprobante recién emitido, para abrirlo listo para imprimir.
   const [ticketInvoice, setTicketInvoice] = useState<Invoice | null>(null);
@@ -264,16 +280,20 @@ export const PosSupabaseView: React.FC = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [srv, prd, cash, fisc, nvl] = await Promise.all([
+      const [srv, prd, cash, fisc, nvl, inc] = await Promise.all([
         fetchServices(category),
         fetchProducts(),
         fetchOpenCashSession(branch.id),
         fetchFiscalStatus(),
         // Sin niveles no se puede calcular ninguna diferencia. Si falla, se
         // sigue vendiendo: se cobra completo y se dice por qué.
-        fetchVehicleCategoryLevels().catch(() => ({} as NivelesPorCategoria))
+        fetchVehicleCategoryLevels().catch(() => ({} as NivelesPorCategoria)),
+        // Para poder distinguir «no hay ninguno marcado» de «el marcado no
+        // tiene precio en esta categoría». Si falla no se bloquea la venta.
+        fetchServiciosIncluiblesMembego().catch(() => [] as ServicioIncluible[])
       ]);
       setServices(srv);
+      setIncluiblesCatalogo(inc);
       setProducts(prd);
       setSession(cash);
       setFiscal(fisc);
@@ -540,24 +560,27 @@ export const PosSupabaseView: React.FC = () => {
       const promo = ficha?.promotions.find(p => p.id === b.id);
       setPromoMembego({ id: b.id, nombre: b.nombre, effect: promo?.effect ?? null });
       setSubmitError(null);
+      setAvisoBeneficio(null);
       return;
     }
 
     const incluibles = services.filter(s => s.included_in_membego);
-    if (incluibles.length === 0) {
-      setSubmitError(
-        'No hay ningún servicio marcado como «incluible en Membego» para esta categoría. ' +
-        'Márcalo en el catálogo de servicios para poder aplicar el beneficio.'
-      );
-      return;
-    }
-    // Si ya hay una línea de servicio incluible, la cobertura ya la toma: no se
-    // duplica.
-    const yaHay = lines.some(l => l.serviceId && incluibles.some(s => s.id === l.serviceId));
-    if (yaHay) return;
-    // El mejor lavado del cliente: el incluible más caro de la categoría.
-    const mejor = incluibles.reduce((a, b2) => (b2.price_cents > a.price_cents ? b2 : a));
-    addService(mejor);
+    const decision = decidirAplicarMembresia({
+      incluiblesEnCategoria: incluibles,
+      incluiblesEnCatalogo: incluiblesCatalogo,
+      // Solo servicios: un ambientador en el carrito no es un lavado.
+      lineasServicio: lines
+        .filter(l => l.serviceId)
+        .map(l => ({ serviceId: l.serviceId as string, name: l.name })),
+      categoriaLabel: CATEGORIES.find(c => c.id === category)?.label ?? category
+    });
+
+    if (decision.accion === 'avisar') { setAvisoBeneficio(decision.texto); return; }
+    setAvisoBeneficio(null);
+    if (decision.accion === 'nada') return;
+
+    const elegido = incluibles.find(s => s.id === decision.servicioId);
+    if (elegido) addService(elegido);
   };
 
   const quitarPromoMembego = () => { setPromoMembego(null); };
@@ -744,6 +767,7 @@ export const PosSupabaseView: React.FC = () => {
     if (!canCheckout || !branch) return;
     setSubmitting(true);
     setSubmitError(null);
+    setAvisoBeneficio(null);
     setAvisoCanje(null);
     setAvisoPromo(null);
 
@@ -1544,6 +1568,17 @@ export const PosSupabaseView: React.FC = () => {
                 />
               )}
             </div>
+
+            {/* Un aviso de comprobación, no un cobro caído: tono de advertencia y
+                SIN la coletilla del reintento. Decirle a un cajero «puede
+                reintentar sin miedo a cobrar dos veces» cuando no se intentó
+                cobrar nada le hace buscar un problema que no existe. */}
+            {avisoBeneficio && (
+              <div role="status" className="flex items-start gap-2 p-3 bg-warning/30 border border-warning/40 rounded-xl text-xs text-warning">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <p>{avisoBeneficio}</p>
+              </div>
+            )}
 
             {submitError && (
               <div role="alert" className="flex items-start gap-2 p-3 bg-danger/50 border border-danger/40 rounded-xl text-xs text-danger">

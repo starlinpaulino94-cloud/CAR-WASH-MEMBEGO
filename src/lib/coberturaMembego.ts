@@ -294,3 +294,101 @@ export function aplicarCobertura(params: {
         : `${usable.nombre} no cubre este lavado. Se cobra completo.`
   );
 }
+
+// ───────────────────────────── Por qué la membresía no encuentra qué cubrir
+
+/**
+ * Qué hacer cuando el cajero pulsa «Aplicar al lavado».
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUÉ ESTO ES UNA FUNCIÓN Y NO UN `if` DENTRO DE LA PANTALLA
+ *
+ * Porque el aviso que sale aquí es lo único que el mostrador tiene para
+ * arreglar el problema, y hasta ahora decía siempre lo mismo: «márcalo en el
+ * catálogo». Cuando la causa era otra —el servicio marcado no tiene precio para
+ * esa categoría, o el que se está vendiendo no es el marcado— ese texto mandaba
+ * a cambiar algo que ya estaba bien. Un aviso que da la instrucción equivocada
+ * cuesta más que no dar ninguna.
+ *
+ * Las cuatro salidas son las cuatro situaciones reales, y cada una dice la que
+ * corresponde.
+ */
+export type DecisionBeneficio =
+  /** Ya hay en la venta un servicio incluible: la cobertura lo toma sola. */
+  | { accion: 'nada' }
+  /** La venta no trae lavado: se agrega el incluible más caro de la categoría. */
+  | { accion: 'agregar'; servicioId: string }
+  /** No se puede aplicar. `texto` explica por qué y qué hacer. */
+  | { accion: 'avisar'; texto: string };
+
+export interface EntradaDecision {
+  /** Servicios incluibles CON precio para la categoría del vehículo. */
+  incluiblesEnCategoria: readonly { id: string; name: string; price_cents: number }[];
+  /** Servicios incluibles del catálogo entero, sin mirar categoría. */
+  incluiblesEnCatalogo: readonly { name: string }[];
+  /** Las líneas de SERVICIO que ya tiene la venta (los productos no cuentan). */
+  lineasServicio: readonly { serviceId: string; name: string }[];
+  /** Cómo se llama la categoría del vehículo, para poder nombrarla. */
+  categoriaLabel: string;
+}
+
+const listar = (nombres: readonly string[], max = 3): string => {
+  const vistos = nombres.slice(0, max).map(n => `«${n}»`);
+  const resto = nombres.length - vistos.length;
+  const texto = vistos.join(', ');
+  return resto > 0 ? `${texto} y ${resto} más` : texto;
+};
+
+export function decidirAplicarMembresia(e: EntradaDecision): DecisionBeneficio {
+  // 1. La venta ya trae un lavado incluible. No se toca nada: `aplicarCobertura`
+  //    ya lo descuenta. Agregar otro sería cobrar dos lavados.
+  const yaIncluible = e.lineasServicio.some(l =>
+    e.incluiblesEnCategoria.some(s => s.id === l.serviceId));
+  if (yaIncluible) return { accion: 'nada' };
+
+  // 2. Nadie marcó nunca ningún servicio. Es el caso que deja la cobertura de
+  //    membresías sin funcionar en silencio: la casilla nace apagada y nada la
+  //    enciende sola —Membego no conoce este catálogo y no puede marcarla—.
+  if (e.incluiblesEnCatalogo.length === 0) {
+    return {
+      accion: 'avisar',
+      texto:
+        'Ningún servicio del catálogo está marcado como «Incluido en el beneficio ' +
+        'Membego», así que la membresía no tiene qué cubrir. Márquelo en ' +
+        'Configuración → Servicios, en la ficha del servicio.'
+    };
+  }
+
+  // 3. Hay marcados, pero ninguno tiene precio para ESTA categoría. El aviso
+  //    viejo mandaba a marcar una casilla que ya estaba marcada.
+  if (e.incluiblesEnCategoria.length === 0) {
+    return {
+      accion: 'avisar',
+      texto:
+        `${listar(e.incluiblesEnCatalogo.map(s => s.name))} está marcado como ` +
+        `incluible en Membego, pero no tiene precio para ${e.categoriaLabel}. ` +
+        `Póngale precio a esa categoría en Configuración → Servicios.`
+    };
+  }
+
+  // 4. La venta ya trae lavado —viene de la orden— y no es de los incluibles.
+  //    Agregar el incluible facturaría DOS lavados del mismo carro, así que se
+  //    dice lo que pasa y se deja la decisión en el mostrador.
+  if (e.lineasServicio.length > 0) {
+    return {
+      accion: 'avisar',
+      texto:
+        `${listar(e.lineasServicio.map(l => l.name))} no está marcado como ` +
+        '«Incluido en el beneficio Membego», así que la membresía no lo puede ' +
+        'cubrir. Márquelo en Configuración → Servicios, o cambie la venta al ' +
+        `servicio que sí cubre el plan (${listar(e.incluiblesEnCategoria.map(s => s.name))}).`
+    };
+  }
+
+  // 5. Venta vacía de servicios: se agrega el mejor lavado del cliente. El más
+  //    caro y no el primero, por lo mismo que en `aplicarCobertura`: cubrir el
+  //    más barato teniendo derecho al más caro es cobrarle de más.
+  const mejor = e.incluiblesEnCategoria.reduce((a, b) =>
+    b.price_cents > a.price_cents ? b : a);
+  return { accion: 'agregar', servicioId: mejor.id };
+}

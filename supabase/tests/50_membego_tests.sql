@@ -225,4 +225,24 @@ set role authenticated;
 select test.expect_error('SSO saliente: empresa no vinculada no obtiene pase',
   $q$select public.membego_sso_saliente()$q$);
 
+-- ---- El vínculo lo puede LEER todo el mostrador, no solo el propietario.
+--
+-- El guard de los bordes de Membego (api/_membego/auth.ts) comprueba «¿es este
+-- empleado de ESTE local?» leyendo esta tabla CON EL TOKEN DEL EMPLEADO. Cuando
+-- la política filtraba también por rol, al cajero le llegaban cero filas y el
+-- guard lo acusaba de ser otra empresa: «Su empresa no es la vinculada a este
+-- local», con el vínculo perfectamente puesto. Estas dos comprobaciones son las
+-- que impiden que vuelva a pasar.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+
+select test.check('el cajero VE el vínculo de su empresa (lo necesita el guard)',
+  exists (select 1 from public.membego_company_links
+          where company_id = test.var('c_a')::uuid));
+
+select test.check('pero NO ve el de otra empresa: el aislamiento sigue en pie',
+  not exists (select 1 from public.membego_company_links
+              where company_id = test.var('c_b')::uuid));
+
 reset role;
