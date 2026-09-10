@@ -1312,3 +1312,40 @@ export async function fetchNivelesDeMembego(): Promise<NivelesDeMembego | null> 
     return null;
   }
 }
+
+// ────────────────────────── Qué servicios puede cubrir una membresía Membego
+
+export interface ServicioIncluible {
+  id: string;
+  name: string;
+  /** Categorías de vehículo para las que ESE servicio tiene precio. */
+  categorias: VehicleCategory[];
+}
+
+/**
+ * Los servicios activos marcados como «Incluido en el beneficio Membego».
+ *
+ * Existe porque la marca es la pieza que decide si una membresía puede cubrir
+ * algo, y nace apagada: Membego no conoce este catálogo —su contrato dice que
+ * las tarifas del satélite son del satélite— así que nada la enciende sola. Un
+ * local podía tener membresías vendidas, clientes con lavados pagados y la
+ * cobertura sin funcionar, y solo enterarse con el cliente en el mostrador.
+ *
+ * Se traen también las categorías con precio: un servicio marcado que no tiene
+ * precio para la jeepeta no cubre jeepetas, y esa distinción es justo la que el
+ * aviso del punto de venta necesita para no mandar a marcar lo ya marcado.
+ */
+export async function fetchServiciosIncluiblesMembego(): Promise<ServicioIncluible[]> {
+  const { data, error } = await requireSupabase()
+    .from('services')
+    .select('id, name, service_prices(vehicle_category)')
+    .eq('is_active', true)
+    .eq('included_in_membego', true)
+    .order('name');
+  if (error) throw fallaDatos(error);
+
+  return (data ?? []).map(row => {
+    const r = row as { id: string; name: string; service_prices: { vehicle_category: VehicleCategory }[] };
+    return { id: r.id, name: r.name, categorias: (r.service_prices ?? []).map(p => p.vehicle_category) };
+  });
+}
