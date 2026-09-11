@@ -240,13 +240,11 @@ export function aplicarCobertura(params: {
     if (hayMembresiaViva && tieneServicio) {
       return SIN_COBERTURA(
         nombresIncluibles.length > 0
-          ? 'Este servicio no está marcado como «Incluido en el beneficio Membego», así que la ' +
-            `membresía no lo puede pagar y el lavado se cobra completo. Los que sí cubre son: ` +
-            `${nombresIncluibles.slice(0, 3).map(n => `«${n}»`).join(', ')}. ` +
-            'Márquelo en Configuración → Servicios si este también entra en el plan.'
-          : 'Ningún servicio del catálogo está marcado como «Incluido en el beneficio Membego», ' +
-            'así que la membresía no tiene qué cubrir y el lavado se cobra completo. ' +
+          ? 'La membresía no puede pagar este servicio: no está marcado como «Incluido en el ' +
+            `beneficio Membego». Sí cubre ${nombresIncluibles.slice(0, 3).map(n => `«${n}»`).join(', ')}. ` +
             'Márquelo en Configuración → Servicios.'
+          : 'Ningún servicio está marcado como «Incluido en el beneficio Membego», así que la ' +
+            'membresía no tiene qué cubrir. Márquelos en Configuración → Servicios.'
       );
     }
     return SIN_COBERTURA('Nada en esta venta entra en una membresía.');
@@ -408,18 +406,15 @@ export function decidirAplicarMembresia(e: EntradaDecision): DecisionBeneficio {
   // 4. La venta ya trae lavado —viene de la orden— y no es de los incluibles.
   //    Agregar el incluible facturaría DOS lavados del mismo carro, así que se
   //    dice lo que pasa y se deja la decisión en el mostrador.
-  // 4. La venta ya trae lavado —viene de la orden— y no es de los incluibles.
-  //    Agregar el incluible facturaría DOS lavados del mismo carro, así que se
-  //    dice lo que pasa y se deja la decisión en el mostrador.
+  // 4. La venta ya trae lavado y no es de los incluibles. No se agrega nada
+  //    —facturaría DOS lavados del mismo carro— y TAMPOCO se avisa aquí: la
+  //    línea del total ya lo está diciendo, en ámbar y sin que nadie pulse
+  //    nada. Cuando esto avisaba además por su cuenta, el cajero veía el mismo
+  //    hecho contado dos veces con palabras distintas, una encima del botón de
+  //    cobrar y otra junto al subtotal; dos avisos para un solo problema no
+  //    informan el doble, parecen un sistema roto y se dejan de leer los dos.
   if (e.lineasServicio.length > 0) {
-    return {
-      accion: 'avisar',
-      texto:
-        `${listar(e.lineasServicio.map(l => l.name))} no está marcado como ` +
-        '«Incluido en el beneficio Membego», así que la membresía no lo puede ' +
-        `cubrir. Márquelo en Configuración → Servicios, o cambie la venta al ` +
-        `servicio que sí cubre el plan (${listar(e.incluiblesEnCategoria.map(s => s.name))}).`
-    };
+    return { accion: 'nada' };
   }
 
   // 5. Venta vacía de servicios: se agrega el mejor lavado del cliente. El más

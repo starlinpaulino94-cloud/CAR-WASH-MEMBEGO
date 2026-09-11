@@ -228,6 +228,8 @@ console.log('\n[8] Un servicio sin marcar NO se cobra a ojo');
     /no está marcado/i.test(r.explicacion), r.explicacion);
   check('nombrando los que sí cubre el plan',
     /Lavado Básico/.test(r.explicacion), r.explicacion);
+  check('en UNA frase: vive pegado al total, no es un prospecto',
+    r.explicacion.length < 200, `${r.explicacion.length} caracteres`);
 }
 {
   // Marcado: la membresía lo cubre ENTERO. Es lo que el negocio espera cuando
@@ -251,7 +253,7 @@ console.log('\n[8] Un servicio sin marcar NO se cobra a ojo');
     nombresIncluibles: []
   });
   check('sin ningún servicio marcado se dice eso, no otra cosa',
-    /Ningún servicio del catálogo/i.test(r.explicacion), r.explicacion);
+    /Ningún servicio está marcado/i.test(r.explicacion), r.explicacion);
   check('y tampoco se cobra nada a ojo', r.coveredCents === 0);
 }
 {

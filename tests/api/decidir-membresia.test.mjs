@@ -58,15 +58,15 @@ test('marcado pero sin precio en esta categoría: NO manda a marcarlo otra vez',
 })
 
 test('la venta trae un lavado que no es el incluible: no agrega un segundo', () => {
+  // No agrega —serían dos lavados del mismo carro— y tampoco avisa: la línea
+  // del total ya lo dice sola, en ámbar y sin pulsar nada. Dos avisos para un
+  // solo problema no informan el doble; parecen un sistema roto.
   const d = decidirAplicarMembresia(entrada({
     incluiblesEnCategoria: [PREMIUM],
     incluiblesEnCatalogo: [PREMIUM],
     lineasServicio: [{ serviceId: 's9', name: 'Cuidado Básico' }]
   }))
-  assert.equal(d.accion, 'avisar')
-  // Nombra el servicio de la venta y el que sí cubre el plan.
-  assert.match(d.texto, /«Cuidado Básico»/)
-  assert.match(d.texto, /«Cuidado Premium»/)
+  assert.deepEqual(d, { accion: 'nada' })
 })
 
 test('los productos de la venta no cuentan como lavado', () => {
