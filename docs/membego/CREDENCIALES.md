@@ -51,6 +51,24 @@ Cópialos en el momento. En la base solo queda el hash; no se pueden volver a ve
 
 ## 3. Poner las variables en Vercel (proyecto del **car wash**)
 
+Todo va en **un solo proyecto de Vercel: el del car wash**. No hay nada que
+poner en ningún despliegue de Membego.
+
+Pero los valores salen de **dos sitios distintos**, y confundirlos es el fallo
+más caro de esta integración:
+
+| Grupo | De dónde sale |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | del Supabase **del car wash** — el mismo proyecto de las `VITE_*` |
+| `MEMBEGO_CLIENT_ID`, `MEMBEGO_CLIENT_SECRET`, `MEMBEGO_SECRETO`, `MEMBEGO_COMPANY_ID` | de **Membego**: los tres primeros los imprime el script de arriba; el último es el id de tu empresa |
+
+> ⚠️ **Del panel de Supabase de Membego no se saca nada.** Son dos proyectos de
+> Supabase distintos. Si en `SUPABASE_URL` se pega el de Membego, el navegador
+> crea la sesión contra el car wash y el servidor la valida contra Membego,
+> donde ese usuario no existe: el mostrador lee «La sesión no es válida o
+> expiró» para siempre y nada más lo delata. El diagnóstico compara los dos
+> lados justo por esto.
+
 En Vercel → Settings → Environment Variables (Production), **sin** prefijo `VITE_`:
 
 | Variable | Valor |
