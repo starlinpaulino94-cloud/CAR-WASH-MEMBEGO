@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2, AlertCircle, BadgeCheck } from 'lucide-react';
 import { normalizePlate, type FichaMembego } from '../../data/customersRepository';
+import { DiagnosticoMembego } from './DiagnosticoMembego';
 
 /**
  * Lo que Membego sabe del cliente, en un sitio y con un solo criterio.
@@ -37,10 +38,17 @@ interface Props {
    */
   onAplicarBeneficio?: (b: { tipo: 'membership' | 'promotion'; id: string; nombre: string }) => void;
   disabled?: boolean;
+  /**
+   * Identificador del cliente en Membego. Si se pasa, el aviso de error trae un
+   * botón que dice POR QUÉ falló — y lo prueba con este cliente, que es el
+   * único caso que reproduce el fallo.
+   */
+  membegoCustomerId?: string | null;
 }
 
 export const PanelFichaMembego: React.FC<Props> = ({
-  ficha, error, buscando, placa = '', onElegirPlaca, onAplicarBeneficio, disabled = false
+  ficha, error, buscando, placa = '', onElegirPlaca, onAplicarBeneficio, disabled = false,
+  membegoCustomerId
 }) => {
   const promosElegibles = ficha?.promotions.filter(p => p.eligible) ?? [];
 
@@ -61,10 +69,18 @@ export const PanelFichaMembego: React.FC<Props> = ({
           —que tiene arreglo y dice cuál— en una caída ajena que solo cabe
           esperar. Los mensajes del borde ya vienen en frases completas. */}
       {error && !buscando && (
-        <p className="text-xs text-warning flex items-start gap-1.5">
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          <span>{error} Puede continuar igual.</span>
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-xs text-warning flex items-start gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+            <span>{error} Puede continuar igual.</span>
+          </p>
+          {/* El botón vive AQUÍ, pegado al fallo, y no escondido en Ajustes:
+              dos de las comprobaciones dependen de quién llama, así que el
+              único diagnóstico que explica el fallo del cajero es el que corre
+              el cajero. Enseñarlo solo cuando algo ha fallado evita ofrecer una
+              herramienta de mantenimiento en mitad de un cobro normal. */}
+          <DiagnosticoMembego membegoCustomerId={membegoCustomerId} compacto />
+        </div>
       )}
 
       {ficha?.memberships.map(m => {

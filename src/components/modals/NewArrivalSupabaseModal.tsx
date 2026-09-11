@@ -637,6 +637,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                     <PanelFichaMembego
                       ficha={ficha} error={fichaError} buscando={fichaBuscando}
                       placa={plate} onElegirPlaca={setPlate} disabled={busy}
+                      membegoCustomerId={cliente.membego_customer_id}
                     />
                   </div>
                 )}

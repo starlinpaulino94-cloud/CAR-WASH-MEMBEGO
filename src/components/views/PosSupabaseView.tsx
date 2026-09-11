@@ -1314,6 +1314,7 @@ export const PosSupabaseView: React.FC = () => {
                 placa={vehiclePlate} onElegirPlaca={setVehiclePlate}
                 onAplicarBeneficio={aplicarBeneficio}
                 disabled={submitting}
+                membegoCustomerId={membegoCustomerId}
               />
             </div>
           )}

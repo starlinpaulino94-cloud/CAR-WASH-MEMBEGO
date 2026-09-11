@@ -59,13 +59,37 @@ En Vercel → Settings → Environment Variables (Production), **sin** prefijo `
 | `MEMBEGO_CLIENT_SECRET` | el `mgs_…` que imprimió el script |
 | `MEMBEGO_COMPANY_ID` | el id `cm…` de tu empresa en Membego |
 | `MEMBEGO_SISTEMA_SLUG` | `car-wash-membego` (el mismo `slug` del manifiesto) |
-| `MEMBEGO_API_URL` | *(opcional)* `https://membego.com/api/platform/v1` — solo si tu Membego corre en otro dominio |
+| `MEMBEGO_API_URL` | *(opcional)* `https://membego.com/api/platform/v1` — **ponla explícita** si tu Membego responde en otro host (ver el aviso de abajo) |
 | `MEMBEGO_SSO_ENTRADA_URL` | *(opcional)* `https://membego.com/sso/entrar` — para el botón «Ir a Membego» |
 
 El secreto de webhooks (`whs_…`) va en Membego, no aquí.
 
 Después de guardarlas hay que **redeploy** en Vercel (las variables no se aplican
 a despliegues ya hechos).
+
+### Cuidado con el `www`: una redirección rompe el token y no lo parece
+
+Si `MEMBEGO_API_URL` apunta a un host que **redirige** al canónico (el caso
+clásico: `membego.com` cuando el bueno es `www.membego.com`), la petición del
+token es un `POST` y **una redirección lo convierte en `GET` y tira el cuerpo**.
+Membego recibe una petición sin `client_id` y contesta 400/405; el mostrador lee
+«Membego rechazó las credenciales» y el que va a arreglarlo se pasa el día
+rotando un secreto que estaba perfecto.
+
+Desde la auditoría, el borde **corta ante cualquier redirección** y dice a qué
+host redirige — que es justo el valor que hay que poner en la variable. Si ves
+ese mensaje, copia el destino en `MEMBEGO_API_URL` y vuelve a desplegar.
+
+## Cuando algo falle: el botón de diagnóstico
+
+No adivines cuál de los seis eslabones está roto. En **Ajustes → Membego →
+Comprobar la integración** hay un botón que los recorre todos y dice cuál falla
+y qué hacer. El mismo botón aparece en la caja, junto al aviso, cuando la ficha
+de un cliente no se puede consultar.
+
+**Que lo pulse quien tiene el problema.** Dos de las comprobaciones —el rol y la
+lectura del vínculo bajo RLS— dependen de quién llama: si a un cajero le falla y
+al dueño le sale todo verde, eso no descarta el fallo, lo **localiza**.
 
 ## Importante: esto NO es el error que ves ahora
 

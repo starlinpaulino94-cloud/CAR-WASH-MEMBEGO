@@ -51,7 +51,25 @@ async function fetchConTope(url: string, init: RequestInit): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
+    // `redirect: 'manual'` NO es un detalle: un 301 se sigue solo, pero al
+    // seguirlo el estándar convierte el POST en GET y TIRA EL CUERPO. Con
+    // `MEMBEGO_API_URL` apuntada al host que redirige (el caso clásico:
+    // `membego.com` cuando el canónico es `www.membego.com`), la petición del
+    // token llega sin `client_id` y Membego contesta 400/405. El mostrador lee
+    // entonces «Membego rechazó las credenciales», y quien va a arreglarlo pasa
+    // el día rotando un secreto que estaba bien. Cortamos aquí y decimos el
+    // destino, que es justo el valor que hay que poner en la variable.
+    const res = await fetch(url, { ...init, redirect: 'manual', signal: ctrl.signal });
+    if (res.status >= 300 && res.status < 400) {
+      const destino = res.headers.get('location') ?? '(sin cabecera Location)';
+      throw new ErrorMembego(
+        'SIN_CONFIGURAR',
+        `Membego redirige ${url} hacia ${destino}. Una redirección pierde el cuerpo de la petición: ` +
+          'ponga MEMBEGO_API_URL en Vercel apuntando al destino final y vuelva a desplegar.',
+        503
+      );
+    }
+    return res;
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') {
       throw new ErrorMembego('NO_DISPONIBLE', `Membego no respondió en ${TIMEOUT_MS} ms.`, 503);
@@ -188,6 +206,42 @@ export async function llamar<T>(ruta: string, opciones: OpcionesLlamada = {}): P
   }
 
   return (await res.json()) as T;
+}
+
+/**
+ * A qué host se está llamando de verdad. Para el diagnóstico: la mitad de los
+ * fallos de integración son una `MEMBEGO_API_URL` apuntando a otro sitio, y
+ * eso no se ve desde el mostrador. La URL no es un secreto; el secreto es el
+ * `client_secret`, que nunca sale de aquí.
+ */
+export function hostApiMembego(): string {
+  try {
+    return new URL(BASE).host;
+  } catch {
+    return BASE;
+  }
+}
+
+/**
+ * Pide un token a Membego a propósito, SIN usar la caché, para comprobar que
+ * las credenciales del despliegue sirven. Devuelve el motivo si no.
+ *
+ * Se salta la caché adrede: un token guardado de hace media hora diría «todo
+ * bien» aunque la credencial se hubiera revocado, que es precisamente lo que
+ * se está intentando averiguar.
+ */
+export async function probarCredencial(): Promise<{ ok: boolean; detalle: string }> {
+  const faltan = faltaConfiguracion();
+  if (faltan.length > 0) {
+    return { ok: false, detalle: `Falta configurar en Vercel: ${faltan.join(', ')}.` };
+  }
+  try {
+    await pedirToken();
+    return { ok: true, detalle: `Membego aceptó las credenciales en ${hostApiMembego()}.` };
+  } catch (e) {
+    if (e instanceof ErrorMembego) return { ok: false, detalle: e.message };
+    return { ok: false, detalle: `No se pudo contactar con ${hostApiMembego()}.` };
+  }
 }
 
 /** Respuesta JSON uniforme para las funciones de este borde. */

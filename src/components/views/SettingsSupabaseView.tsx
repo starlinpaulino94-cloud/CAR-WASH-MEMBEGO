@@ -18,6 +18,7 @@ import {
 import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell';
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
 import { NivelesMembego } from '../settings/NivelesMembego';
+import { DiagnosticoMembego } from '../common/DiagnosticoMembego';
 import { ServiciosIncluibles } from '../settings/ServiciosIncluibles';
 
 /**
@@ -690,6 +691,21 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
               El <span className="font-mono">companyId</span> te lo da Membego. Vincula esta empresa para que
               sus clientes, membresías y promociones entren solo aquí.
             </p>
+          </div>
+
+          {/* Comprobación de extremo a extremo. La vinculación de arriba es
+              solo uno de los seis eslabones que tienen que estar bien para que
+              la caja pueda jalar un cliente; esto los recorre todos y dice cuál
+              está roto.
+
+              Ojo: lo que se ve aquí es el diagnóstico de QUIEN LO PULSA. Si a
+              un cajero le falla y a usted le sale todo verde, eso no descarta
+              el fallo — lo localiza: es algo que depende del usuario (su rol, o
+              la política que le deja leer el vínculo). Que el cajero lo corra
+              desde la caja, donde el mismo botón sale junto al aviso. */}
+          <div className="space-y-2 pt-2 border-t border-line">
+            <h4 className="font-bold text-strong text-xs">Comprobar la integración</h4>
+            <DiagnosticoMembego />
           </div>
 
           {/* Bitácora. Es lo que permite diagnosticar por qué un cliente de
