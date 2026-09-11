@@ -2862,6 +2862,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      invoices_summary: {
+        Args: { p_branch_id: string; p_from?: string; p_to?: string; p_kind?: string };
+        Returns: Json;
+      };
       cash_summary: {
         Args: { p_branch_id: string; p_from?: string; p_to?: string; p_cashier_id?: string };
         Returns: Json;

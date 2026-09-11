@@ -366,3 +366,26 @@ export async function fetchSesionesCaja(
   if (error) throw fallaDatos(error);
   return data as unknown as { total: number; rows: SesionCaja[]; page: number; size: number };
 }
+
+// ─────────────────────────────────────────────────── Resumen de facturación
+
+export interface ResumenFacturas {
+  facturado_cents: number;
+  facturas: number;
+  anulado_cents: number;
+  anuladas: number;
+  notas_credito_cents: number;
+  notas_credito: number;
+  ticket_promedio_cents: number;
+  por_metodo: { method: string; amount_cents: number }[];
+}
+
+export async function fetchResumenFacturas(
+  branchId: string, from?: string | null, to?: string | null, kind?: string | null
+): Promise<ResumenFacturas> {
+  const { data, error } = await requireSupabase().rpc('invoices_summary', {
+    p_branch_id: branchId, p_from: from ?? undefined, p_to: to ?? undefined, p_kind: kind ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as ResumenFacturas;
+}

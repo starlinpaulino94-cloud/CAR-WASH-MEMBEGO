@@ -508,31 +508,9 @@ export async function fetchInvoicePage(params: InvoicePageParams): Promise<Invoi
   return { rows: data ?? [], total: count ?? 0 };
 }
 
-/** Totales del periodo consultado, calculados por el servidor. */
-export async function fetchInvoiceTotals(
-  branchId: string,
-  fromDate?: string,
-  toDate?: string
-): Promise<{ issuedCents: number; annulledCents: number; count: number }> {
-  let query = requireSupabase()
-    .from('invoices')
-    .select('total_cents, is_annulled, credits_invoice_id')
-    .eq('branch_id', branchId)
-    .is('credits_invoice_id', null);
-
-  if (fromDate) query = query.gte('created_at', fromDate);
-  if (toDate)   query = query.lte('created_at', toDate);
-
-  const { data, error } = await query;
-  if (error) throw fallaDatos(error);
-
-  let issued = 0, annulled = 0;
-  for (const row of data ?? []) {
-    if (row.is_annulled) annulled += row.total_cents;
-    else issued += row.total_cents;
-  }
-  return { issuedCents: issued, annulledCents: annulled, count: (data ?? []).length };
-}
+// (fetchInvoiceTotals se retiró: los KPIs de Facturación salen de
+// invoices_summary, que agrega en el servidor y respeta los filtros en vez de
+// traerse todas las facturas al navegador para sumarlas.)
 
 /**
  * Traduce los errores del servidor a algo accionable en un mostrador.
