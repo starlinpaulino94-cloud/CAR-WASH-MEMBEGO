@@ -24,6 +24,8 @@ export interface DiagnosticoMembego {
   ok: boolean;
   resumen: string;
   apiMembego: string;
+  /** 'production' | 'preview' | 'development'. Vacío si no se pudo saber. */
+  entorno?: string;
 }
 
 /**
