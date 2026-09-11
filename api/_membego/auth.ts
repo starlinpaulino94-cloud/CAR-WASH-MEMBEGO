@@ -129,11 +129,31 @@ export interface OpcionesGuard {
 /**
  * Exige que quien llama sea un empleado autenticado y con rol de mostrador.
  * Lanza `ErrorAuth` (401/403/503) si no. Devuelve el usuario si todo va bien.
+ *
+ * Los tres pasos viven en funciones sueltas (`pasoSesion`, `pasoPerfil`,
+ * `pasoVinculo`) por una razón que no es estética: el diagnóstico
+ * (`api/membego/diagnostico.ts`) necesita correrlos UNO A UNO para decir cuál
+ * falla, y un guard que solo sabe decir «no» de golpe obliga a escribir esa
+ * comprobación por segunda vez. Dos copias de la misma regla divergen el día
+ * que alguien toca una; entonces el diagnóstico miente, que es peor que no
+ * tenerlo.
  */
 export async function exigirEmpleado(
   request: Request,
   opciones: OpcionesGuard = {}
 ): Promise<UsuarioAutenticado> {
+  const token = exigirConfiguracionYToken(request);
+  const userId = await pasoSesion(token);
+  const rol = await pasoPerfil(token, userId, opciones.soloLectura === true);
+  await pasoVinculo(token);
+  return { userId, rol };
+}
+
+/**
+ * Lo que hay que tener ANTES de preguntarle nada a nadie: la configuración del
+ * despliegue y un token en la petición. Devuelve el token.
+ */
+export function exigirConfiguracionYToken(request: Request): string {
   const faltan = faltaConfiguracionAuth();
   if (faltan.length > 0) {
     throw new ErrorAuth('SIN_CONFIGURAR', `Falta configurar en Vercel: ${faltan.join(', ')}.`, 503);
@@ -143,8 +163,11 @@ export async function exigirEmpleado(
   if (!token) {
     throw new ErrorAuth('NO_AUTENTICADO', 'Falta la sesión: inicie sesión de nuevo.', 401);
   }
+  return token;
+}
 
-  // 1) ¿El token vale? Se lo preguntamos a Supabase, que es la autoridad.
+/** Paso 1: ¿el token vale? Devuelve el `userId`. */
+export async function pasoSesion(token: string): Promise<string> {
   let userId: string;
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -160,10 +183,19 @@ export async function exigirEmpleado(
     if (e instanceof ErrorAuth) throw e;
     throw new ErrorAuth('NO_AUTENTICADO', 'No se pudo verificar la sesión.', 401);
   }
+  return userId;
+}
 
-  // 2) ¿Es un empleado activo con rol de mostrador? La RLS deja al usuario ver
-  //    solo su propia fila de `profiles`, así que esta consulta con SU token no
-  //    puede leer la de nadie más.
+/**
+ * Paso 2: ¿es un empleado activo con rol de mostrador? La RLS deja al usuario
+ * ver solo su propia fila de `profiles`, así que esta consulta con SU token no
+ * puede leer la de nadie más. Devuelve el rol.
+ */
+export async function pasoPerfil(
+  token: string,
+  userId: string,
+  soloLectura: boolean
+): Promise<string> {
   let rolDelPaso2: string;
   try {
     const res = await fetch(
@@ -173,7 +205,7 @@ export async function exigirEmpleado(
     if (!res.ok) {
       throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el perfil.', 403);
     }
-    const admitidos = opciones.soloLectura ? ROLES_CONSULTA : ROLES_MOSTRADOR;
+    const admitidos = soloLectura ? ROLES_CONSULTA : ROLES_MOSTRADOR;
     const filas = (await res.json()) as Array<{ role?: string; is_active?: boolean }>;
     const perfil = filas[0];
     if (!perfil || perfil.is_active === false || !perfil.role || !admitidos.has(perfil.role)) {
@@ -184,19 +216,26 @@ export async function exigirEmpleado(
     if (e instanceof ErrorAuth) throw e;
     throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el perfil.', 403);
   }
+  return rolDelPaso2;
+}
 
-  // 3) ¿Es de ESTA empresa? La RLS deja al usuario ver solo el vínculo de SU
-  //    empresa; se exige que ese vínculo apunte a la empresa de Membego de este
-  //    despliegue y esté activo. Así un empleado de otro inquilino del mismo
-  //    Supabase —que sí pasa los pasos 1 y 2— no alcanza a este local.
-  //
-  //    Los tres motivos por los que esto falla se dicen POR SEPARADO. Antes los
-  //    tres daban «Su empresa no es la vinculada a este local», y como la
-  //    política RLS de la tabla filtraba además por rol, a un cajero le salía
-  //    ese mensaje aunque el vínculo estuviera perfecto: el sistema acusaba de
-  //    ser otra empresa a quien solo no tenía permiso de lectura. Un mensaje
-  //    exacto sobre lo que el código ve y falso sobre lo que pasa es lo que
-  //    convierte un fallo de diez minutos en uno de tres días.
+/**
+ * Paso 3: ¿es de ESTA empresa? La RLS deja al usuario ver solo el vínculo de SU
+ * empresa; se exige que ese vínculo apunte a la empresa de Membego de este
+ * despliegue y esté activo. Así un empleado de otro inquilino del mismo
+ * Supabase —que sí pasa los pasos 1 y 2— no alcanza a este local.
+ *
+ * Los tres motivos por los que esto falla se dicen POR SEPARADO. Antes los
+ * tres daban «Su empresa no es la vinculada a este local», y como la política
+ * RLS de la tabla filtraba además por rol, a un cajero le salía ese mensaje
+ * aunque el vínculo estuviera perfecto: el sistema acusaba de ser otra empresa
+ * a quien solo no tenía permiso de lectura. Un mensaje exacto sobre lo que el
+ * código ve y falso sobre lo que pasa es lo que convierte un fallo de diez
+ * minutos en uno de tres días.
+ *
+ * Devuelve el vínculo que encontró, para que el diagnóstico pueda enseñarlo.
+ */
+export async function pasoVinculo(token: string): Promise<{ membegoCompanyId: string }> {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/membego_company_links?select=membego_company_id,is_active`,
@@ -239,11 +278,24 @@ export async function exigirEmpleado(
       );
     }
 
-    return { userId, rol: rolDelPaso2 };
+    return { membegoCompanyId: MEMBEGO_COMPANY_ID };
   } catch (e) {
     if (e instanceof ErrorAuth) throw e;
     throw new ErrorAuth('SIN_PERMISO', 'No se pudo comprobar el vínculo con Membego.', 403);
   }
+}
+
+/**
+ * La empresa de Membego que este despliegue atiende, para el diagnóstico.
+ * No es un secreto: el propietario la escribe a mano en Ajustes → Membego.
+ */
+export function empresaMembegoDelDespliegue(): string {
+  return MEMBEGO_COMPANY_ID;
+}
+
+/** El proyecto de Supabase contra el que valida el SERVIDOR. Para el diagnóstico. */
+export function supabaseDelServidor(): string {
+  return SUPABASE_URL;
 }
 
 /** Traduce un `ErrorAuth` a la respuesta JSON del borde. `null` si no lo es. */

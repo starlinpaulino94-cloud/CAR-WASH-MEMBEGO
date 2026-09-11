@@ -53,3 +53,40 @@ demostración de por qué el ciclo exige un auditor que no sea el autor.
 tres del candado de empresa del paso 4) + 4 source-checks (un borde por
 endpoint) de que el guard va antes de tocar Membego. 15/15. Las 250
 comprobaciones e2e siguen verdes.
+
+---
+
+## Anexo (auditoría de operación): el guard también tiene que saber decir POR QUÉ
+
+Un guard bien hecho responde «no». Eso basta para la seguridad y no basta para
+la operación: en producción, sus cinco motivos de rechazo —falta una variable,
+dos proyectos de Supabase distintos, sesión vencida, rol sin permiso, vínculo
+invisible por RLS— llegan al mostrador como el mismo aviso amarillo. La única
+forma de distinguirlos era leer los logs de Vercel, que el dueño de un lavadero
+no tiene.
+
+`api/membego/diagnostico.ts` corre **los mismos pasos, uno a uno**, y nombra el
+que falla. Tres decisiones que lo sostienen:
+
+1. **Los pasos se extraen a funciones** (`pasoSesion`, `pasoPerfil`,
+   `pasoVinculo`) y `exigirEmpleado` las compone. Reimplementar la comprobación
+   en el diagnóstico habría creado una segunda copia de la regla; el día que
+   alguien tocara una, el diagnóstico mentiría — peor que no tenerlo.
+
+2. **Lo corre cualquier empleado autenticado, no solo el propietario.** Dos de
+   las comprobaciones dependen de quién llama. Un diagnóstico que solo el dueño
+   puede correr no ve el problema del cajero, que es el único que importa.
+
+3. **Salir a Membego exige sesión; preguntar por un cliente exige el guard
+   entero.** Es la parte que hay que vigilar: al no llamar a `exigirEmpleado` de
+   una pieza, nada estructural impide que este borde se convierta en la puerta
+   de atrás que el guard existe para cerrar. Lo impiden dos condiciones
+   explícitas y las dos pruebas que las fijan.
+
+Lo que devuelve es configuración del propio local —nombres de variables
+presentes o ausentes, el host de la API, el id de empresa que el propietario
+escribió a mano— y nunca un secreto; hay una prueba que lo comprueba carácter a
+carácter.
+
+**Validación:** `tests/api/diagnostico-membego.test.mjs`, 11 casos (8 de que el
+informe acierta, 3 de que no es una puerta de atrás).
