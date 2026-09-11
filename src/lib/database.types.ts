@@ -2862,6 +2862,14 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      qc_summary: {
+        Args: { p_from?: string; p_to?: string };
+        Returns: Json;
+      };
+      qc_history_page: {
+        Args: { p_from?: string; p_to?: string; p_washer_id?: string; p_result?: string; p_page?: number; p_size?: number };
+        Returns: Json;
+      };
       orders_page: {
         Args: {
           p_branch_id: string; p_from?: string; p_to?: string; p_status?: string;
