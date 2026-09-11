@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
+import { CajaGerencial } from './CajaGerencial';
 import {
   fetchOpenCashSession, fetchCashMovements, fetchCashSessionHistory,
   openCashSession, closeCashSession, registerCashMovement,
@@ -71,6 +72,7 @@ export const CashSupabaseView: React.FC = () => {
   useEffect(() => { void load(); }, [load]);
 
   const allowed = can(profile, 'operateCash');
+  const puedeGestionar = can(profile, 'viewAuditLog');
 
   const handleOpen = async () => {
     if (busy || !branch || !company || !profile) return;
@@ -443,50 +445,54 @@ export const CashSupabaseView: React.FC = () => {
         </div>
       )}
 
-      {/* Histórico: existe porque las sesiones ya no se sobrescriben */}
-      <div className="bg-surface border border-line rounded-2xl p-5 space-y-3">
-        <h3 className="font-bold text-strong text-sm border-b border-line pb-2 flex items-center gap-2">
-          <History className="w-4 h-4 text-brand" /> Turnos anteriores
-        </h3>
-        {history.filter(h => h.status === 'closed').length === 0 ? (
-          <p className="text-xs text-faint italic py-4 text-center">Aún no hay turnos cerrados</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="text-xs">
-              <TableHeader>
-                <TableRow className="text-muted border-b border-line">
-                  <TableHead className="py-2 pr-3 font-semibold">APERTURA</TableHead>
-                  <TableHead className="py-2 pr-3 font-semibold">CIERRE</TableHead>
-                  <TableHead className="py-2 pr-3 font-semibold">ESPERADO</TableHead>
-                  <TableHead className="py-2 pr-3 font-semibold">CONTADO</TableHead>
-                  <TableHead className="py-2 text-right font-semibold">DIFERENCIA</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.filter(h => h.status === 'closed').map(h => (
-                  <TableRow key={h.id}>
-                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
-                      {new Date(h.opened_at).toLocaleString('es-DO')}
-                    </TableCell>
-                    <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">
-                      {h.closed_at ? new Date(h.closed_at).toLocaleString('es-DO') : '—'}
-                    </TableCell>
-                    <TableCell className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</TableCell>
-                    <TableCell className="py-2 pr-3 text-body">
-                      {h.counted_cash_cents !== null ? formatCents(h.counted_cash_cents, symbol) : '—'}
-                    </TableCell>
-                    <TableCell className={`py-2 text-right font-bold ${
-                      (h.difference_cents ?? 0) === 0 ? 'text-success' : 'text-danger'
-                    }`}>
-                      {h.difference_cents !== null ? formatCents(h.difference_cents, symbol) : '—'}
-                    </TableCell>
+      {/* Histórico y análisis gerencial: solo para quien puede verlo. La
+          operación de arriba es del cajero; esto es del supervisor y el dueño,
+          con todas las cajas, sus descuadres y el cierre imprimible. Un cajero
+          sigue viendo sus turnos cerrados en la tabla simple de respaldo. */}
+      {branch && puedeGestionar ? (
+        <div className="space-y-3">
+          <h3 className="font-bold text-strong text-sm flex items-center gap-2">
+            <History className="w-4 h-4 text-brand" /> Histórico y descuadres
+          </h3>
+          <CajaGerencial branchId={branch.id} />
+        </div>
+      ) : (
+        <div className="bg-surface border border-line rounded-2xl p-5 space-y-3">
+          <h3 className="font-bold text-strong text-sm border-b border-line pb-2 flex items-center gap-2">
+            <History className="w-4 h-4 text-brand" /> Turnos anteriores
+          </h3>
+          {history.filter(h => h.status === 'closed').length === 0 ? (
+            <p className="text-xs text-faint italic py-4 text-center">Aún no hay turnos cerrados</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow className="text-muted border-b border-line">
+                    <TableHead className="py-2 pr-3 font-semibold">APERTURA</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold">CIERRE</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold">ESPERADO</TableHead>
+                    <TableHead className="py-2 pr-3 font-semibold">CONTADO</TableHead>
+                    <TableHead className="py-2 text-right font-semibold">DIFERENCIA</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {history.filter(h => h.status === 'closed').map(h => (
+                    <TableRow key={h.id}>
+                      <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">{new Date(h.opened_at).toLocaleString('es-DO')}</TableCell>
+                      <TableCell className="py-2 pr-3 text-muted whitespace-nowrap">{h.closed_at ? new Date(h.closed_at).toLocaleString('es-DO') : '—'}</TableCell>
+                      <TableCell className="py-2 pr-3 text-body">{formatCents(h.expected_cash_cents, symbol)}</TableCell>
+                      <TableCell className="py-2 pr-3 text-body">{h.counted_cash_cents !== null ? formatCents(h.counted_cash_cents, symbol) : '—'}</TableCell>
+                      <TableCell className={`py-2 text-right font-bold ${(h.difference_cents ?? 0) === 0 ? 'text-success' : 'text-danger'}`}>
+                        {h.difference_cents !== null ? formatCents(h.difference_cents, symbol) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

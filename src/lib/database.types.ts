@@ -2862,6 +2862,18 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      invoices_summary: {
+        Args: { p_branch_id: string; p_from?: string; p_to?: string; p_kind?: string };
+        Returns: Json;
+      };
+      cash_summary: {
+        Args: { p_branch_id: string; p_from?: string; p_to?: string; p_cashier_id?: string };
+        Returns: Json;
+      };
+      cash_sessions_page: {
+        Args: { p_branch_id: string; p_from?: string; p_to?: string; p_cashier_id?: string; p_estado?: string; p_diferencia?: string; p_page?: number; p_size?: number };
+        Returns: Json;
+      };
       qc_summary: {
         Args: { p_from?: string; p_to?: string };
         Returns: Json;

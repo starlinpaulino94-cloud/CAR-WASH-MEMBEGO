@@ -9,12 +9,17 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import {
-  fetchInvoicePage, fetchInvoiceTotals, annulInvoice, fetchFiscalStatus, revertirEnMembego,
+  fetchInvoicePage, annulInvoice, fetchFiscalStatus, revertirEnMembego,
   Invoice, InvoiceKindFilter, FiscalStatus
 } from '../../data/billingRepository';
 import { TicketSupabaseModal, AnnulInvoiceDialog } from '../modals/TicketSupabaseModal';
 import { ExportButton } from '../common/ExportButton';
 import { invoicesExport } from '../../lib/exportSpecs';
+import { FiltroFechas } from '../common/FiltroFechas';
+import { RejillaKpi, Kpi } from '../common/RejillaKpi';
+import { SeleccionFecha, rangoDeFechas } from '../../lib/rangosFecha';
+import { fetchResumenFacturas, ResumenFacturas } from '../../data/reportsRepository';
+import { etiquetaMetodo } from '../../lib/etiquetas';
 
 const PAGE_SIZE = 25;
 
@@ -43,7 +48,8 @@ export const InvoicesSupabaseView: React.FC = () => {
 
   const [rows, setRows] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
-  const [totals, setTotals] = useState({ issuedCents: 0, annulledCents: 0, count: 0 });
+  const [sel, setSel] = useState<SeleccionFecha>({ preset: 'este_mes' });
+  const [resumen, setResumen] = useState<ResumenFacturas | null>(null);
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -81,23 +87,27 @@ export const InvoicesSupabaseView: React.FC = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [pageData, totalsData, fisc] = await Promise.all([
-        fetchInvoicePage({ branchId: branch.id, page, pageSize: PAGE_SIZE, search, kind }),
-        fetchInvoiceTotals(branch.id),
+      const { desde, hasta } = rangoDeFechas(sel);
+      const desdeIso = `${desde}T00:00:00`;
+      const hastaIso = `${hasta}T23:59:59.999`;
+      const [pageData, resumenData, fisc] = await Promise.all([
+        fetchInvoicePage({ branchId: branch.id, page, pageSize: PAGE_SIZE, search, kind, fromDate: desdeIso, toDate: hastaIso }),
+        fetchResumenFacturas(branch.id, desde, hasta, kind === 'all' ? null : kind),
         fetchFiscalStatus()
       ]);
       setRows(pageData.rows);
       setTotal(pageData.total);
-      setTotals(totalsData);
+      setResumen(resumenData);
       setFiscal(fisc);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'No se pudo cargar el historial');
     } finally {
       setLoading(false);
     }
-  }, [branch, page, search, kind]);
+  }, [branch, page, search, kind, sel]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPage(0); }, [sel, kind]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canAnnul = can(profile, 'annulInvoice');
@@ -155,11 +165,15 @@ export const InvoicesSupabaseView: React.FC = () => {
     setToAnnul(invoice);
   };
 
-  const summary = useMemo(() => ([
-    { label: 'Facturado (vigente)', value: formatCents(totals.issuedCents, symbol), tone: 'text-success' },
-    { label: 'Anulado', value: formatCents(totals.annulledCents, symbol), tone: 'text-danger' },
-    { label: 'Comprobantes emitidos', value: String(totals.count), tone: 'text-brand' }
-  ]), [totals, symbol]);
+  const kpis: Kpi[] = useMemo(() => resumen ? [
+    { id: 'fact', label: 'Facturado', valor: resumen.facturado_cents, moneda: true, tono: 'ok',
+      hint: `${resumen.facturas} comprobantes` },
+    { id: 'ticket', label: 'Ticket promedio', valor: resumen.ticket_promedio_cents, moneda: true },
+    { id: 'nc', label: 'Notas de crédito', valor: resumen.notas_credito_cents, moneda: true,
+      tono: resumen.notas_credito_cents > 0 ? 'warn' : undefined, hint: `${resumen.notas_credito} emitidas` },
+    { id: 'anul', label: 'Anulado', valor: resumen.anulado_cents, moneda: true,
+      tono: resumen.anulado_cents > 0 ? 'bad' : undefined, hint: `${resumen.anuladas} facturas` }
+  ] : [], [resumen]);
 
   if (loadError) {
     return (
@@ -205,14 +219,20 @@ export const InvoicesSupabaseView: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {summary.map(s => (
-          <div key={s.label} className="bg-surface border border-line rounded-2xl p-4 space-y-1">
-            <div className="text-xs text-muted">{s.label}</div>
-            <div className={`text-lg font-black ${s.tone}`}>{s.value}</div>
-          </div>
-        ))}
-      </div>
+      <FiltroFechas valor={sel} onCambiar={setSel} disabled={loading} />
+
+      <RejillaKpi kpis={kpis} cargando={loading || !resumen} symbol={symbol} />
+
+      {resumen && resumen.por_metodo.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {resumen.por_metodo.map(m => (
+            <span key={m.method} className="inline-flex items-center gap-1.5 bg-surface border border-line rounded-xl px-3 py-1.5 text-xs">
+              <span className="text-muted">{etiquetaMetodo(m.method)}</span>
+              <strong className="text-strong tabular-nums">{formatCents(m.amount_cents, symbol)}</strong>
+            </span>
+          ))}
+        </div>
+      )}
 
       {notice && (
         <div role="status" className="flex items-start gap-2 p-3 bg-success/40 border border-success/40 rounded-xl text-xs text-success">
