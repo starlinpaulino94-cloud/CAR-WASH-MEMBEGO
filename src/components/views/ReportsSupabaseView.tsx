@@ -5,6 +5,12 @@ import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
+import { FiltroFechas } from '../common/FiltroFechas';
+import { BotonImprimir, ReporteImprimible } from '../common/ReporteImprimible';
+import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
+import { toCsv, downloadCsv, stampedName } from '../../lib/csv';
+import { Button } from '../ui/button';
+import { Download } from 'lucide-react';
 import {
   fetchAuditPage, fetchDashboardMetrics, fetchTeam,
   AuditLog, DashboardMetrics, Profile
@@ -39,20 +45,6 @@ const ENTIDADES: { id: string; label: string }[] = [
 const selectClass =
   'w-full bg-canvas border border-line rounded-lg p-2 text-strong text-xs focus:outline-none focus:border-brand';
 
-type RangeId = 'today' | 'week' | 'month';
-const RANGES: { id: RangeId; label: string }[] = [
-  { id: 'today', label: 'Hoy' },
-  { id: 'week', label: '7 días' },
-  { id: 'month', label: 'Este mes' }
-];
-
-function bounds(id: RangeId): { from: Date; to: Date } {
-  const now = new Date();
-  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  if (id === 'today') return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to };
-  if (id === 'week') return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6), to };
-  return { from: new Date(now.getFullYear(), now.getMonth(), 1), to };
-}
 
 /**
  * Reportes y bitácora de auditoría.
@@ -67,42 +59,82 @@ export const ReportsSupabaseView: React.FC = () => {
   const symbol = company?.currency_symbol ?? 'RD$';
   const canSee = can(profile, 'viewAuditLog');
 
-  const [range, setRange] = useState<RangeId>('month');
+  /**
+   * UN periodo para toda la pantalla. Antes los KPI tenían sus chips y la
+   * bitácora sus propios «desde/hasta»: las tarjetas podían decir un mes
+   * mientras la tabla enseñaba otro, que es exactamente la clase de pantalla
+   * en la que no se puede confiar.
+   */
+  const [sel, setSel] = useState<SeleccionFecha>({ preset: 'este_mes' });
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
-  const period = useMemo(() => bounds(range), [range]);
+  const rango = rangoDeFechas(sel);
+  const period = useMemo(() => ({
+    from: new Date(`${rango.desde}T00:00:00`),
+    to: new Date(new Date(`${rango.hasta}T00:00:00`).getTime() + 24 * 3600 * 1000)
+  }), [rango.desde, rango.hasta]);
 
-  // Filtros de la bitácora.
+  // Filtros de la bitácora (el periodo es el mismo de arriba).
   const [fEntidad, setFEntidad] = useState('');
   const [fActor, setFActor] = useState('');
-  const [fDesde, setFDesde] = useState('');
-  const [fHasta, setFHasta] = useState('');
   const [team, setTeam] = useState<Profile[]>([]);
+  const [exportando, setExportando] = useState(false);
 
   useEffect(() => {
     if (!canSee) return;
     fetchTeam().then(setTeam).catch(() => { /* el filtro de usuario es accesorio */ });
   }, [canSee]);
 
+  const filtrosAuditoria = useCallback((search: string) => ({
+    search,
+    entity: fEntidad || undefined,
+    actorId: fActor || undefined,
+    from: new Date(`${rango.desde}T00:00:00`).toISOString(),
+    to: new Date(`${rango.hasta}T23:59:59.999`).toISOString()
+  }), [fEntidad, fActor, rango.desde, rango.hasta]);
+
   const fetcher = useCallback(
-    (page: number, size: number, search: string) => fetchAuditPage(page, size, {
-      search,
-      entity: fEntidad || undefined,
-      actorId: fActor || undefined,
-      from: fDesde ? new Date(`${fDesde}T00:00:00`).toISOString() : undefined,
-      to: fHasta ? new Date(`${fHasta}T23:59:59.999`).toISOString() : undefined
-    }),
-    [fEntidad, fActor, fDesde, fHasta]
+    (page: number, size: number, search: string) =>
+      fetchAuditPage(page, size, filtrosAuditoria(search)),
+    [filtrosAuditoria]
   );
 
   const q = usePagedQuery<AuditLog>({
     fetcher, pageSize: PAGE_SIZE, enabled: canSee,
-    deps: [fEntidad, fActor, fDesde, fHasta]
+    deps: [fEntidad, fActor, rango.desde, rango.hasta]
   });
 
-  const hayFiltros = Boolean(fEntidad || fActor || fDesde || fHasta || q.searchInput);
+  const hayFiltros = Boolean(fEntidad || fActor || q.searchInput);
   const limpiarFiltros = () => {
-    setFEntidad(''); setFActor(''); setFDesde(''); setFHasta(''); q.setSearchInput('');
+    setFEntidad(''); setFActor(''); q.setSearchInput('');
+  };
+
+  /**
+   * Exporta LO FILTRADO: mismos filtros que la tabla, recorriendo el servidor
+   * por páginas. Tope de 10.000 eventos con aviso; para más, acotar el rango
+   * — que aquí SÍ se puede acotar.
+   */
+  const exportarBitacora = async () => {
+    setExportando(true);
+    try {
+      const todas: AuditLog[] = [];
+      const TAM = 500;
+      for (let pagina = 0; pagina < 20; pagina++) {
+        const { rows } = await fetchAuditPage(pagina, TAM, filtrosAuditoria(q.searchInput));
+        todas.push(...rows);
+        if (rows.length < TAM) break;
+      }
+      downloadCsv(stampedName('auditoria'), toCsv<AuditLog>([
+        { header: 'cuando', value: l => new Date(l.occurred_at).toLocaleString('es-DO') },
+        { header: 'accion', value: l => l.action },
+        { header: 'modulo', value: l => ENTIDADES.find(x => x.id === l.entity)?.label ?? l.entity },
+        { header: 'detalle', value: l => l.details },
+        { header: 'quien', value: l => l.actor_name || '' },
+        { header: 'rol', value: l => l.actor_role ?? '' }
+      ], todas));
+    } finally {
+      setExportando(false);
+    }
   };
 
   const loadMetrics = useCallback(async () => {
@@ -134,8 +166,19 @@ export const ReportsSupabaseView: React.FC = () => {
       <ViewHeader
         title="Reportes y auditoría"
         subtitle={`${branch?.name} · registro de solo inserción`}
-        actions={<FilterChips options={RANGES} value={range} onChange={setRange} />}
+        actions={
+          <>
+            <BotonImprimir disabled={q.loading} />
+            <Button variant="outline" size="sm" onClick={() => void exportarBitacora()}
+              disabled={q.loading || exportando}>
+              {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Exportar filtrado
+            </Button>
+          </>
+        }
       />
+
+      <FiltroFechas valor={sel} onCambiar={setSel} disabled={q.loading} />
 
       {metricsError ? (
         <div role="alert" className="text-xs text-danger">{metricsError}</div>
@@ -150,7 +193,7 @@ export const ReportsSupabaseView: React.FC = () => {
             value={metrics ? String(metrics.arrived) : '—'}
             hint={metrics ? `${metrics.delivered} entregados` : undefined} />
           <StatCard label="Eventos auditados" tone="text-warning"
-            value={q.loading ? '—' : String(q.total)} hint="histórico completo" />
+            value={q.loading ? '—' : String(q.total)} hint="en el periodo y filtros elegidos" />
         </div>
       )}
 
@@ -163,7 +206,7 @@ export const ReportsSupabaseView: React.FC = () => {
           onChange={q.setSearchInput} placeholder="Buscar por acción, detalle o usuario…" />
 
         {/* Filtros: módulo, usuario y rango de fechas. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div className="space-y-1">
             <label htmlFor="f-entidad" className="text-xs font-semibold text-muted uppercase">Módulo</label>
             <select id="f-entidad" className={selectClass} value={fEntidad}
@@ -178,16 +221,6 @@ export const ReportsSupabaseView: React.FC = () => {
               <option value="">Todos los usuarios</option>
               {team.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
             </select>
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="f-desde" className="text-xs font-semibold text-muted uppercase">Desde</label>
-            <input id="f-desde" type="date" className={selectClass} value={fDesde}
-              max={fHasta || undefined} onChange={e => setFDesde(e.target.value)} />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="f-hasta" className="text-xs font-semibold text-muted uppercase">Hasta</label>
-            <input id="f-hasta" type="date" className={selectClass} value={fHasta}
-              min={fDesde || undefined} onChange={e => setFHasta(e.target.value)} />
           </div>
         </div>
         {hayFiltros && (
@@ -246,6 +279,34 @@ export const ReportsSupabaseView: React.FC = () => {
         La bitácora no admite modificación ni borrado, garantizado por permisos, políticas y
         trigger. El autor y la hora los sella el servidor.
       </p>
+
+      {/* En papel va la página visible de la bitácora: para el histórico
+          completo está «Exportar filtrado». */}
+      <ReporteImprimible
+        empresa={company?.trade_name}
+        titulo="Bitácora de auditoría"
+        periodo={describirRango(sel)}
+        filtros={[
+          ...(fEntidad ? [`Módulo: ${ENTIDADES.find(x => x.id === fEntidad)?.label ?? fEntidad}`] : []),
+          ...(fActor ? [`Usuario: ${team.find(t => t.id === fActor)?.full_name ?? ''}`] : []),
+          `Eventos: ${q.total} (se imprimen ${q.rows.length})`
+        ]}
+        generadoPor={profile?.full_name}
+      >
+        <table>
+          <thead><tr><th>Cuándo</th><th>Acción</th><th>Detalle</th><th>Quién</th></tr></thead>
+          <tbody>
+            {q.rows.map(l => (
+              <tr key={l.id}>
+                <td>{new Date(l.occurred_at).toLocaleString('es-DO')}</td>
+                <td>{l.action}</td>
+                <td>{l.details}</td>
+                <td>{l.actor_name || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ReporteImprimible>
     </div>
   );
 };

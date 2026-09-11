@@ -314,6 +314,12 @@ html {
    desplazado o partido entre páginas.
    =========================================================================== */
 
+/* La isla de impresión administrativa no existe en pantalla. Dentro de
+   @media print, .print-report la vuelve a mostrar. */
+.solo-impresion {
+  display: none;
+}
+
 @media print {
   html, body {
     background: #fff !important;
@@ -380,6 +386,78 @@ html {
   .print-hide {
     display: none !important;
   }
+
+  /* -----------------------------------------------------------------------
+   * Reporte administrativo (Carta/A4). Segunda isla de impresión: en pantalla
+   * no existe (.solo-impresion la esconde); en papel es lo único visible.
+   * A diferencia del ticket, aquí hay varias páginas: la cabecera de cada
+   * tabla se repite (table-header-group) y las filas no se parten.
+   * --------------------------------------------------------------------- */
+  .print-report,
+  .print-report * {
+    visibility: visible !important;
+  }
+
+  .print-report {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #111 !important;
+    font-size: 10pt !important;
+    line-height: 1.45 !important;
+  }
+
+  .print-report .pr-cabecera {
+    border-bottom: 2px solid #111;
+    padding-bottom: 8pt;
+    margin-bottom: 10pt;
+  }
+  .print-report .pr-cabecera h1 {
+    font-size: 15pt; font-weight: 800; margin: 0;
+  }
+  .print-report .pr-cabecera h2 {
+    font-size: 12pt; font-weight: 600; margin: 2pt 0 6pt;
+  }
+  .print-report .pr-cabecera dl { margin: 0; font-size: 9pt; }
+  .print-report .pr-cabecera dl div { display: flex; gap: 4pt; }
+  .print-report .pr-cabecera dt { font-weight: 700; }
+  .print-report .pr-cabecera dd { margin: 0; }
+
+  .print-report h3 {
+    font-size: 11pt; font-weight: 700; margin: 12pt 0 4pt;
+    break-after: avoid; page-break-after: avoid;
+  }
+
+  .print-report table {
+    width: 100%; border-collapse: collapse; font-size: 9pt;
+  }
+  .print-report thead { display: table-header-group; }
+  .print-report th {
+    text-align: left; border-bottom: 1.5px solid #111;
+    padding: 3pt 4pt; font-weight: 700;
+  }
+  .print-report td { border-bottom: 0.5px solid #999; padding: 3pt 4pt; }
+  .print-report th.num, .print-report td.num {
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .print-report tr { break-inside: avoid; page-break-inside: avoid; }
+  .print-report tfoot td { border-top: 1.5px solid #111; font-weight: 700; }
+
+  .print-report .pr-kpis {
+    display: flex; flex-wrap: wrap; gap: 8pt 18pt; margin: 0 0 8pt;
+  }
+  .print-report .pr-kpis > div { min-width: 110pt; }
+  .print-report .pr-kpis .pr-kpi-label { font-size: 8pt; color: #444; }
+  .print-report .pr-kpis .pr-kpi-valor {
+    font-size: 12pt; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+
+  .print-report .pr-nota { font-size: 8pt; color: #444; margin-top: 8pt; }
 
   /* ---------------------------------------------------------------------
      Etiquetas de producto (código de barras)
