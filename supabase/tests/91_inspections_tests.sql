@@ -64,7 +64,7 @@ select test.check('al firmar quedan sello de tiempo, firmante y términos acepta
 
 select test.check('la firma quedó en la bitácora',
   (select count(*) >= 1 from public.audit_logs
-    where action = 'FIRMAR_INSPECCION' and entity_id = test.var('insp')::uuid));
+    where action = 'FIRMAR_INSPECCION' and entity_id = test.var('insp')));
 
 -- ---- Inmutabilidad: la evidencia firmada no se reescribe.
 select test.expect_error('una inspección firmada ya no se modifica',

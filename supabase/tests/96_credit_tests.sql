@@ -75,7 +75,7 @@ select test.check('el propietario autoriza el crédito con cupo y plazo',
 
 select test.check('la autorización quedó en la bitácora',
   (select count(*) = 1 from public.audit_logs
-    where action = 'AUTORIZAR_CREDITO' and entity_id = test.var('cli_cred')::uuid));
+    where action = 'AUTORIZAR_CREDITO' and entity_id = test.var('cli_cred')));
 
 -- ==================================================== Fiar en el mostrador
 set role postgres;
@@ -296,9 +296,16 @@ select test.expect_error('una cuenta liquidada no admite más abonos',
   format($q$select public.collect_receivable(%L::uuid, 1000, 'efectivo', null, %L::uuid)$q$,
          test.var('cr_rec1'), test.var('cr_sess')));
 
+-- La bitácora solo la pueden LEER los roles gerenciales (política
+-- `audit_logs_select`), y aquí la sesión es de otro rol. Lo que se comprueba
+-- es que la operación DEJÓ CONSTANCIA, no quién puede consultarla: se lee
+-- como postgres. Con el rol de la sesión el conteo daba 0 y parecía que no
+-- se había registrado nada.
+set role postgres;
 select test.check('los cobros quedaron en la bitácora',
   (select count(*) = 2 from public.audit_logs
-    where action = 'COBRAR_CREDITO' and entity_id = test.var('cr_rec1')::uuid));
+    where action = 'COBRAR_CREDITO' and entity_id = test.var('cr_rec1')));
+set role authenticated;
 
 -- ================================================== Mora: se corta el grifo
 -- Se envejece la cuenta de la venta mixta (única pendiente) 40 días.

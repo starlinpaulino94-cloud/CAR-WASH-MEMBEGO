@@ -100,9 +100,16 @@ select test.check('el canje quedó registrado contra la factura',
 select test.check('el contador de usos subió',
   (select uses_count = 1 from public.promotions where id = test.var('promo10')::uuid));
 
+-- La bitácora solo la pueden LEER los roles gerenciales (política
+-- `audit_logs_select`), y aquí la sesión es de otro rol. Lo que se comprueba
+-- es que la operación DEJÓ CONSTANCIA, no quién puede consultarla: se lee
+-- como postgres. Con el rol de la sesión el conteo daba 0 y parecía que no
+-- se había registrado nada.
+set role postgres;
 select test.check('la promoción quedó en la bitácora de la factura',
   (select details like '%DIEZ%' from public.audit_logs
-    where action = 'EMITIR_FACTURA' and entity_id = test.var('promo_inv1')::uuid));
+    where action = 'EMITIR_FACTURA' and entity_id = test.var('promo_inv1')));
+set role authenticated;
 
 -- ==================================================== Las reglas se cumplen
 set role postgres;

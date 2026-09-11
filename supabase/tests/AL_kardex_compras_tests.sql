@@ -21,10 +21,15 @@ select test.check('ese movimiento trae su documento resuelto a «compra»',
      public.kardex_page(null, null, test.var('prod')::uuid, null, 'compra') -> 'rows') r
    limit 1) = 'compra');
 
+-- Se busca la compra ENTRE las filas, no se asume que sea la primera: otras
+-- suites compran el mismo producto y el kardex ordena por fecha descendente,
+-- así que «la de arriba» es de quien haya comprado más tarde. Una prueba que
+-- depende del orden en que corren sus vecinas falla por motivos que no tienen
+-- nada que ver con lo que quiere comprobar.
 select test.check('y trae el id de la compra para poder abrirla',
-  (select (r ->> 'doc_id') from jsonb_array_elements(
+  exists (select 1 from jsonb_array_elements(
      public.kardex_page(null, null, test.var('prod')::uuid, null, 'compra') -> 'rows') r
-   limit 1) = test.var('compra1'));
+   where (r ->> 'doc_id') = test.var('compra1')));
 
 select test.check('el valor del movimiento no es nulo (cantidad × costo)',
   (select (r ->> 'valor_cents')::bigint from jsonb_array_elements(

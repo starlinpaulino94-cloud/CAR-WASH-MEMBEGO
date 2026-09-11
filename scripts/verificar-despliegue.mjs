@@ -26,10 +26,23 @@ import { readFileSync, readdirSync } from 'node:fs';
 
 const DIR = new URL('../supabase/migrations/', import.meta.url);
 
+/**
+ * Los comentarios se quitan ANTES de buscar nombres. Un comentario que explica
+ * un `create table as` contiene literalmente esa frase, y sin esto el script
+ * exigía a la base una tabla llamada «as». Una herramienta de diagnóstico que
+ * inventa un fallo enseña a desconfiar de ella, y entonces deja de servir el
+ * día que acierta.
+ */
+function sinComentarios(texto) {
+  return texto
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ');
+}
+
 const sql = readdirSync(DIR)
   .filter((f) => f.endsWith('.sql'))
   .sort()
-  .map((f) => readFileSync(new URL(f, DIR), 'utf8'))
+  .map((f) => sinComentarios(readFileSync(new URL(f, DIR), 'utf8')))
   .join('\n');
 
 /** Nombres creados por las migraciones. `drop` se tiene en cuenta al final. */

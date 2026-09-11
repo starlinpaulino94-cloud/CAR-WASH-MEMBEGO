@@ -245,6 +245,10 @@ begin
     v_p.company_id = test.var('c_a')::uuid and v_p.role = 'cajero' and v_p.is_active);
 end $$;
 
+-- Estas dos leen `auth.*`, que `authenticated` no puede tocar: comprueban lo
+-- que el alta dejó ESCRITO, no lo que el empleado puede ver. Se leen como
+-- postgres, igual que el id de la sucursal ajena unas líneas más abajo.
+set role postgres;
 select test.check('el empleado nuevo puede iniciar sesión (contraseña bcrypt verificable)',
   (select encrypted_password = crypt('clave-segura', encrypted_password)
      from auth.users where email = 'nuevo.cajero@alfa.test'));
@@ -253,6 +257,8 @@ select test.check('el alta creó la identidad de correo del empleado',
   (select count(*) = 1 from auth.identities i
      join auth.users u on u.id = i.user_id
     where u.email = 'nuevo.cajero@alfa.test' and i.provider = 'email'));
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
 
 select test.expect_error('no se puede dar de alta dos veces el mismo correo',
   $q$select public.create_employee('nuevo.cajero@alfa.test','otra-clave','Otro','operario')$q$);

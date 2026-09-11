@@ -63,7 +63,7 @@ select test.check('el último costo del producto se actualizó',
 
 select test.check('la compra quedó en la bitácora',
   (select count(*) >= 1 from public.audit_logs
-    where action = 'REGISTRAR_COMPRA' and entity_id = test.var('compra1')::uuid));
+    where action = 'REGISTRAR_COMPRA' and entity_id = test.var('compra1')));
 
 -- ---- Compra a CRÉDITO: exige vencimiento y abre cuenta por pagar.
 select test.expect_error('una compra a crédito sin vencimiento se rechaza',

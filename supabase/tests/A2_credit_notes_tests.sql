@@ -105,7 +105,7 @@ select test.check('la devolución salió de la caja por el importe acreditado',
 
 select test.check('la nota quedó en la bitácora con su motivo',
   (select count(*) = 1 from public.audit_logs
-    where action = 'NOTA_CREDITO' and entity_id = test.var('nc_inv')::uuid
+    where action = 'NOTA_CREDITO' and entity_id = test.var('nc_inv')
       and details like '%Se entregó uno de menos%'));
 
 -- Idempotencia: la misma clave devuelve la misma nota, no emite otra.
@@ -234,7 +234,7 @@ select test.expect_ok('un administrador sí reinicia la clave de un operario',
 
 select test.check('el reinicio quedó en la bitácora',
   (select count(*) = 1 from public.audit_logs
-    where action = 'REINICIAR_CLAVE' and entity_id = test.var('op1')::uuid));
+    where action = 'REINICIAR_CLAVE' and entity_id = test.var('op1')));
 
 -- ============================================== Aislamiento entre empresas
 set role postgres;

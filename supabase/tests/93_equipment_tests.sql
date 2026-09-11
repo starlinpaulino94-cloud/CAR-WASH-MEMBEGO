@@ -80,7 +80,7 @@ select test.check('la intervención queda cerrada con su salida y resolución',
 
 select test.check('el mantenimiento quedó en la bitácora (apertura y cierre)',
   (select count(*) = 2 from public.audit_logs
-    where entity_id = test.var('equip')::uuid
+    where entity_id = test.var('equip')
       and action in ('ABRIR_MANTENIMIENTO', 'CERRAR_MANTENIMIENTO')));
 
 select test.expect_error('una intervención cerrada no se cierra dos veces',

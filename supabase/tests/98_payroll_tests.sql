@@ -68,9 +68,16 @@ select test.check('el sueldo mensual quedó fijado por la vía correcta',
 select test.check('cambiar de modalidad no deja residuos de la anterior',
   (select hourly_rate_cents = 0 from public.profiles where id = test.var('op1')::uuid));
 
+-- La bitácora solo la pueden LEER los roles gerenciales (política
+-- `audit_logs_select`), y aquí la sesión es de otro rol. Lo que se comprueba
+-- es que la operación DEJÓ CONSTANCIA, no quién puede consultarla: se lee
+-- como postgres. Con el rol de la sesión el conteo daba 0 y parecía que no
+-- se había registrado nada.
+set role postgres;
 select test.check('el sueldo quedó en la bitácora',
-  (select count(*) >= 1 from public.audit_logs
-    where action = 'FIJAR_SUELDO' and entity_id = test.var('op1')::uuid));
+  (select count(*) >= 1 and bool_or(details like '%1500000%') from public.audit_logs
+    where action = 'FIJAR_PAGO_EMPLEADO' and entity_id = test.var('op1')));
+set role authenticated;
 
 -- ==================================================================== Turnos
 select test.expect_error('un turno que acaba antes de empezar se rechaza',

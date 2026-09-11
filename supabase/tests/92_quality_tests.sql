@@ -102,7 +102,7 @@ select test.check('aprobar deja la orden lista para entregar',
 
 select test.check('el control de calidad quedó en la bitácora',
   (select count(*) = 2 from public.audit_logs
-    where action = 'CONTROL_CALIDAD' and entity_id = test.var('wo_qc')::uuid));
+    where action = 'CONTROL_CALIDAD' and entity_id = test.var('wo_qc')));
 
 -- ---- Índice de retrabajos: 1 de 2 revisiones del lavador fue rechazo.
 select test.check('el índice de retrabajos cuenta los rechazos por lavador',
