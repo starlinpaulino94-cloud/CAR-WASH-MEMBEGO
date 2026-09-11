@@ -435,3 +435,88 @@ function translate(message: string): string {
   }
   return message;
 }
+
+// ────────────────────────────────── Operación: órdenes con tiempos y detalle
+
+export interface FiltrosOrden {
+  from?: string | null;
+  to?: string | null;
+  status?: string | null;
+  washerId?: string | null;
+  serviceId?: string | null;
+  bayId?: string | null;
+  payment?: string | null;
+  search?: string | null;
+}
+
+export interface OrdenOperacion {
+  id: string;
+  order_number: string;
+  vehicle_plate: string;
+  vehicle_make_model: string;
+  customer_name: string;
+  status: OrderStatus;
+  priority: string;
+  payment_status: string;
+  total_cents: number;
+  arrival_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  delivered_at: string | null;
+  estimated_ready_at: string | null;
+  es_membego: boolean;
+  bay_name: string | null;
+  lavadores: string | null;
+  sin_lavador: boolean;
+  espera_seg: number | null;
+  duracion_seg: number | null;
+  atrasada: boolean;
+  lista_sin_entregar: boolean;
+}
+
+export async function fetchOrdersPage(
+  branchId: string, filtros: FiltrosOrden, page = 0, size = 25
+): Promise<{ total: number; rows: OrdenOperacion[]; page: number; size: number }> {
+  const { data, error } = await requireSupabase().rpc('orders_page', {
+    p_branch_id: branchId,
+    p_from: filtros.from ?? undefined, p_to: filtros.to ?? undefined,
+    p_status: filtros.status ?? undefined, p_washer_id: filtros.washerId ?? undefined,
+    p_service_id: filtros.serviceId ?? undefined, p_bay_id: filtros.bayId ?? undefined,
+    p_payment: filtros.payment ?? undefined, p_search: filtros.search ?? undefined,
+    p_page: page, p_size: size
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as { total: number; rows: OrdenOperacion[]; page: number; size: number };
+}
+
+export interface DetalleOrden {
+  id: string;
+  order_number: string;
+  status: OrderStatus;
+  vehicle_plate: string;
+  vehicle_make_model: string;
+  vehicle_color: string;
+  customer_name: string;
+  priority: string;
+  notes: string | null;
+  total_cents: number;
+  payment_status: string;
+  es_membego: boolean;
+  bay_name: string | null;
+  hitos: { clave: string; label: string; at: string | null }[];
+  estimado: string | null;
+  lavadores: string[];
+  servicios: { name: string; qty: number; price_cents: number; tipo: string }[];
+  calidad: {
+    attempt: number; result: string; reject_reason: string | null;
+    reviewer: string | null; washer: string | null; created_at: string;
+  }[];
+  inspeccion: { fuel_level: string | null; mileage: number | null; valuables: string | null; notes: string | null; signed_at: string | null } | null;
+  factura: { id: string; invoice_number: string; total_cents: number; is_annulled: boolean } | null;
+}
+
+export async function fetchDetalleOrden(orderId: string): Promise<DetalleOrden> {
+  const { data, error } = await requireSupabase().rpc('order_detail', { p_order_id: orderId });
+  if (error) throw fallaDatos(error);
+  return data as unknown as DetalleOrden;
+}

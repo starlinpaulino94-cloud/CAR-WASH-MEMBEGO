@@ -2862,6 +2862,18 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      orders_page: {
+        Args: {
+          p_branch_id: string; p_from?: string; p_to?: string; p_status?: string;
+          p_washer_id?: string; p_service_id?: string; p_bay_id?: string;
+          p_payment?: string; p_search?: string; p_page?: number; p_size?: number;
+        };
+        Returns: Json;
+      };
+      order_detail: {
+        Args: { p_order_id: string };
+        Returns: Json;
+      };
       supplier_detail: {
         Args: { p_supplier_id: string; p_from?: string; p_to?: string };
         Returns: Json;
