@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Eye, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
@@ -16,6 +16,11 @@ import { ExportButton } from '../common/ExportButton';
 import { ImportButton } from '../common/ImportModal';
 import { suppliersExport } from '../../lib/exportSpecs';
 import { can } from '../../lib/auth';
+import { formatCents } from '../../lib/money';
+import { PanelDetalle } from '../common/PanelDetalle';
+import { TablaDatos } from '../common/TablaDatos';
+import { ReporteImprimible, BotonImprimir } from '../common/ReporteImprimible';
+import { fetchFichaProveedor, FichaProveedor } from '../../data/reportsRepository';
 
 const PAGE_SIZE = 25;
 
@@ -43,6 +48,17 @@ export const SuppliersSupabaseView: React.FC = () => {
   const [form, setForm] = useState(emptyForm);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const symbol = company?.currency_symbol ?? 'RD$';
+
+  // Ficha 360 del proveedor, en panel lateral.
+  const [fichaSup, setFichaSup] = useState<Supplier | null>(null);
+  const [ficha, setFicha] = useState<FichaProveedor | null>(null);
+  const [fichaCargando, setFichaCargando] = useState(false);
+  const verFicha = (sup: Supplier) => {
+    setFichaSup(sup); setFicha(null); setFichaCargando(true);
+    fetchFichaProveedor(sup.id)
+      .then(setFicha).catch(() => setFicha(null)).finally(() => setFichaCargando(false));
+  };
   const [notice, setNotice] = useState<string | null>(null);
 
   const openCreate = () => { setForm(emptyForm); setError(null); setModal('create'); };
@@ -150,8 +166,10 @@ export const SuppliersSupabaseView: React.FC = () => {
                 ) : q.rows.map(s => (
                   <TableRow key={s.id} className="hover:bg-surface-2/40">
                     <TableCell className="p-3">
-                      <div className="font-bold text-strong">{s.name}</div>
-                      {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
+                      <button onClick={() => verFicha(s)} className="text-left hover:underline" title="Ver ficha del proveedor">
+                        <div className="font-bold text-strong">{s.name}</div>
+                        {s.notes && <div className="text-xs text-faint">{s.notes}</div>}
+                      </button>
                     </TableCell>
                     <TableCell className="p-3 text-muted">{s.tax_id ?? '—'}</TableCell>
                     <TableCell className="p-3 text-muted">
@@ -165,7 +183,10 @@ export const SuppliersSupabaseView: React.FC = () => {
                     </TableCell>
                     {canManage && (
                       <TableCell className="p-3 text-right whitespace-nowrap">
-                        <Button variant="ghost" size="icon-sm" onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}
+                        <Button variant="outline" size="xs" onClick={() => verFicha(s)}>
+                          <Eye className="w-3.5 h-3.5" /> Ver
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" className="ml-1" onClick={() => openEdit(s)} aria-label={`Editar ${s.name}`}
                           >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -220,6 +241,98 @@ export const SuppliersSupabaseView: React.FC = () => {
           </Field>
         </FormModal>
       )}
+
+      <PanelDetalle
+        abierto={!!fichaSup}
+        titulo={fichaSup?.name ?? ''}
+        subtitulo={fichaSup?.tax_id ? `RNC ${fichaSup.tax_id}` : (fichaSup?.phone ?? undefined)}
+        onCerrar={() => { setFichaSup(null); setFicha(null); }}
+        acciones={ficha ? <BotonImprimir /> : undefined}
+      >
+        {fichaCargando ? (
+          <p className="text-xs text-faint flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Cargando…</p>
+        ) : ficha ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                ['Total comprado', formatCents(ficha.total_comprado_cents, symbol), 'text-strong'],
+                ['Saldo pendiente', formatCents(ficha.saldo_cents, symbol), ficha.saldo_cents > 0 ? 'text-warning' : 'text-strong'],
+                ['Vencido', formatCents(ficha.vencido_cents, symbol), ficha.vencido_cents > 0 ? 'text-danger' : 'text-strong'],
+                ['Compras', String(ficha.compras_total), 'text-strong'],
+                ['Última compra', ficha.ultima_compra ? new Date(ficha.ultima_compra).toLocaleDateString('es-DO') : '—', 'text-strong']
+              ].map(([l, v, c]) => (
+                <div key={l} className="bg-canvas border border-line rounded-xl p-3">
+                  <div className="text-xs text-muted">{l}</div>
+                  <div className={`text-sm font-bold tabular-nums ${c}`}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {ficha.productos_top.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold text-strong">Lo que más le compra</h3>
+                <TablaDatos
+                  columnas={[
+                    { id: 'n', label: 'Producto', render: (t: FichaProveedor['productos_top'][number]) => t.name },
+                    { id: 'q', label: 'Cant.', numerica: true, render: t => t.qty },
+                    { id: 'tot', label: 'Total', numerica: true, render: t => formatCents(t.total_cents, symbol) }
+                  ]}
+                  filas={ficha.productos_top} clave={t => t.name}
+                  vacio="Sin compras con detalle de productos." etiqueta="Productos más comprados" />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-strong">Historial de compras</h3>
+              <TablaDatos
+                columnas={[
+                  { id: 'f', label: 'Fecha', render: (c: FichaProveedor['compras'][number]) => new Date(c.purchase_date).toLocaleDateString('es-DO') },
+                  { id: 'ref', label: 'Ref.', ocultarEnMovil: true, render: c => c.invoice_ref ?? '—' },
+                  { id: 'tot', label: 'Total', numerica: true, render: c => formatCents(c.total_cents, symbol) },
+                  { id: 'saldo', label: 'Saldo', numerica: true, render: c => {
+                    const s2 = c.total_cents - c.paid_cents;
+                    return s2 > 0 ? <span className={c.vencida ? 'text-danger font-bold' : 'text-warning'}>{formatCents(s2, symbol)}</span> : <span className="text-success">Pagada</span>;
+                  } },
+                  { id: 'venc', label: 'Vence', ocultarEnMovil: true, render: c => c.due_date ? new Date(c.due_date).toLocaleDateString('es-DO') : '—' }
+                ]}
+                filas={ficha.compras} clave={c => c.id}
+                vacio="Sin compras registradas." etiqueta="Historial de compras" />
+            </div>
+
+            {/* El estado de cuenta imprimible: mismos datos, papel Carta. */}
+            <ReporteImprimible
+              empresa={company?.trade_name}
+              titulo={`Estado de cuenta · ${fichaSup?.name ?? ''}`}
+              periodo={ficha.ultima_compra ? `Última compra: ${new Date(ficha.ultima_compra).toLocaleDateString('es-DO')}` : 'Sin compras'}
+              filtros={[
+                `Total comprado: ${formatCents(ficha.total_comprado_cents, symbol)}`,
+                `Saldo pendiente: ${formatCents(ficha.saldo_cents, symbol)}`,
+                `Vencido: ${formatCents(ficha.vencido_cents, symbol)}`
+              ]}
+              generadoPor={profile?.full_name}
+            >
+              <h3>Historial de compras</h3>
+              <table>
+                <thead><tr><th>Fecha</th><th>Ref.</th><th className="num">Total</th><th className="num">Pagado</th><th className="num">Saldo</th></tr></thead>
+                <tbody>
+                  {ficha.compras.map(c => (
+                    <tr key={c.id}>
+                      <td>{new Date(c.purchase_date).toLocaleDateString('es-DO')}</td>
+                      <td>{c.invoice_ref ?? '—'}</td>
+                      <td className="num">{formatCents(c.total_cents, symbol)}</td>
+                      <td className="num">{formatCents(c.paid_cents, symbol)}</td>
+                      <td className="num">{formatCents(c.total_cents - c.paid_cents, symbol)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="pr-nota">Saldo pendiente total: {formatCents(ficha.saldo_cents, symbol)} · Vencido: {formatCents(ficha.vencido_cents, symbol)}</p>
+            </ReporteImprimible>
+          </div>
+        ) : (
+          <p className="text-xs text-faint">No se pudo cargar la ficha.</p>
+        )}
+      </PanelDetalle>
     </div>
   );
 };
