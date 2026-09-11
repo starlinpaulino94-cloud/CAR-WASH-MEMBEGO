@@ -308,3 +308,61 @@ export async function fetchHistorialCalidad(
   if (error) throw fallaDatos(error);
   return data as unknown as { total: number; rows: RevisionCalidad[]; page: number; size: number };
 }
+
+// ─────────────────────────────────────────────────── Caja gerencial
+
+export interface ResumenCaja {
+  cajas_cerradas: number;
+  cajas_abiertas: number;
+  ventas_cents: number;
+  efectivo_cents: number;
+  tarjeta_cents: number;
+  transferencia_cents: number;
+  membego_cents: number;
+  salidas_cents: number;
+  sobrantes_cents: number;
+  faltantes_cents: number;
+  descuadre_neto_cents: number;
+}
+
+export async function fetchResumenCaja(
+  branchId: string, from?: string | null, to?: string | null, cashierId?: string | null
+): Promise<ResumenCaja> {
+  const { data, error } = await requireSupabase().rpc('cash_summary', {
+    p_branch_id: branchId, p_from: from ?? undefined, p_to: to ?? undefined, p_cashier_id: cashierId ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as ResumenCaja;
+}
+
+export interface SesionCaja {
+  id: string;
+  status: string;
+  opened_at: string;
+  closed_at: string | null;
+  cashier: string | null;
+  initial_amount_cents: number;
+  expected_cash_cents: number;
+  counted_cash_cents: number | null;
+  difference_cents: number | null;
+  ventas_cents: number;
+  efectivo_cents: number;
+  tarjeta_cents: number;
+  transferencia_cents: number;
+  membego_cents: number;
+  salidas_cents: number;
+}
+
+export async function fetchSesionesCaja(
+  branchId: string, from: string | null, to: string | null,
+  cashierId: string | null, estado: string | null, diferencia: string | null,
+  page = 0, size = 25
+): Promise<{ total: number; rows: SesionCaja[]; page: number; size: number }> {
+  const { data, error } = await requireSupabase().rpc('cash_sessions_page', {
+    p_branch_id: branchId, p_from: from ?? undefined, p_to: to ?? undefined,
+    p_cashier_id: cashierId ?? undefined, p_estado: estado ?? undefined, p_diferencia: diferencia ?? undefined,
+    p_page: page, p_size: size
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as { total: number; rows: SesionCaja[]; page: number; size: number };
+}
