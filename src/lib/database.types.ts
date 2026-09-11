@@ -2265,6 +2265,8 @@ export interface Database {
       };
       products: {
         Row: {
+          low_stock: boolean;
+          out_of_stock: boolean;
           id: string;
           company_id: string;
           branch_id: string | null;
@@ -2860,6 +2862,14 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      inventory_summary: {
+        Args: { p_from?: string; p_to?: string; p_branch_id?: string };
+        Returns: Json;
+      };
+      product_detail: {
+        Args: { p_product_id: string };
+        Returns: Json;
+      };
       sales_report: {
         Args: { p_from: string; p_to: string; p_filtros?: Json };
         Returns: Json;

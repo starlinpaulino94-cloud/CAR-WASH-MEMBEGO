@@ -59,7 +59,7 @@ export const RecipeModal: React.FC<{
 
   useEffect(() => {
     void reload();
-    fetchProductPage(0, 200, '', false).then(r => setProducts(r.rows)).catch(() => setProducts([]));
+    fetchProductPage(0, 200, '').then(r => setProducts(r.rows)).catch(() => setProducts([]));
   }, [reload]);
 
   useEffect(() => {

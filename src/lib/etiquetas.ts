@@ -28,3 +28,17 @@ export const CATEGORIA_GASTO: Record<string, string> = {
 
 export const etiquetaMetodo = (m: string) => METODO_PAGO[m] ?? m;
 export const etiquetaGasto = (c: string) => CATEGORIA_GASTO[c] ?? c;
+
+/** Los tipos de movimiento del kardex, en español. */
+export const MOVIMIENTO: Record<string, string> = {
+  entrada: 'Entrada',
+  compra: 'Compra',
+  venta: 'Venta',
+  devolucion: 'Devolución',
+  consumo: 'Consumo',
+  ajuste: 'Ajuste',
+  merma: 'Merma',
+  transferencia: 'Transferencia'
+};
+
+export const etiquetaMovimiento = (m: string) => MOVIMIENTO[m] ?? m;

@@ -283,27 +283,93 @@ export async function createService(input: {
 
 // --------------------------------------------------------------- Productos
 
+/** Qué acota la lista de productos. Todo se resuelve en el servidor. */
+export interface FiltrosProducto {
+  /** 'todos' | 'bajo' | 'agotado' | 'negativo' — sobre las columnas calculadas. */
+  estado?: 'todos' | 'bajo' | 'agotado' | 'negativo';
+  categoria?: string;
+  /** 'todos' | 'activos' | 'inactivos'. */
+  actividad?: 'todos' | 'activos' | 'inactivos';
+  /** 'todos' | 'venta' | 'interno'. */
+  uso?: 'todos' | 'venta' | 'interno';
+}
+
+/**
+ * Página de productos, TODO filtrado en el servidor.
+ *
+ * El bajo stock ya no se compara en el navegador sobre la página traída (que
+ * solo encontraba los casos de la página visible): se filtra por la columna
+ * calculada low_stock, así que el conteo y la paginación son de todo el
+ * inventario. Igual para agotados (out_of_stock) y negativos.
+ */
 export async function fetchProductPage(
-  page: number, pageSize: number, search: string, onlyLowStock = false
+  page: number, pageSize: number, search: string, filtros: FiltrosProducto = {}
 ): Promise<PagedResult<Product>> {
   let query = requireSupabase().from('products').select('*', { count: 'exact' });
   if (search.trim()) {
     const t = escape(search.trim());
-    query = query.or(`name.ilike.%${t}%,code.ilike.%${t}%,category.ilike.%${t}%`);
+    query = query.or(`name.ilike.%${t}%,code.ilike.%${t}%,category.ilike.%${t}%,barcode.ilike.%${t}%`);
   }
+  if (filtros.categoria) query = query.eq('category', filtros.categoria);
+  if (filtros.actividad === 'activos') query = query.eq('is_active', true);
+  else if (filtros.actividad === 'inactivos') query = query.eq('is_active', false);
+  if (filtros.uso === 'venta') query = query.eq('is_for_sale', true);
+  else if (filtros.uso === 'interno') query = query.eq('is_for_sale', false);
+  // El estado de existencia, por columna calculada: la comparación vive en la base.
+  if (filtros.estado === 'bajo') query = query.eq('low_stock', true).gt('stock', 0);
+  else if (filtros.estado === 'agotado') query = query.eq('stock', 0);
+  else if (filtros.estado === 'negativo') query = query.lt('stock', 0);
+
   const { data, error, count } = await query
     .order('name')
     .range(page * pageSize, page * pageSize + pageSize - 1);
   if (error) throw fallaDatos(error);
-
-  // El filtro de bajo stock compara dos columnas entre sí, algo que PostgREST
-  // no expresa directamente; se aplica sobre la página ya traída y se avisa en
-  // la interfaz de que el filtro actúa sobre lo mostrado.
-  const rows = onlyLowStock ? (data ?? []).filter(p => p.stock <= p.min_stock) : (data ?? []);
-  return { rows, total: count ?? 0 };
+  return { rows: data ?? [], total: count ?? 0 };
 }
 
-export async function updateProduct(id: string, patch: Omit<Partial<Product>, 'stock' | 'stock_frac'>): Promise<void> {
+export interface ResumenInventario {
+  valor_costo_cents: number;
+  venta_potencial_cents: number;
+  activos: number;
+  bajo_stock: number;
+  agotados: number;
+  negativos: number;
+  consumo_cents?: number;
+  merma_cents?: number;
+  merma_unidades?: number;
+}
+
+export async function fetchResumenInventario(
+  from?: string | null, to?: string | null, branchId?: string | null
+): Promise<ResumenInventario> {
+  const { data, error } = await requireSupabase().rpc('inventory_summary', {
+    p_from: from ?? undefined, p_to: to ?? undefined, p_branch_id: branchId ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as ResumenInventario;
+}
+
+export interface FichaProducto {
+  ultimas_compras: {
+    purchase_id: string; invoice_ref: string | null; supplier_name: string | null;
+    purchase_date: string; quantity: number; unit_cost_cents: number;
+  }[];
+  ultimos_movimientos: {
+    id: number; kind: string; qty_change: number; qty_before: number; qty_after: number;
+    reason: string | null; created_at: string; invoice_id: string | null; work_order_id: string | null;
+  }[];
+  consumo_30d: number;
+  proveedor_habitual: string | null;
+  ultimo_costo_cents: number | null;
+}
+
+export async function fetchFichaProducto(productId: string): Promise<FichaProducto> {
+  const { data, error } = await requireSupabase().rpc('product_detail', { p_product_id: productId });
+  if (error) throw fallaDatos(error);
+  return data as unknown as FichaProducto;
+}
+
+export async function updateProduct(id: string, patch: Omit<Partial<Product>, 'stock' | 'stock_frac' | 'low_stock' | 'out_of_stock'>): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('products').update(patch).eq('id', id).select();
   if (error) throw fallaDatos(error);
