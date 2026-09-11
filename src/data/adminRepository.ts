@@ -1417,6 +1417,23 @@ export async function fetchServiciosIncluiblesMembego(): Promise<ServicioIncluib
 }
 
 /**
+ * Marca o desmarca un servicio como cubrible por una membresía.
+ *
+ * Existe como operación propia —en vez de obligar a abrir la ficha entera del
+ * servicio— porque es el único ajuste de Membego que vive en el catálogo, y la
+ * pantalla que dice que falta no es la que lo edita. Quien acaba de leer «estos
+ * 16 no los paga ninguna membresía» tiene que poder arreglarlo ahí mismo; ir a
+ * buscarlos uno a uno en una tabla que se desplaza a lo ancho es donde se
+ * abandona.
+ */
+export async function marcarServicioIncluibleMembego(
+  id: string,
+  incluible: boolean
+): Promise<void> {
+  await updateService(id, { included_in_membego: incluible });
+}
+
+/**
  * Los servicios activos que NO puede pagar una membresía.
  *
  * Enseñar solo los marcados dejaba invisible justo el hueco que cuesta dinero:

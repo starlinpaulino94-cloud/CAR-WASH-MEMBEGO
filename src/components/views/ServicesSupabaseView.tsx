@@ -484,9 +484,16 @@ export const ServicesSupabaseView: React.FC = () => {
                         className="p-1.5 text-brand-2 hover:text-brand-2 rounded-lg hover:bg-surface-2">
                         <FlaskConical className="w-4 h-4" />
                       </button>
+                      {/* La descripción enumeraba lo que se edita aquí y dejaba
+                          fuera justo lo que la pantalla de Membego manda a
+                          cambiar en esta ficha: si el servicio entra en las
+                          membresías. Quien venía buscándola leía la lista, no la
+                          veía nombrada y seguía buscando. (Marcarlo se puede
+                          ahora también desde Ajustes → Membego, sin llegar hasta
+                          este botón, que queda al final de una tabla ancha.) */}
                       {editable && (
                         <Button variant="ghost" size="icon-sm" onClick={() => abrirFicha(s)} aria-label={`Editar ${s.name}`}
-                          title="Nombre, código, minutos y comisión"
+                          title="Nombre, código, minutos, comisión y si entra en las membresías de Membego"
                           >
                           <Pencil className="w-4 h-4" />
                         </Button>
