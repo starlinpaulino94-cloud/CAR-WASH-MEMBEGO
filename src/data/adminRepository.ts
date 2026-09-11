@@ -1416,6 +1416,26 @@ export async function fetchServiciosIncluiblesMembego(): Promise<ServicioIncluib
   });
 }
 
+/**
+ * Los servicios activos que NO puede pagar una membresía.
+ *
+ * Enseñar solo los marcados dejaba invisible justo el hueco que cuesta dinero:
+ * un servicio que se vende a diario y que nadie marcó. Nadie repasa una lista
+ * de aciertos buscando lo que falta; el que falta hay que enseñarlo. Esta es la
+ * pregunta que el mostrador acaba haciendo con el cliente delante, contestada
+ * antes y en el sitio donde se arregla.
+ */
+export async function fetchServiciosNoIncluiblesMembego(): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await requireSupabase()
+    .from('services')
+    .select('id, name')
+    .eq('is_active', true)
+    .eq('included_in_membego', false)
+    .order('name');
+  if (error) throw fallaDatos(error);
+  return (data ?? []) as { id: string; name: string }[];
+}
+
 
 // ─────────────────────────────────────────── Categorías de servicio (el filtro)
 
