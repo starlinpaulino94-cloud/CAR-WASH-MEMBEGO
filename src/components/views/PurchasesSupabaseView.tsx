@@ -14,6 +14,8 @@ import {
   InlineAlert, ReadOnlyNotice, FilterChips
 } from '../common/DataViewShell';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
+import { RejillaKpi } from '../common/RejillaKpi';
+import { fetchResumenCompras, ResumenCompras } from '../../data/reportsRepository';
 
 const PAGE_SIZE = 25;
 
@@ -45,6 +47,7 @@ export const PurchasesSupabaseView: React.FC = () => {
     .includes(profile?.role ?? '');
 
   const [filter, setFilter] = useState<Filter>('all');
+  const [resumen, setResumen] = useState<ResumenCompras | null>(null);
   const q = usePagedQuery<Purchase>({
     fetcher: (page, size, search) => fetchPurchasePage(page, size, search, filter),
     pageSize: PAGE_SIZE,
@@ -122,6 +125,12 @@ export const PurchasesSupabaseView: React.FC = () => {
 
   // --- Abono
   const [paying, setPaying] = useState<Purchase | null>(null);
+
+  // El panel de indicadores. Sale de una RPC agregada; no de sumar la página.
+  useEffect(() => {
+    if (phase !== 'ready') return;
+    fetchResumenCompras().then(setResumen).catch(() => setResumen(null));
+  }, [phase, q.total, q.loading]);
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState<PaymentMethod>('transferencia');
   const [payRef, setPayRef] = useState('');
@@ -176,6 +185,25 @@ export const PurchasesSupabaseView: React.FC = () => {
       {!canManage && <ReadOnlyNotice>Su rol permite consultar las compras, no registrarlas.</ReadOnlyNotice>}
       {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
       {error && !showCreate && !paying && <InlineAlert tone="error" onDismiss={() => setError(null)}>{error}</InlineAlert>}
+
+      {/* Cuánto se compró, cuánto se debe y cuánto está vencido. «Pendiente» y
+          «vencido» son deudas vigentes, no del rango: por eso el clic en
+          «Pendiente» filtra la lista a las compras por pagar. */}
+      <RejillaKpi
+        symbol={symbol}
+        cargando={!resumen}
+        kpis={resumen ? [
+          { id: 'compras', label: 'Compras', valor: resumen.compras_cents, moneda: true, hint: `${resumen.compras_count} compras` },
+          { id: 'pagado', label: 'Pagado', valor: resumen.pagado_cents, moneda: true, tono: 'ok' },
+          { id: 'pend', label: 'Pendiente', valor: resumen.pendiente_cents, moneda: true,
+            tono: resumen.pendiente_cents > 0 ? 'warn' : undefined,
+            hint: `${resumen.proveedores_con_saldo} con saldo`,
+            onClick: () => setFilter('pending') },
+          { id: 'venc', label: 'Vencido', valor: resumen.vencido_cents, moneda: true,
+            tono: resumen.vencido_cents > 0 ? 'bad' : undefined,
+            onClick: resumen.vencido_cents > 0 ? () => setFilter('pending') : undefined }
+        ] : []}
+      />
 
       <div className="flex flex-col sm:flex-row gap-3">
         <SearchBox id="pur-search" label="Buscar por proveedor" value={q.searchInput}

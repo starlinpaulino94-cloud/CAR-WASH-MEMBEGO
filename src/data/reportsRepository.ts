@@ -165,3 +165,72 @@ export async function fetchReporteRentabilidad(
   if (error) throw fallaDatos(error);
   return data as unknown as ReporteRentabilidad;
 }
+
+// ─────────────────────────────────────────── Kardex trazable y panel de compras
+
+export interface FiltrosKardex {
+  from?: string | null;
+  to?: string | null;
+  productId?: string | null;
+  category?: string | null;
+  kind?: string | null;
+  branchId?: string | null;
+  userId?: string | null;
+  search?: string | null;
+}
+
+export interface MovimientoKardex {
+  id: number;
+  kind: string;
+  qty_change: number;
+  qty_before: number;
+  qty_after: number;
+  reason: string | null;
+  created_at: string;
+  product_name: string;
+  product_code: string;
+  product_unit: string;
+  valor_cents: number;
+  /** 'factura' | 'compra' | 'orden' | null — para saber qué vista abrir. */
+  doc_tipo: string | null;
+  doc_id: string | null;
+  doc_ref: string | null;
+  responsable: string | null;
+}
+
+export async function fetchKardexPage(
+  filtros: FiltrosKardex, page = 0, size = 25
+): Promise<{ total: number; rows: MovimientoKardex[]; page: number; size: number }> {
+  const { data, error } = await requireSupabase().rpc('kardex_page', {
+    p_from: filtros.from ?? undefined,
+    p_to: filtros.to ?? undefined,
+    p_product_id: filtros.productId ?? undefined,
+    p_category: filtros.category ?? undefined,
+    p_kind: filtros.kind ?? undefined,
+    p_branch_id: filtros.branchId ?? undefined,
+    p_user_id: filtros.userId ?? undefined,
+    p_search: filtros.search ?? undefined,
+    p_page: page, p_size: size
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as { total: number; rows: MovimientoKardex[]; page: number; size: number };
+}
+
+export interface ResumenCompras {
+  compras_cents: number;
+  compras_count: number;
+  pagado_cents: number;
+  pendiente_cents: number;
+  vencido_cents: number;
+  proveedores_con_saldo: number;
+}
+
+export async function fetchResumenCompras(
+  from?: string | null, to?: string | null, supplierId?: string | null
+): Promise<ResumenCompras> {
+  const { data, error } = await requireSupabase().rpc('purchases_summary', {
+    p_from: from ?? undefined, p_to: to ?? undefined, p_supplier_id: supplierId ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as ResumenCompras;
+}

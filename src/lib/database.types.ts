@@ -2862,6 +2862,18 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      kardex_page: {
+        Args: {
+          p_from?: string; p_to?: string; p_product_id?: string; p_category?: string;
+          p_kind?: string; p_branch_id?: string; p_user_id?: string; p_search?: string;
+          p_page?: number; p_size?: number;
+        };
+        Returns: Json;
+      };
+      purchases_summary: {
+        Args: { p_from?: string; p_to?: string; p_supplier_id?: string };
+        Returns: Json;
+      };
       inventory_summary: {
         Args: { p_from?: string; p_to?: string; p_branch_id?: string };
         Returns: Json;
