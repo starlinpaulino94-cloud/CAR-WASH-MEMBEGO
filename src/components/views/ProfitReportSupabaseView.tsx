@@ -1,50 +1,65 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
-import { formatCents } from '../../lib/money';
+import { formatCents, bpsToPercent } from '../../lib/money';
 import { fetchManagementReport, ManagementReport } from '../../data/adminRepository';
+import { fetchActiveBranches, Branch } from '../../data/branchRepository';
 import {
-  ViewHeader, ErrorState, StatCard, FilterChips, ReadOnlyNotice, InlineAlert, HelpNote
+  ViewHeader, ErrorState, ReadOnlyNotice, InlineAlert, HelpNote
 } from '../common/DataViewShell';
-import { RangeId, RANGES, rangeDates } from '../../lib/reportRanges';
+import { FiltroFechas } from '../common/FiltroFechas';
+import { TablaDatos } from '../common/TablaDatos';
+import { ReporteImprimible, BotonImprimir } from '../common/ReporteImprimible';
+import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 
 /**
  * Rentabilidad del periodo.
  *
- * La pieza que faltaba: el sistema conocía el precio de venta, pero no el
- * costo de ejecutar cada servicio. Con las recetas (0021) el consumo de
- * insumos queda registrado con su costo, y aquí se enfrenta a las ventas:
- * margen por servicio y utilidad bruta estimada.
+ * ────────────────────────────────────────────────────────────────────────────
+ * NINGÚN NÚMERO CON UN NOMBRE MÁS FUERTE DE LO QUE ES
+ *
+ * La versión anterior rotulaba «lo que de verdad queda» y «utilidad bruta» a
+ * un cálculo que solo descuenta insumos con receta y gastos registrados: sin
+ * comisiones ni nómina. Un dueño que decida con ese número decide con un
+ * resultado inflado. Esta pantalla usa MARGEN SOBRE INSUMOS Y GASTOS, dice en
+ * cada línea qué descuenta, y deja explícito lo que todavía no entra. El
+ * estado de resultados completo (comisiones, nómina prorrateada) llega con la
+ * RPC nueva de la siguiente fase; hasta entonces no se finge que existe.
  */
 export const ProfitReportSupabaseView: React.FC = () => {
   const { company, profile, phase } = useAuth();
   const symbol = company?.currency_symbol ?? 'RD$';
   const allowed = can(profile, 'viewAuditLog');
 
-  const [range, setRange] = useState<RangeId>('month');
+  const [sel, setSel] = useState<SeleccionFecha>({ preset: 'este_mes' });
+  const [branchId, setBranchId] = useState<string>('');
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [report, setReport] = useState<ManagementReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (phase !== 'ready' || !allowed) return;
+    fetchActiveBranches().then(setBranches).catch(() => setBranches([]));
+  }, [phase, allowed]);
+
+  const { desde, hasta } = rangoDeFechas(sel);
+
   const reload = useCallback(() => {
     if (phase !== 'ready' || !allowed) return;
     setLoading(true); setError(null);
-    const { from, to } = rangeDates(range);
-    fetchManagementReport(from, to)
+    fetchManagementReport(desde, hasta, branchId || null)
       .then(setReport)
       .catch(err => setError(err instanceof Error ? err.message : 'No se pudo cargar el reporte'))
       .finally(() => setLoading(false));
-  }, [phase, allowed, range]);
+  }, [phase, allowed, desde, hasta, branchId]);
 
   useEffect(() => { reload(); }, [reload]);
 
   if (phase !== 'ready' || !allowed) {
     return (
       <div className="p-6 max-w-4xl mx-auto space-y-6">
-        <ViewHeader
-          title="Rentabilidad" subtitle="Margen por servicio y utilidad estimada" />
+        <ViewHeader title="Rentabilidad" subtitle="Margen por servicio del periodo" />
         <ReadOnlyNotice>
           {phase !== 'ready'
             ? 'Disponible al conectar la base de datos.'
@@ -56,111 +71,169 @@ export const ProfitReportSupabaseView: React.FC = () => {
 
   if (error) return <ErrorState message={error} onRetry={reload} title="No se pudo cargar el reporte" />;
 
+  const money = (c: number) => formatCents(c, symbol);
   const margin = report?.service_margin ?? [];
   const belowCost = margin.filter(m => m.sales_cents > 0 && m.margin_cents < 0);
+  const pct = (m: { sales_cents: number; margin_cents: number }) =>
+    m.sales_cents === 0 ? null : Math.round((m.margin_cents / m.sales_cents) * 10000);
+
+  const sucursalNombre = branchId ? branches.find(b => b.id === branchId)?.name ?? null : null;
+
+  // La cascada: cada línea dice de dónde sale. Los rótulos son la promesa.
+  const cascada = report ? [
+    { id: 'ventas', label: 'Ingresos por ventas', valor: report.sales.total_cents, signo: '' },
+    { id: 'insumos', label: 'Costo de insumos consumidos', valor: -report.consumption_cents, signo: '−' },
+    { id: 'gastos', label: 'Gastos operativos registrados', valor: -report.expenses_total_cents, signo: '−' },
+    { id: 'margen', label: 'Margen sobre insumos y gastos (estimado)', valor: report.gross_profit_cents, signo: '=' }
+  ] : [];
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <ViewHeader
         title="Rentabilidad"
-        subtitle="Ventas menos insumos consumidos y gastos: lo que de verdad queda"
+        subtitle="Margen del periodo: qué descuenta cada línea está escrito en la propia línea"
+        actions={<BotonImprimir disabled={!report || loading} />}
       />
 
-      <FilterChips options={RANGES} value={range} onChange={setRange} />
+      <div className="flex flex-col lg:flex-row lg:items-start gap-3 justify-between">
+        <FiltroFechas valor={sel} onCambiar={setSel} disabled={loading} />
+        {branches.length > 1 && (
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Sucursal
+            <select value={branchId} onChange={e => setBranchId(e.target.value)} disabled={loading}
+              className="bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:border-brand">
+              <option value="">Todas</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
 
-      {loading || !report ? (
-        <div className="flex justify-center py-16" aria-busy="true">
-          <Loader2 className="w-6 h-6 animate-spin text-faint" />
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Ventas" tone="text-success"
-              value={formatCents(report.sales.total_cents, symbol)} />
-            <StatCard label="Insumos consumidos" tone="text-brand-2"
-              value={formatCents(report.consumption_cents, symbol)}
-              hint="Según las recetas aplicadas al entregar" />
-            <StatCard label="Gastos" tone="text-warning"
-              value={formatCents(report.expenses_total_cents, symbol)} />
-            <StatCard label="Utilidad bruta estimada"
-              tone={report.gross_profit_cents >= 0 ? 'text-success' : 'text-danger'}
-              value={formatCents(report.gross_profit_cents, symbol)}
-              hint="Ventas − insumos − gastos" />
+      {branchId && (
+        <InlineAlert tone="warning">
+          Con sucursal elegida, el consumo de insumos sigue siendo el de TODA la
+          empresa: los consumos aún no guardan sucursal. El margen por sucursal
+          se corrige en la siguiente fase; mientras, tómelo como referencia.
+        </InlineAlert>
+      )}
+
+      {/* La cascada del margen. No es un estado de resultados: le faltan
+          comisiones y nómina, y por eso no se llama así. */}
+      <section className="bg-surface border border-line rounded-2xl divide-y divide-line">
+        {loading || !report ? (
+          <div className="p-6 space-y-3" aria-busy="true">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-5 bg-surface-2/60 rounded animate-pulse" />
+            ))}
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <StatCard label="Compras del periodo"
-              value={formatCents(report.purchases_total_cents, symbol)} />
-            <StatCard label="Cuentas por pagar (vigentes)" tone="text-warning"
-              value={formatCents(report.payables_cents, symbol)}
-              hint="Saldo pendiente a proveedores, sin importar el rango" />
+        ) : cascada.map(l => (
+          <div key={l.id}
+            className={`flex items-center justify-between px-5 py-3 ${l.signo === '=' ? 'bg-canvas/50' : ''}`}>
+            <span className={`text-sm ${l.signo === '=' ? 'font-bold text-strong' : 'text-body'}`}>
+              {l.signo && <span className="text-faint mr-2">{l.signo}</span>}{l.label}
+            </span>
+            <span className={`tabular-nums font-bold ${
+              l.signo === '=' ? (l.valor >= 0 ? 'text-success text-lg' : 'text-danger text-lg') : 'text-strong text-sm'
+            }`}>
+              {money(Math.abs(l.valor))}
+            </span>
           </div>
+        ))}
+      </section>
 
-          {belowCost.length > 0 && (
-            <InlineAlert tone="warning">
-              {belowCost.length === 1
-                ? <>El servicio <strong>{belowCost[0].name}</strong> se vendió por debajo de su costo de insumos en este periodo.</>
-                : <>{belowCost.length} servicios se vendieron por debajo de su costo de insumos en este periodo.</>}
-            </InlineAlert>
-          )}
+      {!loading && report && (
+        <p className="text-xs text-faint">
+          Todavía NO descuenta comisiones de lavadores ni nómina. No es utilidad
+          neta y por eso no se llama así.
+        </p>
+      )}
 
-          <section className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
-            <h3 className="font-bold text-strong text-sm px-4 pt-4">Margen por servicio</h3>
-            <div className="overflow-x-auto p-2">
-              <Table>
-                <TableHeader>
-                  <TableRow className="text-muted text-xs">
-                    <TableHead className="p-2 font-semibold">SERVICIO</TableHead>
-                    <TableHead className="p-2 font-semibold text-right">VENTAS</TableHead>
-                    <TableHead className="p-2 font-semibold text-right">INSUMOS</TableHead>
-                    <TableHead className="p-2 font-semibold text-right">MARGEN</TableHead>
-                    <TableHead className="p-2 font-semibold text-right">%</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {margin.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-6 text-center text-faint italic">
-                        Sin ventas de servicios en el periodo. El margen aparece cuando hay
-                        ventas y las recetas registran consumo al entregar.
-                      </TableCell>
-                    </TableRow>
-                  ) : margin.map(m => {
-                    const pct = m.sales_cents > 0
-                      ? Math.round((m.margin_cents / m.sales_cents) * 100)
-                      : null;
-                    return (
-                      <TableRow key={m.service_id ?? m.name}>
-                        <TableCell className="p-2 text-strong font-medium">{m.name}</TableCell>
-                        <TableCell className="p-2 text-right text-body tabular-nums whitespace-nowrap">
-                          {formatCents(m.sales_cents, symbol)}
-                        </TableCell>
-                        <TableCell className="p-2 text-right text-brand-2 tabular-nums whitespace-nowrap">
-                          {formatCents(m.consumption_cents, symbol)}
-                        </TableCell>
-                        <TableCell className={`p-2 text-right font-bold tabular-nums whitespace-nowrap ${
-                          m.margin_cents >= 0 ? 'text-success' : 'text-danger'
-                        }`}>
-                          {formatCents(m.margin_cents, symbol)}
-                        </TableCell>
-                        <TableCell className={`p-2 text-right font-bold tabular-nums ${
-                          pct === null ? 'text-faint' : pct >= 0 ? 'text-success' : 'text-danger'
-                        }`}>
-                          {pct === null ? '—' : `${pct}%`}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </section>
+      {belowCost.length > 0 && (
+        <InlineAlert tone="warning">
+          {belowCost.length === 1
+            ? <>El servicio <strong>{belowCost[0].name}</strong> se vendió por debajo de su costo de insumos en este periodo.</>
+            : <>{belowCost.length} servicios se vendieron por debajo de su costo de insumos en este periodo.</>}
+        </InlineAlert>
+      )}
 
-          <HelpNote summary="Qué descuenta este margen">
-            SOLO los insumos con receta. No prorratea nómina, comisiones ni gastos
-            fijos, así que un servicio sin receta muestra margen igual a sus ventas.
-          </HelpNote>
-        </>
+      <section className="space-y-2">
+        <h3 className="font-bold text-strong text-sm">Margen por servicio</h3>
+        <TablaDatos
+          columnas={[
+            { id: 'n', label: 'Servicio', render: m => <span className="font-medium text-strong">{m.name}</span> },
+            { id: 'v', label: 'Ventas', numerica: true, render: m => money(m.sales_cents) },
+            { id: 'i', label: 'Insumos', numerica: true, render: m => money(m.consumption_cents) },
+            { id: 'm', label: 'Margen', numerica: true,
+              render: m => (
+                <span className={m.margin_cents < 0 ? 'text-danger font-bold' : ''}>
+                  {money(m.margin_cents)}
+                </span>
+              ) },
+            { id: 'p', label: '%', numerica: true,
+              render: m => { const p = pct(m); return p === null ? '—' : bpsToPercent(p); } }
+          ]}
+          filas={margin}
+          clave={m => m.service_id ?? m.name}
+          cargando={loading}
+          vacio="Sin ventas de servicios en el periodo. El margen aparece cuando hay ventas y las recetas registran consumo al entregar."
+          etiqueta="Margen por servicio"
+        />
+      </section>
+
+      <HelpNote summary="Qué descuenta este margen, exactamente">
+        Por servicio: sus ventas menos los insumos con receta consumidos al
+        entregar. En total: además, los gastos operativos registrados en Caja →
+        Gastos. NO entran comisiones, nómina ni costos fijos sin registrar: un
+        servicio sin receta muestra margen igual a sus ventas. Las fórmulas
+        completas, con comisiones y nómina prorrateada, llegan con el estado de
+        resultados de la próxima fase.
+      </HelpNote>
+
+      {report && (
+        <ReporteImprimible
+          empresa={company?.trade_name}
+          titulo="Reporte de rentabilidad"
+          periodo={describirRango(sel)}
+          filtros={sucursalNombre ? [`Sucursal: ${sucursalNombre}`] : []}
+          generadoPor={profile?.full_name}
+        >
+          <table>
+            <tbody>
+              {cascada.map(l => (
+                <tr key={l.id}>
+                  <td>{l.signo ? `${l.signo} ` : ''}{l.label}</td>
+                  <td className="num">{money(Math.abs(l.valor))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3>Margen por servicio</h3>
+          <table>
+            <thead>
+              <tr><th>Servicio</th><th className="num">Ventas</th><th className="num">Insumos</th><th className="num">Margen</th><th className="num">%</th></tr>
+            </thead>
+            <tbody>
+              {margin.map(m => {
+                const p = pct(m);
+                return (
+                  <tr key={m.service_id ?? m.name}>
+                    <td>{m.name}</td>
+                    <td className="num">{money(m.sales_cents)}</td>
+                    <td className="num">{money(m.consumption_cents)}</td>
+                    <td className="num">{money(m.margin_cents)}</td>
+                    <td className="num">{p === null ? '—' : bpsToPercent(p)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <p className="pr-nota">
+            Margen sobre insumos con receta y gastos registrados. No descuenta
+            comisiones ni nómina: no es utilidad neta.
+          </p>
+        </ReporteImprimible>
       )}
     </div>
   );

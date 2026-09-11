@@ -1,4 +1,15 @@
-/** Rangos de fecha de los reportes gerenciales. */
+/**
+ * CAPA DE COMPATIBILIDAD. La implementación vive en rangosFecha.ts.
+ *
+ * Este módulo tenía el bug de «Hoy es mañana a partir de las 20:00» (fechas
+ * locales serializadas con toISOString, que es UTC). Se conserva solo la API
+ * vieja —RangeId, RANGES, rangeDates— apoyada en la implementación nueva, para
+ * no tocar a la vez a todos sus consumidores. Vista que se moderniza, vista
+ * que pasa a importar rangosFecha directamente; cuando no quede ninguno, este
+ * archivo se borra.
+ */
+import { rangoDeFechas, type PresetFecha } from './rangosFecha';
+
 export type RangeId = 'today' | 'week' | 'month' | 'prev_month';
 
 export const RANGES: { id: RangeId; label: string }[] = [
@@ -8,18 +19,11 @@ export const RANGES: { id: RangeId; label: string }[] = [
   { id: 'prev_month', label: 'Mes anterior' }
 ];
 
+const EQUIVALENCIA: Record<RangeId, PresetFecha> = {
+  today: 'hoy', week: '7dias', month: 'este_mes', prev_month: 'mes_anterior'
+};
+
 export function rangeDates(id: RangeId): { from: string; to: string } {
-  const now = new Date();
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
-  if (id === 'today') return { from: iso(now), to: iso(now) };
-  if (id === 'week') {
-    const from = new Date(now); from.setDate(now.getDate() - 6);
-    return { from: iso(from), to: iso(now) };
-  }
-  if (id === 'month') {
-    return { from: iso(new Date(now.getFullYear(), now.getMonth(), 1)), to: iso(now) };
-  }
-  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const last = new Date(now.getFullYear(), now.getMonth(), 0);
-  return { from: iso(first), to: iso(last) };
+  const r = rangoDeFechas({ preset: EQUIVALENCIA[id] });
+  return { from: r.desde, to: r.hasta };
 }
