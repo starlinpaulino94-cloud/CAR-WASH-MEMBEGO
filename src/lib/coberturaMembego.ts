@@ -201,12 +201,118 @@ export function categoriaTopeDelPlan(
  *        del plan. `null` si no se pudo averiguar — y entonces no se cubre nada,
  *        porque adivinarlo es regalar dinero del negocio.
  */
+/**
+ * El cliente sube de servicio: la membresía pone lo que vale SU lavado y él
+ * paga el resto.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * POR QUÉ NO BASTA CON MARCAR EL SERVICIO CARO
+ *
+ * Un plan de «Lavado Básico» y un cliente que pide «Lavado Estándar». Marcar el
+ * Estándar como incluible lo resolvía —el aviso desaparecía— pero la membresía
+ * absorbía el Estándar ENTERO: el lavadero regalaba la mejora en cada visita,
+ * y como el aviso se iba, nadie volvía a mirarlo.
+ *
+ * Es el mismo problema que ya resolvía el salto de categoría de vehículo, con
+ * el eje cambiado: allí el cliente trae un carro más grande, aquí pide un
+ * servicio mejor. En los dos casos pagó por un lavado y lo que le falta es la
+ * diferencia, no el lavado entero.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * DOS DECISIONES QUE CONVIENE VER ESCRITAS
+ *
+ *   · El valor de la membresía es el lavado incluible MÁS CARO de la categoría.
+ *     Si el negocio marcó varios, el cliente tiene derecho al mejor de ellos;
+ *     tomar el más barato le cobraría de más por cómo está ordenado el catálogo.
+ *
+ *   · Si el servicio que se lleva vale MENOS que el de su plan, se cubre entero
+ *     y no se le devuelve nada. Una membresía da derecho a un lavado hasta
+ *     cierto valor, no a un saldo.
+ */
+function mejoraDeServicio(params: {
+  membresias: MembresiaEvaluada[];
+  lineas: LineaCobrable[];
+  precioEnCategoriaTope: (serviceId: string) => number | null;
+  lavadoDelPlan: { servicioId: string; precioCents: number } | null;
+}): AplicacionCobertura {
+  const { membresias, lineas, precioEnCategoriaTope, lavadoDelPlan } = params;
+
+  // Sin nada marcado en el catálogo no hay valor que aplicar. Ese caso lo
+  // explica `decidirAplicarMembresia`, que sabe mandar a marcarlo.
+  if (!lavadoDelPlan) return SIN_COBERTURA('Nada en esta venta entra en una membresía.');
+
+  const servicios = lineas
+    .map((l, i) => ({ l, i }))
+    .filter(({ l }) => l.serviceId !== null);
+  if (servicios.length === 0) {
+    return SIN_COBERTURA('Nada en esta venta entra en una membresía.');
+  }
+
+  const usables = membresias.filter(m =>
+    m.coverage !== null &&
+    (m.coverage.unlimited || m.usesLeft > 0) &&
+    m.coverage.covers !== null
+  );
+  const usable = usables.find(m => m.coverage!.covers === true) ?? usables[0];
+  if (!usable || !usable.coverage) {
+    return SIN_COBERTURA('Nada en esta venta entra en una membresía.');
+  }
+
+  const elegida = servicios.reduce((mejor, actual) =>
+    actual.l.unitPriceCents > mejor.l.unitPriceCents ? actual : mejor
+  );
+  const precioLinea = elegida.l.unitPriceCents;
+  const cobertura = usable.coverage;
+
+  // Cuánto vale su lavado. Si además trae un vehículo por encima del plan, el
+  // tope es el de SU lavado en SU categoría: los dos límites se acumulan, y
+  // aplicar solo uno regalaría el otro.
+  let tope: number | null;
+  if (cobertura.covers === true) {
+    tope = lavadoDelPlan.precioCents;
+  } else if (cobertura.reason === 'VEHICLE_LEVEL_ABOVE_PLAN' && cobertura.vehicleLevelMax !== null) {
+    tope = precioEnCategoriaTope(lavadoDelPlan.servicioId);
+    if (tope === null) {
+      return SIN_COBERTURA(
+        `${usable.nombre} no cubre esta categoría y falta el precio de la categoría del plan ` +
+        'para calcular la diferencia. El lavado se cobra completo.'
+      );
+    }
+  } else {
+    return SIN_COBERTURA(
+      cobertura.reason === 'NO_USES_LEFT'
+        ? `${usable.nombre} no tiene lavados disponibles. Se cobra completo.`
+        : cobertura.reason === 'VEHICLE_NOT_IN_MEMBERSHIP'
+          ? 'Esta placa no está en su membresía. Se cobra completo.'
+          : `${usable.nombre} no cubre este lavado. Se cobra completo.`
+    );
+  }
+
+  const cubierto = Math.max(0, Math.min(tope, precioLinea));
+  return {
+    lineaIndex: elegida.i,
+    membershipId: usable.id,
+    membershipNombre: usable.nombre,
+    coveredCents: cubierto,
+    differenceCents: precioLinea - cubierto,
+    explicacion: cubierto >= precioLinea
+      ? `${usable.nombre} cubre este lavado.`
+      : `${usable.nombre} cubre el lavado de su plan. La diferencia se cobra.`
+  };
+}
+
 export function aplicarCobertura(params: {
   membresias: MembresiaEvaluada[];
   lineas: LineaCobrable[];
   precioEnCategoriaTope: (serviceId: string) => number | null;
+  /**
+   * El lavado al que da derecho el plan, con su precio EN ESTA CATEGORÍA: el
+   * más caro de los marcados como incluibles. Es el valor de la membresía
+   * cuando el cliente se lleva otra cosa. `null` si no hay ninguno marcado.
+   */
+  lavadoDelPlan?: { servicioId: string; precioCents: number } | null;
 }): AplicacionCobertura {
-  const { membresias, lineas, precioEnCategoriaTope } = params;
+  const { membresias, lineas, precioEnCategoriaTope, lavadoDelPlan = null } = params;
 
   // Solo servicios marcados como incluibles. Un producto —una fragancia, un
   // café— nunca lo paga una membresía de lavados.
@@ -215,7 +321,7 @@ export function aplicarCobertura(params: {
     .filter(({ l }) => l.serviceId !== null && l.incluidoEnMembego);
 
   if (candidatas.length === 0) {
-    return SIN_COBERTURA('Nada en esta venta entra en una membresía.');
+    return mejoraDeServicio({ membresias, lineas, precioEnCategoriaTope, lavadoDelPlan });
   }
 
   // Las que de verdad pueden usarse ahora. `covers === null` es «no se
@@ -374,15 +480,13 @@ export function decidirAplicarMembresia(e: EntradaDecision): DecisionBeneficio {
   // 4. La venta ya trae lavado —viene de la orden— y no es de los incluibles.
   //    Agregar el incluible facturaría DOS lavados del mismo carro, así que se
   //    dice lo que pasa y se deja la decisión en el mostrador.
+  // 4. La venta trae un lavado que no es el del plan. Ya NO es un aviso: la
+  //    membresía pone lo que vale el lavado de su plan y el cliente paga la
+  //    diferencia (`mejoraDeServicio`), igual que con el salto de categoría.
+  //    El resultado se enseña junto al dinero, que es donde se entiende; un
+  //    recuadro aparte diciendo «no se puede» sería ahora falso.
   if (e.lineasServicio.length > 0) {
-    return {
-      accion: 'avisar',
-      texto:
-        `${listar(e.lineasServicio.map(l => l.name))} no está marcado como ` +
-        '«Incluido en el beneficio Membego», así que la membresía no lo puede ' +
-        'cubrir. Márquelo en Configuración → Servicios, o cambie la venta al ' +
-        `servicio que sí cubre el plan (${listar(e.incluiblesEnCategoria.map(s => s.name))}).`
-    };
+    return { accion: 'nada' };
   }
 
   // 5. Venta vacía de servicios: se agrega el mejor lavado del cliente. El más
