@@ -633,17 +633,11 @@ export const PosSupabaseView: React.FC = () => {
    * el beneficio se pactó al recibir el vehículo y volver a decidirlo aquí sería
    * cobrar distinto a lo que se le dijo al cliente en la puerta.
    */
-  /**
-   * El lavado al que da derecho el plan, con su precio en ESTA categoría: el
-   * más caro de los marcados como incluibles. Es lo que la membresía vale
-   * cuando el cliente se lleva un servicio distinto del suyo.
-   */
-  const lavadoDelPlan = useMemo(() => {
-    const incluibles = services.filter(s => s.included_in_membego);
-    if (incluibles.length === 0) return null;
-    const mejor = incluibles.reduce((a, b) => (b.price_cents > a.price_cents ? b : a));
-    return { servicioId: mejor.id, precioCents: mejor.price_cents };
-  }, [services]);
+  /** Los servicios que una membresía SÍ puede pagar, para poder nombrarlos. */
+  const nombresIncluibles = useMemo(
+    () => services.filter(s => s.included_in_membego).map(s => s.name),
+    [services]
+  );
 
   const cobertura = useMemo(() => {
     if (!ficha || lines.length === 0) return null;
@@ -660,9 +654,9 @@ export const PosSupabaseView: React.FC = () => {
         quantity: l.quantity
       })),
       precioEnCategoriaTope: id => preciosTope?.[id] ?? null,
-      lavadoDelPlan
+      nombresIncluibles
     });
-  }, [ficha, lines, services, preciosTope, lavadoDelPlan]);
+  }, [ficha, lines, services, preciosTope, nombresIncluibles]);
 
   /**
    * Las líneas tal como van a facturarse, con el beneficio ya aplicado.
@@ -1514,12 +1508,22 @@ export const PosSupabaseView: React.FC = () => {
                   discusión la aguanta el cajero. */}
               {cobertura && cobertura.differenceCents > 0 && (
                 <p className="text-xs text-warning pb-0.5">
-                  Su plan no llega a esta categoría: paga la diferencia de{' '}
+                  {/* El motivo lo dice la cobertura, que es quien lo sabe. Este
+                      texto estaba fijo en «su plan no llega a esta categoría» y
+                      se enseñaba para cualquier diferencia: a un cliente cuya
+                      ficha decía «Cubre este vehículo» se le contaba que su
+                      plan no llegaba a su categoría. Un motivo equivocado en
+                      pantalla lo discute el cajero con el cliente delante. */}
+                  {cobertura.explicacion} Paga la diferencia de{' '}
                   <strong>{formatCents(cobertura.differenceCents, symbol)}</strong>.
                 </p>
               )}
+              {/* Hay membresía viva y no cubrió nada: casi siempre es la marca
+                  «Incluido en el beneficio Membego» sin poner. Va en ámbar y no
+                  en gris tenue porque es justo el momento en que el dinero sale
+                  mal, y en gris nadie lo leía. */}
               {cobertura && cobertura.coveredCents === 0 && ficha && ficha.memberships.length > 0 && (
-                <p className="text-xs text-faint pb-0.5">{cobertura.explicacion}</p>
+                <p className="text-xs text-warning pb-0.5">{cobertura.explicacion}</p>
               )}
 
               <div className="flex justify-between text-muted">

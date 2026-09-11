@@ -205,82 +205,67 @@ console.log('\n[7] Bordes de tarifa mal configurada');
 }
 
 
-console.log('\n[7] La mejora de servicio — el plan cubre lo suyo, el cliente pone el resto');
+console.log('\n[8] Un servicio sin marcar NO se cobra a ojo');
 {
-  // Plan de «Lavado Básico» (500). El cliente pide «Estándar» (800), que NO
-  // está marcado como incluible. Antes esto era un aviso y se cobraba entero,
-  // o se marcaba el Estándar y se regalaba la mejora. Ahora paga los 300.
+  // El caso real que lo motivó: PLAN GOLD (SUV GRANDE), la ficha dice «Cubre
+  // este vehículo», y el lavado vendido no está marcado como incluible. Hubo
+  // una versión que tomaba el precio del incluible más caro como «lo que vale
+  // el plan» y cobraba la diferencia: al cliente le salieron RD$600 de un
+  // lavado de RD$1500 que su plan cubría entero, explicados con un motivo —la
+  // categoría del vehículo— que su propia ficha desmentía.
+  //
+  // Un servicio sin marcar es DESCONOCIDO, no más caro. No se adivina.
   const r = aplicarCobertura({
     membresias: [membresia()],
-    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 80000 })],
-    precioEnCategoriaTope: sinPrecioTope,
-    lavadoDelPlan: { servicioId: 'srv-basico', precioCents: 50000 }
+    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 150000 })],
+    precioEnCategoriaTope: () => 90000,
+    nombresIncluibles: ['Lavado Básico']
   });
-  check('la membresía pone lo que vale el lavado de su plan', r.coveredCents === 50000);
-  check('y el cliente paga solo la mejora', r.differenceCents === 30000);
-  check('lo cubierto más la diferencia es el precio real',
-    r.coveredCents + r.differenceCents === 80000);
-  check('apunta a la línea del servicio vendido', r.lineaIndex === 0);
-  check('y se explica al cajero', /diferencia/i.test(r.explicacion), r.explicacion);
+  check('no se inventa ninguna cobertura', r.coveredCents === 0);
+  check('ni ninguna diferencia: el cobro inventado es peor que el completo',
+    r.differenceCents === 0 && r.lineaIndex === null);
+  check('y se dice que falta la marca, que es lo único accionable',
+    /no está marcado/i.test(r.explicacion), r.explicacion);
+  check('nombrando los que sí cubre el plan',
+    /Lavado Básico/.test(r.explicacion), r.explicacion);
 }
 {
-  // Si se lleva algo MÁS BARATO que su plan, va cubierto y no hay vuelto: una
-  // membresía da derecho a un lavado hasta cierto valor, no a un saldo.
+  // Marcado: la membresía lo cubre ENTERO. Es lo que el negocio espera cuando
+  // el plan del cliente da derecho a ese lavado.
   const r = aplicarCobertura({
     membresias: [membresia()],
-    lineas: [lavado({ serviceId: 'srv-express', incluidoEnMembego: false, unitPriceCents: 30000 })],
-    precioEnCategoriaTope: sinPrecioTope,
-    lavadoDelPlan: { servicioId: 'srv-basico', precioCents: 50000 }
+    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: true, unitPriceCents: 150000 })],
+    precioEnCategoriaTope: () => 90000,
+    nombresIncluibles: ['Lavado Estándar']
   });
-  check('un servicio más barato que su plan va cubierto entero',
-    r.coveredCents === 30000 && r.differenceCents === 0);
-  check('y NO se le devuelve la diferencia a favor', r.coveredCents <= 30000);
+  check('marcado y con la ficha diciendo que cubre, se absorbe el lavado entero',
+    r.coveredCents === 150000);
+  check('y no queda diferencia que cobrar', r.differenceCents === 0);
 }
 {
-  // Los dos topes se acumulan: plan de sedán, llega en camioneta Y pide un
-  // servicio que no es el suyo. Manda el precio de SU lavado en SU categoría.
+  // Sin nada marcado en el catálogo el aviso es otro: no hay a qué apuntar.
   const r = aplicarCobertura({
-    membresias: [membresia({ covers: false, reason: 'VEHICLE_LEVEL_ABOVE_PLAN' })],
-    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 120000 })],
-    precioEnCategoriaTope: () => 50000,
-    lavadoDelPlan: { servicioId: 'srv-basico', precioCents: 90000 }
+    membresias: [membresia()],
+    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 150000 })],
+    precioEnCategoriaTope: sinPrecioTope,
+    nombresIncluibles: []
   });
-  check('con carro grande Y servicio mejor, se cubre el lavado del plan en su categoría',
-    r.coveredCents === 50000);
-  check('y el resto lo paga el cliente', r.differenceCents === 70000);
+  check('sin ningún servicio marcado se dice eso, no otra cosa',
+    /Ningún servicio del catálogo/i.test(r.explicacion), r.explicacion);
+  check('y tampoco se cobra nada a ojo', r.coveredCents === 0);
 }
 {
+  // Sin membresía viva no hay que dar la lección del catálogo: el mensaje útil
+  // es que no hay nada que cubrir.
   const r = aplicarCobertura({
     membresias: [membresia({ covers: false, reason: 'NO_USES_LEFT', usesLeft: 0 })],
-    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 80000 })],
+    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 150000 })],
     precioEnCategoriaTope: sinPrecioTope,
-    lavadoDelPlan: { servicioId: 'srv-basico', precioCents: 50000 }
+    nombresIncluibles: ['Lavado Básico']
   });
-  check('sin lavados disponibles no se regala la mejora',
-    r.coveredCents === 0 && r.lineaIndex === null);
+  check('sin lavados disponibles no se manda a marcar nada',
+    !/no está marcado/i.test(r.explicacion), r.explicacion);
 }
-{
-  const r = aplicarCobertura({
-    membresias: [membresia()],
-    lineas: [lavado({ serviceId: 'srv-estandar', incluidoEnMembego: false, unitPriceCents: 80000 })],
-    precioEnCategoriaTope: sinPrecioTope,
-    lavadoDelPlan: null
-  });
-  check('sin ningún servicio marcado en el catálogo no se inventa un valor',
-    r.coveredCents === 0 && r.lineaIndex === null);
-}
-{
-  // Un producto suelto no es un lavado, ni siquiera para la mejora.
-  const r = aplicarCobertura({
-    membresias: [membresia()],
-    lineas: [{ serviceId: null, incluidoEnMembego: false, unitPriceCents: 200000, quantity: 1 }],
-    precioEnCategoriaTope: sinPrecioTope,
-    lavadoDelPlan: { servicioId: 'srv-basico', precioCents: 50000 }
-  });
-  check('una membresía de lavados no paga productos',
-    r.coveredCents === 0 && r.lineaIndex === null);
-}
-
 
 console.log(`\n${pass} pasan · ${fail} fallan`);
 if (fail > 0) process.exit(1);

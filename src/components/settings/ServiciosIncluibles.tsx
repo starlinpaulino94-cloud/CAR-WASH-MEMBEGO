@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BadgeCheck, Loader2 } from 'lucide-react';
-import { fetchServiciosIncluiblesMembego, ServicioIncluible } from '../../data/adminRepository';
+import {
+  fetchServiciosIncluiblesMembego, fetchServiciosNoIncluiblesMembego, ServicioIncluible
+} from '../../data/adminRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { InlineAlert } from '../common/DataViewShell';
 
@@ -27,11 +29,15 @@ import { InlineAlert } from '../common/DataViewShell';
 export const ServiciosIncluibles: React.FC = () => {
   const CATEGORIAS = useVehicleCategories();
   const [incluibles, setIncluibles] = useState<ServicioIncluible[]>([]);
+  const [sinMarcar, setSinMarcar] = useState<{ id: string; name: string }[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let activo = true;
+    fetchServiciosNoIncluiblesMembego()
+      .then(r => { if (activo) setSinMarcar(r); })
+      .catch(() => { /* el hueco es un extra: no puede tumbar la pantalla */ });
     fetchServiciosIncluiblesMembego()
       .then(r => { if (activo) setIncluibles(r); })
       .catch(e => { if (activo) setError(e instanceof Error ? e.message : 'No se pudieron cargar los servicios'); })
@@ -93,6 +99,32 @@ export const ServiciosIncluibles: React.FC = () => {
               ))}
             </div>
           </div>
+
+          {/* Lo que NO está marcado. Es la mitad que faltaba: una lista de
+              aciertos no deja ver el olvido, y el olvido es lo que hace que un
+              cliente con su plan al día pague el lavado completo. Aquí se ve
+              antes de que haya nadie esperando en la caja. */}
+          {sinMarcar.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-muted uppercase">
+                Sin marcar ({sinMarcar.length}) · ninguna membresía los paga
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {sinMarcar.map(s => (
+                  <span key={s.id}
+                    className="px-2 py-0.5 rounded-md text-xs border border-line bg-surface-2 text-muted">
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-faint">
+                Si alguno de estos entra en sus planes, ábralo en{' '}
+                <strong>Configuración → Servicios</strong> y active «Incluido en
+                el beneficio Membego». Mientras esté aquí, la caja lo cobra
+                completo aunque el cliente tenga membresía.
+              </p>
+            </div>
+          )}
 
           {sinCobertura.length > 0 && (
             <InlineAlert tone="warning">
