@@ -234,3 +234,77 @@ export async function fetchResumenCompras(
   if (error) throw fallaDatos(error);
   return data as unknown as ResumenCompras;
 }
+
+// ─────────────────────────────────────────────────── Ficha 360 del proveedor
+
+export interface FichaProveedor {
+  total_comprado_cents: number;
+  saldo_cents: number;
+  vencido_cents: number;
+  compras_total: number;
+  ultima_compra: string | null;
+  periodo_cents: number | null;
+  productos_top: { name: string; qty: number; total_cents: number }[];
+  compras: {
+    id: string; invoice_ref: string | null; purchase_date: string;
+    total_cents: number; paid_cents: number; is_credit: boolean;
+    due_date: string | null; status: string; vencida: boolean;
+  }[];
+}
+
+export async function fetchFichaProveedor(
+  supplierId: string, from?: string | null, to?: string | null
+): Promise<FichaProveedor> {
+  const { data, error } = await requireSupabase().rpc('supplier_detail', {
+    p_supplier_id: supplierId, p_from: from ?? undefined, p_to: to ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as FichaProveedor;
+}
+
+// ─────────────────────────────────────────────────── Calidad gerencial
+
+export interface ResumenCalidad {
+  vehiculos_revisados: number;
+  revisiones: number;
+  aprobados_primera: number;
+  rechazados: number;
+  tasa_aprobacion_primera: number | null;
+  tasa_reproceso: number | null;
+  causas: { motivo: string; veces: number }[];
+  lavadores_top: { name: string; reprocesos: number }[];
+  servicios_top: { name: string; veces: number }[];
+}
+
+export async function fetchResumenCalidad(from?: string | null, to?: string | null): Promise<ResumenCalidad> {
+  const { data, error } = await requireSupabase().rpc('qc_summary', {
+    p_from: from ?? undefined, p_to: to ?? undefined
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as ResumenCalidad;
+}
+
+export interface RevisionCalidad {
+  id: string;
+  order_number: string;
+  vehicle_plate: string;
+  attempt: number;
+  result: string;
+  reject_reason: string | null;
+  created_at: string;
+  washer: string | null;
+  reviewer: string | null;
+  servicios: string | null;
+}
+
+export async function fetchHistorialCalidad(
+  from: string | null, to: string | null, washerId: string | null, result: string | null, page = 0, size = 25
+): Promise<{ total: number; rows: RevisionCalidad[]; page: number; size: number }> {
+  const { data, error } = await requireSupabase().rpc('qc_history_page', {
+    p_from: from ?? undefined, p_to: to ?? undefined,
+    p_washer_id: washerId ?? undefined, p_result: result ?? undefined,
+    p_page: page, p_size: size
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as { total: number; rows: RevisionCalidad[]; page: number; size: number };
+}

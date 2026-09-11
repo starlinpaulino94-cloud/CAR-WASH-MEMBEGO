@@ -1,77 +1,111 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Car, Plus, AlertCircle, Loader2, Printer, PackageCheck, ClipboardCheck, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/button';
-import {
-  Car, Search, Plus, AlertCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight,
-  ClipboardCheck, Printer, PackageCheck
-} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
 import {
-  fetchOrderPage, WorkOrder, OrderStatus, STATUS_LABEL
+  fetchOrdersPage, fetchDetalleOrden, fetchWorkOrderById, fetchAssignees, fetchOperators,
+  FiltrosOrden, OrdenOperacion, DetalleOrden, WorkOrder, OrderStatus, STATUS_LABEL, Profile
 } from '../../data/ordersRepository';
-import { useVehicleCategories } from '../../hooks/useVehicleCategories';
+import { fetchServicesWithPrices, ServiceWithPrices } from '../../data/adminRepository';
+import { ViewHeader, ErrorState, SearchBox, Pagination, ReadOnlyNotice, InlineAlert } from '../common/DataViewShell';
+import { FiltroFechas } from '../common/FiltroFechas';
+import { TablaDatos } from '../common/TablaDatos';
+import { PanelDetalle } from '../common/PanelDetalle';
+import { SeleccionFecha, rangoDeFechas } from '../../lib/rangosFecha';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { InspectionModal } from '../modals/InspectionModal';
 import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
-import { fetchAssignees, fetchOperators } from '../../data/ordersRepository';
-import { ExportButton } from '../common/ExportButton';
-import { ordersExport } from '../../lib/exportSpecs';
 
 const PAGE_SIZE = 25;
 
-const STATUS_FILTERS: { id: OrderStatus | 'all' | 'active'; label: string }[] = [
-  { id: 'active', label: 'En taller' },
-  { id: 'all', label: 'Todas' },
-  { id: 'pendiente', label: 'Pendientes' },
-  { id: 'en_proceso', label: 'En lavado' },
-  { id: 'listo', label: 'Listas' },
-  { id: 'entregado', label: 'Entregadas' },
+const STATUS_FILTERS: { id: string; label: string }[] = [
+  { id: 'active', label: 'En taller' }, { id: 'all', label: 'Todas' },
+  { id: 'pendiente', label: 'Pendientes' }, { id: 'en_proceso', label: 'En lavado' },
+  { id: 'listo', label: 'Listas' }, { id: 'entregado', label: 'Entregadas' },
   { id: 'cancelado', label: 'Canceladas' }
 ];
 
 const STATUS_TONE: Record<OrderStatus, string> = {
-  pendiente: 'bg-warning/20 text-warning',
-  en_espera: 'bg-info/20 text-info',
-  asignada: 'bg-info/20 text-info',
-  en_proceso: 'bg-brand/20 text-brand-hi',
-  control_calidad: 'bg-brand/20 text-brand-2',
-  listo: 'bg-success/20 text-success',
-  entregado: 'bg-surface-2 text-body',
-  cancelado: 'bg-danger/20 text-danger'
+  pendiente: 'bg-warning/20 text-warning', en_espera: 'bg-info/20 text-info',
+  asignada: 'bg-info/20 text-info', en_proceso: 'bg-brand/20 text-brand-hi',
+  control_calidad: 'bg-brand/20 text-brand-2', listo: 'bg-success/20 text-success',
+  entregado: 'bg-surface-2 text-body', cancelado: 'bg-danger/20 text-danger'
 };
 
+/** Segundos a «1 h 20 min» o «15 min». */
+function fmtDur(seg: number | null): string {
+  if (seg == null) return '—';
+  const min = Math.round(seg / 60);
+  if (min < 60) return `${min} min`;
+  return `${Math.floor(min / 60)} h ${min % 60} min`;
+}
+
 /**
- * Historial de órdenes sobre Supabase.
+ * Órdenes de servicio: la operación, no solo el historial.
  *
- * Paginado y búsqueda en el servidor, igual que en Facturas: la vista auditada
- * filtraba en memoria sobre el array completo en cada pulsación de tecla.
+ * Sobre orders_page: filtra en el servidor por periodo, estado, lavador,
+ * servicio y pago, y trae los TIEMPOS (espera, duración) y las BANDERAS
+ * operativas (atrasada, lista sin entregar, sin lavador) ya calculadas. Al
+ * abrir una orden se ve su línea de tiempo —llegó, se inició, se terminó, se
+ * entregó— con lavadores, servicios, calidad e inspección. El sistema se
+ * siente conectado: del número al carro y su historia.
  */
 export const OrdersSupabaseView: React.FC = () => {
-  const categorias = useVehicleCategories();
-  const etiquetaCategoria = (code: string) =>
-    categorias.find(c => c.id === code)?.label ?? code;
-  const { branch, company } = useAuth();
+  const { branch, company, phase } = useAuth();
   const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
-  const [rows, setRows] = useState<WorkOrder[]>([]);
-  const [total, setTotal] = useState(0);
+  const [sel, setSel] = useState<SeleccionFecha>({ preset: '7dias' });
+  const [status, setStatus] = useState('active');
+  const [busqueda, setBusqueda] = useState('');
+  const [washerId, setWasherId] = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [payment, setPayment] = useState('');
   const [page, setPage] = useState(0);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<OrderStatus | 'all' | 'active'>('active');
 
+  const [washers, setWashers] = useState<Profile[]>([]);
+  const [services, setServices] = useState<ServiceWithPrices[]>([]);
+  const [data, setData] = useState<{ total: number; rows: OrdenOperacion[] }>({ total: 0, rows: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [creating, setCreating] = useState(false);
   const [inspecting, setInspecting] = useState<WorkOrder | null>(null);
-  /** Qué orden se está imprimiendo y en cuál de sus dos formas. */
-  const [imprimiendo, setImprimiendo] =
-    useState<{ order: WorkOrder; variante: 'llegada' | 'entrega' } | null>(null);
-  /** Nombres de los lavadores de la orden que se imprime. */
+  const [imprimiendo, setImprimiendo] = useState<{ order: WorkOrder; variante: 'llegada' | 'entrega' } | null>(null);
   const [lavadoresImpresion, setLavadoresImpresion] = useState<string[]>([]);
 
-  // Los nombres se resuelven al abrir: el listado no los trae, y el papel sin
-  // el nombre del lavador no sirve para lo que existe.
+  // El detalle con la línea de tiempo.
+  const [detalle, setDetalle] = useState<DetalleOrden | null>(null);
+  const [detalleCargando, setDetalleCargando] = useState(false);
+
+  useEffect(() => {
+    if (phase !== 'ready' || !branch) return;
+    fetchOperators(branch.id).then(setWashers).catch(() => setWashers([]));
+    fetchServicesWithPrices().then(setServices).catch(() => setServices([]));
+  }, [phase, branch]);
+
+  const { desde, hasta } = rangoDeFechas(sel);
+  const filtros: FiltrosOrden = useMemo(() => ({
+    from: desde, to: hasta, status, search: busqueda || null,
+    washerId: washerId || null, serviceId: serviceId || null, payment: payment || null
+  }), [desde, hasta, status, busqueda, washerId, serviceId, payment]);
+
+  const load = useCallback(() => {
+    if (phase !== 'ready' || !branch) return;
+    setLoading(true); setError(null);
+    fetchOrdersPage(branch.id, filtros, page, PAGE_SIZE)
+      .then(setData)
+      .catch(err => setError(err instanceof Error ? err.message : 'No se pudieron cargar las órdenes'))
+      .finally(() => setLoading(false));
+  }, [phase, branch, filtros, page]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(0); }, [desde, hasta, status, busqueda, washerId, serviceId, payment]);
+
+  // Los nombres de lavadores para el papel se resuelven al abrir la impresión.
   useEffect(() => {
     if (!imprimiendo) { setLavadoresImpresion([]); return; }
     let activo = true;
@@ -85,223 +119,237 @@ export const OrdersSupabaseView: React.FC = () => {
       .catch(() => { if (activo) setLavadoresImpresion([]); });
     return () => { activo = false; };
   }, [imprimiendo]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  const searchTimer = useRef<number | null>(null);
-  useEffect(() => {
-    if (searchTimer.current) window.clearTimeout(searchTimer.current);
-    searchTimer.current = window.setTimeout(() => { setSearch(searchInput); setPage(0); }, 350);
-    return () => { if (searchTimer.current) window.clearTimeout(searchTimer.current); };
-  }, [searchInput]);
+  const abrirDetalle = (id: string) => {
+    setDetalle(null); setDetalleCargando(true);
+    fetchDetalleOrden(id).then(setDetalle).catch(() => setDetalle(null)).finally(() => setDetalleCargando(false));
+  };
 
-  const load = useCallback(async () => {
-    if (!branch) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const data = await fetchOrderPage({
-        branchId: branch.id, page, pageSize: PAGE_SIZE, search, status
-      });
-      setRows(data.rows);
-      setTotal(data.total);
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'No se pudieron cargar las órdenes');
-    } finally {
-      setLoading(false);
-    }
-  }, [branch, page, search, status]);
+  // Las banderas operativas de la página, para el aviso de arriba.
+  const alertas = useMemo(() => ({
+    atrasadas: data.rows.filter(o => o.atrasada).length,
+    listas: data.rows.filter(o => o.lista_sin_entregar).length,
+    sinLavador: data.rows.filter(o => o.sin_lavador && o.status !== 'entregado' && o.status !== 'cancelado').length
+  }), [data.rows]);
 
-  useEffect(() => { void load(); }, [load]);
+  // Para imprimir o inspeccionar se necesita la orden COMPLETA (el listado trae
+  // una forma recortada). Se pide por id al pulsar.
+  const conOrdenCompleta = async (id: string, fn: (o: WorkOrder) => void) => {
+    const o = await fetchWorkOrderById(id);
+    if (o) fn(o);
+  };
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  if (loadError) {
+  if (phase !== 'ready') {
     return (
-      <div className="p-6 max-w-md mx-auto">
-        <div role="alert" className="bg-danger/40 border border-danger/40 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center gap-2 text-danger font-bold text-sm">
-            <AlertCircle className="w-5 h-5" /> No se pudieron cargar las órdenes
-          </div>
-          <p className="text-xs text-body">{loadError}</p>
-          <Button size="sm" onClick={() => void load()} >
-            <RefreshCw className="w-4 h-4" /> Reintentar
-          </Button>
-        </div>
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <ViewHeader title="Órdenes de servicio" subtitle="Operación del taller" />
+        <ReadOnlyNotice>Disponible al conectar la base de datos.</ReadOnlyNotice>
       </div>
     );
   }
+  if (error) return <ErrorState message={error} onRetry={load} title="No se pudieron cargar las órdenes" />;
+
+  const pageCount = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
+  const sel3 = 'bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:border-brand';
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line pb-4">
-        <div>
-          <h2 className="text-xl font-bold text-strong flex items-center gap-2">
-            <Car className="w-5 h-5 text-brand" /> Órdenes de servicio
-          </h2>
-          <p className="text-xs text-muted">{branch?.name}</p>
-        </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <ExportButton {...ordersExport()} />
-          <Button size="sm"
-            onClick={() => setCreating(true)}
-            
-          >
-            <Plus className="w-4 h-4" /> Registrar llegada
-          </Button>
-        </div>
-      </div>
+      <ViewHeader
+        title="Órdenes de servicio"
+        subtitle={branch?.name}
+        actions={<Button size="sm" onClick={() => setCreating(true)}><Plus className="w-4 h-4" /> Registrar llegada</Button>}
+      />
 
-      {notice && (
-        <div role="status" className="flex items-start gap-2 p-3 bg-success/40 border border-success/40 rounded-xl text-xs text-success">
-          <span className="flex-1">{notice}</span>
-          <button onClick={() => setNotice(null)} aria-label="Descartar aviso" className="px-1 font-bold">×</button>
+      {notice && <InlineAlert tone="success" onDismiss={() => setNotice(null)}>{notice}</InlineAlert>}
+
+      {/* Avisos operativos: lo que pide atención AHORA, calculado de las banderas
+          de la página. No son alertas inventadas: cada una es una condición real. */}
+      {(alertas.atrasadas > 0 || alertas.listas > 0 || alertas.sinLavador > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {alertas.atrasadas > 0 && (
+            <span className="inline-flex items-center gap-1.5 bg-danger/15 text-danger border border-danger/30 rounded-xl px-3 py-1.5 text-xs font-bold">
+              <AlertTriangle className="w-3.5 h-3.5" /> {alertas.atrasadas} atrasada{alertas.atrasadas > 1 ? 's' : ''}
+            </span>
+          )}
+          {alertas.listas > 0 && (
+            <span className="inline-flex items-center gap-1.5 bg-warning/15 text-warning border border-warning/30 rounded-xl px-3 py-1.5 text-xs font-bold">
+              <PackageCheck className="w-3.5 h-3.5" /> {alertas.listas} lista{alertas.listas > 1 ? 's' : ''} sin entregar
+            </span>
+          )}
+          {alertas.sinLavador > 0 && (
+            <span className="inline-flex items-center gap-1.5 bg-info/15 text-info border border-info/30 rounded-xl px-3 py-1.5 text-xs font-bold">
+              <AlertCircle className="w-3.5 h-3.5" /> {alertas.sinLavador} sin lavador
+            </span>
+          )}
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <label htmlFor="ord-search" className="sr-only">Buscar orden</label>
-          <input
-            id="ord-search" type="search" value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            placeholder="Buscar por número de orden, placa o cliente…"
-            className="w-full bg-surface border border-line rounded-xl pl-9 pr-4 py-2 text-xs text-strong placeholder-faint focus:outline-none focus:border-brand"
-          />
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.id}
-              onClick={() => { setStatus(f.id); setPage(0); }}
-              aria-pressed={status === f.id}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                status === f.id
-                  ? 'bg-brand text-on-accent border-brand'
-                  : 'bg-surface text-muted border-line hover:border-line-strong'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table className="text-xs">
-            <caption className="sr-only">Listado de órdenes de servicio</caption>
-            <TableHeader>
-              <TableRow className="border-b border-line text-muted bg-canvas/50">
-                <TableHead scope="col" className="p-3 font-semibold">ORDEN</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold">VEHÍCULO</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold">CLIENTE</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold">LLEGADA</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold text-right">TOTAL</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold text-right">INSPECCIÓN</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i} aria-hidden="true">
-                    <TableCell colSpan={7} className="p-3"><div className="h-5 bg-surface-2/60 rounded animate-pulse" /></TableCell>
-                  </TableRow>
-                ))
-              ) : rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="p-10 text-center text-faint italic">
-                    {search || status !== 'active'
-                      ? 'Ninguna orden coincide con el filtro.'
-                      : 'No hay vehículos en el taller ahora mismo.'}
-                  </TableCell>
-                </TableRow>
-              ) : rows.map(order => (
-                <TableRow key={order.id} className="hover:bg-surface-2/40 transition-colors">
-                  <TableCell className="p-3 font-bold text-brand-hi whitespace-nowrap">{order.order_number}</TableCell>
-                  <TableCell className="p-3">
-                    <div className="font-bold text-strong uppercase">{order.vehicle_plate}</div>
-                    <div className="text-xs text-muted">
-                      {order.vehicle_make_model || '—'} ({etiquetaCategoria(order.vehicle_category)})
-                    </div>
-                  </TableCell>
-                  <TableCell className="p-3 text-body">{order.customer_name}</TableCell>
-                  <TableCell className="p-3 text-muted whitespace-nowrap">
-                    {new Date(order.arrival_at).toLocaleString('es-DO')}
-                  </TableCell>
-                  <TableCell className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_TONE[order.status]}`}>
-                      {STATUS_LABEL[order.status]}
-                    </span>
-                  </TableCell>
-                  <TableCell className="p-3 font-bold text-right text-body whitespace-nowrap">
-                    {order.total_cents === 0
-                      ? <span className="text-success">Beneficio</span>
-                      : formatCents(order.total_cents, symbol)}
-                  </TableCell>
-                  <TableCell className="p-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {/* Reimprimir. La comanda salía SOLO al registrar: si se
-                          cerraba, o la llegada era de antes, no había forma de
-                          volver a sacarla — y es el papel que el cliente le
-                          entrega al lavador. */}
-                      <button
-                        onClick={() => setImprimiendo({ order, variante: 'llegada' })}
-                        aria-label={`Imprimir comanda de ${order.order_number}`}
-                        title="Comanda de llegada (para el lavador)"
-                        className="p-1.5 text-body hover:text-strong rounded-lg hover:bg-surface-2">
-                        <Printer className="w-4 h-4" />
-                      </button>
-                      {/* La entrega solo tiene sentido con el carro ya entregado. */}
-                      {order.status === 'entregado' && (
-                        <button
-                          onClick={() => setImprimiendo({ order, variante: 'entrega' })}
-                          aria-label={`Imprimir comprobante de entrega de ${order.order_number}`}
-                          title="Comprobante de entrega (firma del cliente)"
-                          className="p-1.5 text-success hover:text-success rounded-lg hover:bg-surface-2">
-                          <PackageCheck className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setInspecting(order)}
-                        aria-label={`Inspección de ${order.vehicle_plate}`}
-                        title="Estado del vehículo al recibirlo y entregarlo"
-                        className="p-1.5 text-info hover:text-info rounded-lg hover:bg-surface-2">
-                        <ClipboardCheck className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="flex items-center justify-between px-4 py-3 border-t border-line text-xs">
-          <span className="text-muted">
-            {total === 0 ? 'Sin resultados'
-              : <>Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total}</>}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
-              aria-label="Página anterior"
-              >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-muted tabular-nums">{page + 1} / {pageCount}</span>
-            <Button variant="outline" size="icon-sm" onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1 || loading}
-              aria-label="Página siguiente"
-              >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            {loading && <Loader2 className="w-4 h-4 animate-spin text-faint" />}
+      <div className="space-y-3 bg-surface/60 border border-line rounded-2xl p-4">
+        <FiltroFechas valor={sel} onCambiar={setSel} disabled={loading} />
+        <div className="flex flex-col lg:flex-row gap-3">
+          <SearchBox id="ord-search" label="Buscar orden" value={busqueda} onChange={setBusqueda}
+            placeholder="Buscar por número, placa o cliente…" />
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map(f => (
+              <button key={f.id} onClick={() => setStatus(f.id)} aria-pressed={status === f.id}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                  status === f.id ? 'bg-brand text-on-accent border-brand' : 'bg-surface text-muted border-line hover:border-brand'}`}>
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex items-center gap-1.5 text-xs text-muted">Lavador
+            <select className={sel3} value={washerId} onChange={e => setWasherId(e.target.value)}>
+              <option value="">Todos</option>
+              {washers.map(w => <option key={w.id} value={w.id}>{w.full_name}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted">Servicio
+            <select className={sel3} value={serviceId} onChange={e => setServiceId(e.target.value)}>
+              <option value="">Todos</option>
+              {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted">Pago
+            <select className={sel3} value={payment} onChange={e => setPayment(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="pagado">Pagado</option>
+              <option value="parcial">Parcial</option>
+            </select>
+          </label>
+        </div>
       </div>
+
+      <TablaDatos
+        columnas={[
+          { id: 'ord', label: 'Orden', render: (o: OrdenOperacion) => (
+            <><span className="font-bold text-brand-hi">{o.order_number}</span>
+              {o.es_membego && <span className="block text-xs text-brand-2">Membego</span>}</>) },
+          { id: 'veh', label: 'Vehículo', render: o => (
+            <><span className="font-bold text-strong uppercase">{o.vehicle_plate}</span>
+              <span className="block text-xs text-muted">{o.vehicle_make_model || '—'}</span></>) },
+          { id: 'cli', label: 'Cliente', ocultarEnMovil: true, render: o => o.customer_name },
+          { id: 'lav', label: 'Lavador', ocultarEnMovil: true, render: o => o.lavadores
+            ?? <span className="text-info">sin asignar</span> },
+          { id: 'espera', label: 'Espera', numerica: true, ocultarEnMovil: true, render: o => fmtDur(o.espera_seg) },
+          { id: 'dur', label: 'Duración', numerica: true, ocultarEnMovil: true, render: o => fmtDur(o.duracion_seg) },
+          { id: 'est', label: 'Estado', render: o => (
+            <div className="flex flex-col gap-1 items-start">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_TONE[o.status]}`}>
+                {STATUS_LABEL[o.status]}</span>
+              {o.atrasada && <span className="text-xs text-danger font-bold flex items-center gap-0.5"><Clock className="w-3 h-3" /> atrasada</span>}
+              {o.lista_sin_entregar && <span className="text-xs text-warning font-bold">sin entregar</span>}
+            </div>) },
+          { id: 'tot', label: 'Total', numerica: true, render: o => o.total_cents === 0
+            ? <span className="text-success">Beneficio</span> : formatCents(o.total_cents, symbol) },
+          { id: 'acc', label: '', render: o => (
+            <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+              <button onClick={() => void conOrdenCompleta(o.id, ord => setImprimiendo({ order: ord, variante: 'llegada' }))}
+                title="Comanda de llegada" className="p-1.5 text-body hover:text-strong rounded-lg hover:bg-surface-2">
+                <Printer className="w-4 h-4" /></button>
+              {o.status === 'entregado' && (
+                <button onClick={() => void conOrdenCompleta(o.id, ord => setImprimiendo({ order: ord, variante: 'entrega' }))}
+                  title="Comprobante de entrega" className="p-1.5 text-success rounded-lg hover:bg-surface-2">
+                  <PackageCheck className="w-4 h-4" /></button>)}
+              <button onClick={() => void conOrdenCompleta(o.id, setInspecting)}
+                title="Inspección del vehículo" className="p-1.5 text-info rounded-lg hover:bg-surface-2">
+                <ClipboardCheck className="w-4 h-4" /></button>
+            </div>) }
+        ]}
+        filas={data.rows}
+        clave={o => o.id}
+        cargando={loading}
+        onFila={o => abrirDetalle(o.id)}
+        vacio={busqueda || status !== 'active' ? 'Ninguna orden coincide con el filtro.' : 'No hay vehículos en el taller ahora mismo.'}
+        etiqueta="Órdenes de servicio"
+      />
+      <Pagination page={page} pageCount={pageCount} total={data.total} pageSize={PAGE_SIZE} loading={loading} onPage={setPage} />
+
+      {/* La línea de tiempo de la orden. */}
+      <PanelDetalle
+        abierto={!!detalle || detalleCargando}
+        titulo={detalle ? `Orden ${detalle.order_number}` : 'Orden'}
+        subtitulo={detalle ? `${detalle.vehicle_plate} · ${detalle.customer_name}` : undefined}
+        onCerrar={() => { setDetalle(null); }}
+      >
+        {detalleCargando ? (
+          <p className="text-xs text-faint flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Cargando…</p>
+        ) : detalle ? (
+          <div className="space-y-5">
+            {/* La línea de tiempo: cada hito con su hora; los que no pasaron, en gris. */}
+            <ol className="relative border-l-2 border-line ml-2 space-y-4">
+              {detalle.hitos.map(h => (
+                <li key={h.clave} className="ml-4">
+                  <span className={`absolute -left-[7px] w-3 h-3 rounded-full ${h.at ? 'bg-brand' : 'bg-surface-2 border border-line'}`} />
+                  <div className={`text-sm font-semibold ${h.at ? 'text-strong' : 'text-faint'}`}>{h.label}</div>
+                  <div className="text-xs text-muted">
+                    {h.at ? new Date(h.at).toLocaleString('es-DO') : 'pendiente'}</div>
+                </li>
+              ))}
+            </ol>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                ['Estado', STATUS_LABEL[detalle.status]],
+                ['Bahía', detalle.bay_name ?? '—'],
+                ['Lavadores', detalle.lavadores.join(', ') || '—'],
+                ['Vehículo', `${detalle.vehicle_make_model} ${detalle.vehicle_color}`.trim() || detalle.vehicle_plate],
+                ['Total', formatCents(detalle.total_cents, symbol)],
+                ['Pago', detalle.payment_status]
+              ].map(([l, v]) => (
+                <div key={l} className="bg-canvas border border-line rounded-xl p-3">
+                  <div className="text-xs text-muted">{l}</div>
+                  <div className="text-sm font-bold text-strong">{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-bold text-strong">Servicios</h3>
+              {detalle.servicios.length === 0 ? <p className="text-xs text-faint">Sin servicios.</p> :
+                detalle.servicios.map((s, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span className="text-body">{s.name}{s.qty > 1 ? ` ×${s.qty}` : ''}</span>
+                    <span className="tabular-nums text-strong">{formatCents(s.price_cents * s.qty, symbol)}</span>
+                  </div>))}
+            </div>
+
+            {detalle.calidad.length > 0 && (
+              <div className="space-y-1.5">
+                <h3 className="text-sm font-bold text-strong">Control de calidad</h3>
+                {detalle.calidad.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className={c.result === 'rechazado' ? 'text-danger' : 'text-success'}>
+                      Intento {c.attempt}: {c.result === 'rechazado' ? `Rechazado — ${c.reject_reason}` : 'Aprobado'}
+                    </span>
+                    <span className="text-xs text-faint">{c.reviewer ?? ''}</span>
+                  </div>))}
+              </div>
+            )}
+
+            {detalle.inspeccion && (
+              <div className="bg-canvas border border-line rounded-xl p-3 text-xs text-body space-y-1">
+                <div className="font-bold text-strong text-sm">Inspección al recibir</div>
+                {detalle.inspeccion.fuel_level && <div>Combustible: {detalle.inspeccion.fuel_level}</div>}
+                {detalle.inspeccion.mileage != null && <div>Kilometraje: {detalle.inspeccion.mileage}</div>}
+                {detalle.inspeccion.notes && <div>Notas: {detalle.inspeccion.notes}</div>}
+              </div>
+            )}
+
+            {detalle.factura && (
+              <div className="text-xs text-muted">
+                Factura <strong className="text-strong">{detalle.factura.invoice_number}</strong> · {formatCents(detalle.factura.total_cents, symbol)}
+              </div>
+            )}
+            {detalle.notes && <p className="text-xs text-faint">Observaciones: {detalle.notes}</p>}
+          </div>
+        ) : (
+          <p className="text-xs text-faint">No se pudo cargar el detalle.</p>
+        )}
+      </PanelDetalle>
 
       {creating && (
         <NewArrivalSupabaseModal
@@ -309,30 +357,17 @@ export const OrdersSupabaseView: React.FC = () => {
           onCreated={order => {
             setCreating(false);
             setNotice(`Orden ${order.order_number} registrada para ${order.vehicle_plate}.`);
-            void load();
-            refreshQueue();
+            load(); refreshQueue();
           }}
         />
       )}
-
       {imprimiendo && (
-        <ComandaOrdenModal
-          order={imprimiendo.order}
-          company={company}
-          branch={branch}
-          lavadores={lavadoresImpresion}
-          variante={imprimiendo.variante}
-          onClose={() => setImprimiendo(null)}
-        />
+        <ComandaOrdenModal order={imprimiendo.order} company={company} branch={branch}
+          lavadores={lavadoresImpresion} variante={imprimiendo.variante} onClose={() => setImprimiendo(null)} />
       )}
-
       {inspecting && (
-        <InspectionModal
-          orderId={inspecting.id}
-          orderNumber={inspecting.order_number}
-          plate={inspecting.vehicle_plate}
-          onClose={() => setInspecting(null)}
-        />
+        <InspectionModal orderId={inspecting.id} orderNumber={inspecting.order_number}
+          plate={inspecting.vehicle_plate} onClose={() => setInspecting(null)} />
       )}
     </div>
   );
