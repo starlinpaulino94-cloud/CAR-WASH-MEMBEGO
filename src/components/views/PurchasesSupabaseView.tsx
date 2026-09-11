@@ -70,7 +70,7 @@ export const PurchasesSupabaseView: React.FC = () => {
     if (!showCreate || phase !== 'ready') return;
     fetchActiveSuppliers().then(setSuppliers).catch(() => setSuppliers([]));
     // Catálogo acotado para el selector (los primeros 200 por nombre).
-    fetchProductPage(0, 200, '', false).then(r => setProducts(r.rows)).catch(() => setProducts([]));
+    fetchProductPage(0, 200, '').then(r => setProducts(r.rows)).catch(() => setProducts([]));
   }, [showCreate, phase]);
 
   const openCreate = () => {

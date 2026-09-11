@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
-import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText, Tag } from 'lucide-react';
+import { Pencil, AlertTriangle, Plus, Trash2, Archive, ArchiveRestore, FileText, Tag, Eye, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import {
   fetchProductPage, adjustStock, createProduct, updateProduct,
-  eliminarFila, archivarFila, Product
+  eliminarFila, archivarFila, Product, FiltrosProducto,
+  fetchResumenInventario, fetchFichaProducto, ResumenInventario, FichaProducto
 } from '../../data/adminRepository';
 import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import {
@@ -21,6 +22,10 @@ import { ImportButton } from '../common/ImportModal';
 import { productsExport } from '../../lib/exportSpecs';
 import { Barcode } from '../common/Barcode';
 import { EtiquetasProductoModal } from '../modals/EtiquetasProductoModal';
+import { RejillaKpi, Kpi } from '../common/RejillaKpi';
+import { PanelDetalle } from '../common/PanelDetalle';
+import { TablaDatos } from '../common/TablaDatos';
+import { etiquetaMovimiento } from '../../lib/etiquetas';
 
 const PAGE_SIZE = 25;
 
@@ -29,10 +34,12 @@ const emptyProductForm = {
   stock: '0', minStock: '0', unit: 'Unidad', forSale: true
 };
 
-type StockFilter = 'all' | 'low';
-const STOCK_FILTERS: { id: StockFilter; label: string }[] = [
-  { id: 'all', label: 'Todos' },
-  { id: 'low', label: 'Bajo stock' }
+type EstadoStock = NonNullable<FiltrosProducto['estado']>;
+const ESTADOS: { id: EstadoStock; label: string }[] = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'bajo', label: 'Bajo stock' },
+  { id: 'agotado', label: 'Agotados' },
+  { id: 'negativo', label: 'Negativos' }
 ];
 
 /**
@@ -49,12 +56,30 @@ export const ProductsSupabaseView: React.FC = () => {
   const symbol = company?.currency_symbol ?? 'RD$';
   const editable = can(profile, 'manageCatalog');
 
-  const [lowOnly, setLowOnly] = useState<StockFilter>('all');
+  const [estado, setEstado] = useState<EstadoStock>('todos');
+  const [actividad, setActividad] = useState<FiltrosProducto['actividad']>('activos');
+  const [uso, setUso] = useState<FiltrosProducto['uso']>('todos');
   const q = usePagedQuery<Product>({
-    fetcher: (page, size, search) => fetchProductPage(page, size, search, lowOnly === 'low'),
+    fetcher: (page, size, search) => fetchProductPage(page, size, search, { estado, actividad, uso }),
     pageSize: PAGE_SIZE,
-    deps: [lowOnly]
+    deps: [estado, actividad, uso]
   });
+
+  // El panel de indicadores. Sale de una RPC agregada, no de sumar la página.
+  const [resumen, setResumen] = useState<ResumenInventario | null>(null);
+  useEffect(() => {
+    fetchResumenInventario().then(setResumen).catch(() => setResumen(null));
+  }, [q.total, q.loading]);
+
+  // La ficha 360 de un producto, en panel lateral.
+  const [fichaProd, setFichaProd] = useState<Product | null>(null);
+  const [ficha360, setFicha360] = useState<FichaProducto | null>(null);
+  const [fichaCargando, setFichaCargando] = useState(false);
+  const verFicha = useCallback((prod: Product) => {
+    setFichaProd(prod); setFicha360(null); setFichaCargando(true);
+    fetchFichaProducto(prod.id)
+      .then(setFicha360).catch(() => setFicha360(null)).finally(() => setFichaCargando(false));
+  }, []);
 
   // Ajuste de existencia: modal con cantidad nueva y motivo (obligatorio).
   const [adjusting, setAdjusting] = useState<Product | null>(null);
@@ -225,18 +250,50 @@ export const ProductsSupabaseView: React.FC = () => {
       {!editable && <ReadOnlyNotice>Su rol permite consultar el inventario, pero no ajustarlo.</ReadOnlyNotice>}
       {actionError && <InlineAlert tone="error" onDismiss={() => setActionError(null)}>{actionError}</InlineAlert>}
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <SearchBox id="prod-search" label="Buscar producto" value={q.searchInput}
-          onChange={q.setSearchInput} placeholder="Buscar por nombre, código o categoría…" />
-        <FilterChips options={STOCK_FILTERS} value={lowOnly} onChange={setLowOnly} />
-      </div>
-
-      {lowOnly === 'low' && (
+      {/* El panel: cuánto vale el inventario y cuántos productos piden atención.
+          Cada conteo es clicable y filtra la tabla — el KPI lleva a los productos
+          que lo forman, no es un número decorativo. */}
+      <RejillaKpi
+        symbol={symbol}
+        cargando={!resumen}
+        kpis={resumen ? [
+          { id: 'valor', label: 'Valor del inventario', valor: resumen.valor_costo_cents, moneda: true, hint: 'a costo' },
+          { id: 'venta', label: 'Venta potencial', valor: resumen.venta_potencial_cents, moneda: true, tono: 'ok', hint: 'a precio' },
+          { id: 'bajo', label: 'Bajo stock', valor: resumen.bajo_stock, tono: resumen.bajo_stock > 0 ? 'warn' : undefined,
+            onClick: () => { setEstado('bajo'); setActividad('activos'); } },
+          { id: 'agot', label: 'Agotados', valor: resumen.agotados, tono: resumen.agotados > 0 ? 'bad' : undefined,
+            onClick: () => { setEstado('agotado'); setActividad('activos'); } }
+        ] : []}
+      />
+      {resumen && resumen.negativos > 0 && (
         <InlineAlert tone="warning">
-          El filtro de bajo stock se aplica sobre la página mostrada, porque compara dos
-          columnas entre sí. Recorra las páginas para ver todos los casos.
+          <button className="underline font-semibold" onClick={() => { setEstado('negativo'); setActividad('activos'); }}>
+            {resumen.negativos} {resumen.negativos === 1 ? 'producto tiene' : 'productos tienen'} existencia negativa
+          </button>: revise si hubo ventas sin registrar la entrada.
         </InlineAlert>
       )}
+
+      <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+        <SearchBox id="prod-search" label="Buscar producto" value={q.searchInput}
+          onChange={q.setSearchInput} placeholder="Buscar por nombre, código o código de barras…" />
+        <FilterChips options={ESTADOS} value={estado} onChange={setEstado} />
+        <label className="flex items-center gap-1.5 text-xs text-muted">
+          <select value={actividad} onChange={e => setActividad(e.target.value as FiltrosProducto['actividad'])}
+            className="bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:border-brand">
+            <option value="activos">Activos</option>
+            <option value="inactivos">Inactivos</option>
+            <option value="todos">Activos e inactivos</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-muted">
+          <select value={uso} onChange={e => setUso(e.target.value as FiltrosProducto['uso'])}
+            className="bg-canvas border border-line rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:border-brand">
+            <option value="todos">Venta e interno</option>
+            <option value="venta">Solo venta</option>
+            <option value="interno">Solo uso interno</option>
+          </select>
+        </label>
+      </div>
 
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -245,19 +302,21 @@ export const ProductsSupabaseView: React.FC = () => {
             <TableHeader>
               <TableRow className="border-b border-line text-muted bg-canvas/50">
                 <TableHead scope="col" className="p-3 font-semibold">PRODUCTO</TableHead>
-                <TableHead scope="col" className="p-3 font-semibold">CATEGORÍA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold hidden md:table-cell">CATEGORÍA</TableHead>
                 <TableHead scope="col" className="p-3 font-semibold text-right">COSTO</TableHead>
                 <TableHead scope="col" className="p-3 font-semibold text-right">PRECIO</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right hidden lg:table-cell">MARGEN</TableHead>
                 <TableHead scope="col" className="p-3 font-semibold text-right">EXISTENCIA</TableHead>
+                <TableHead scope="col" className="p-3 font-semibold text-right hidden lg:table-cell">VALOR</TableHead>
                 <TableHead scope="col" className="p-3 font-semibold">ESTADO</TableHead>
                 <TableHead scope="col" className="p-3 font-semibold text-right">ACCIONES</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {q.loading ? <SkeletonRows cols={7} />
+              {q.loading ? <SkeletonRows cols={9} />
                 : q.rows.length === 0 ? (
-                  <EmptyRow cols={7}>
-                    {q.searchInput || lowOnly === 'low'
+                  <EmptyRow cols={9}>
+                    {q.searchInput || estado !== 'todos' || uso !== 'todos' || actividad !== 'activos'
                       ? 'Ningún producto coincide con el filtro.'
                       : 'Todavía no hay productos registrados.'}
                   </EmptyRow>
@@ -266,15 +325,28 @@ export const ProductsSupabaseView: React.FC = () => {
                   return (
                     <TableRow key={p.id} className="hover:bg-surface-2/40">
                       <TableCell className="p-3">
-                        <div className="font-bold text-strong">{p.name}</div>
-                        <div className="text-xs text-faint">{p.code}</div>
+                        <button onClick={() => verFicha(p)} className="text-left hover:underline"
+                          title="Ver ficha del producto">
+                          <div className="font-bold text-strong">{p.name}</div>
+                          <div className="text-xs text-faint">{p.code}</div>
+                        </button>
                       </TableCell>
-                      <TableCell className="p-3 text-muted">{p.category || '—'}</TableCell>
+                      <TableCell className="p-3 text-muted hidden md:table-cell">{p.category || '—'}</TableCell>
                       <TableCell className="p-3 text-body text-right whitespace-nowrap">
                         {formatCents(p.cost_cents, symbol)}
                       </TableCell>
                       <TableCell className="p-3 font-bold text-brand-hi text-right whitespace-nowrap">
                         {p.is_for_sale ? formatCents(p.price_cents, symbol) : 'Uso interno'}
+                      </TableCell>
+                      <TableCell className="p-3 text-right whitespace-nowrap hidden lg:table-cell">
+                        {p.is_for_sale && p.price_cents > 0 ? (
+                          <span className={p.price_cents <= p.cost_cents ? 'text-danger font-bold' : 'text-body'}>
+                            {formatCents(p.price_cents - p.cost_cents, symbol)}
+                            <span className="block text-xs text-faint">
+                              {Math.round(((p.price_cents - p.cost_cents) / p.price_cents) * 100)}%
+                            </span>
+                          </span>
+                        ) : '—'}
                       </TableCell>
                       <TableCell className="p-3 text-right">
                         <button
@@ -289,6 +361,9 @@ export const ProductsSupabaseView: React.FC = () => {
                           {p.stock} {p.unit}
                           {editable && <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-40" />}
                         </button>
+                      </TableCell>
+                      <TableCell className="p-3 text-right whitespace-nowrap hidden lg:table-cell text-body tabular-nums">
+                        {p.stock > 0 ? formatCents(p.cost_cents * p.stock, symbol) : '—'}
                       </TableCell>
                       <TableCell className="p-3">
                         {p.stock < 0 ? (
@@ -549,6 +624,77 @@ export const ProductsSupabaseView: React.FC = () => {
           </label>
         </FormModal>
       )}
+      <PanelDetalle
+        abierto={!!fichaProd}
+        titulo={fichaProd?.name ?? ''}
+        subtitulo={fichaProd ? `${fichaProd.code}${fichaProd.barcode ? ` · ${fichaProd.barcode}` : ''}` : ''}
+        onCerrar={() => { setFichaProd(null); setFicha360(null); }}
+        acciones={editable && fichaProd
+          ? <Button variant="outline" size="sm" onClick={() => { const pr = fichaProd; setFichaProd(null); abrirFicha(pr); }}>
+              <Pencil className="w-4 h-4" /> Editar
+            </Button>
+          : undefined}
+      >
+        {fichaProd && (
+          <div className="space-y-5">
+            {/* Lo general, de la propia fila: no hace falta esperar la RPC. */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                ['Existencia', `${fichaProd.stock} ${fichaProd.unit}`, fichaProd.stock < 0 ? 'text-danger' : 'text-strong'],
+                ['Mínimo', String(fichaProd.min_stock), 'text-strong'],
+                ['Costo', formatCents(fichaProd.cost_cents, symbol), 'text-strong'],
+                ['Precio', fichaProd.is_for_sale ? formatCents(fichaProd.price_cents, symbol) : 'Uso interno', 'text-brand-hi'],
+                ['Valor actual', fichaProd.stock > 0 ? formatCents(fichaProd.cost_cents * fichaProd.stock, symbol) : '—', 'text-strong'],
+                ['Categoría', fichaProd.category || '—', 'text-strong'],
+                ['Consumo 30 días', ficha360 ? `${ficha360.consumo_30d} ${fichaProd.unit}` : '…', 'text-strong'],
+                ['Proveedor habitual', ficha360?.proveedor_habitual ?? '—', 'text-strong']
+              ].map(([l, v, c]) => (
+                <div key={l} className="bg-canvas border border-line rounded-xl p-3">
+                  <div className="text-xs text-muted">{l}</div>
+                  <div className={`text-sm font-bold tabular-nums ${c}`}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {fichaCargando ? (
+              <p className="text-xs text-faint flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Cargando historial…</p>
+            ) : ficha360 ? (
+              <>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-strong">Últimas compras</h3>
+                  <TablaDatos
+                    columnas={[
+                      { id: 'f', label: 'Fecha', render: c => new Date(c.purchase_date).toLocaleDateString('es-DO') },
+                      { id: 'prov', label: 'Proveedor', render: c => c.supplier_name ?? '—' },
+                      { id: 'ref', label: 'Ref.', ocultarEnMovil: true, render: c => c.invoice_ref ?? '—' },
+                      { id: 'q', label: 'Cant.', numerica: true, render: c => c.quantity },
+                      { id: 'costo', label: 'Costo unit.', numerica: true, render: c => formatCents(c.unit_cost_cents, symbol) }
+                    ]}
+                    filas={ficha360.ultimas_compras} clave={c => c.purchase_id + c.purchase_date}
+                    vacio="Sin compras registradas de este producto." etiqueta="Últimas compras" />
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-strong">Últimos movimientos</h3>
+                  <TablaDatos
+                    columnas={[
+                      { id: 'f', label: 'Fecha', render: m => new Date(m.created_at).toLocaleDateString('es-DO') },
+                      { id: 'tipo', label: 'Tipo', render: m => etiquetaMovimiento(m.kind) },
+                      { id: 'cam', label: 'Cambio', numerica: true,
+                        render: m => <span className={m.qty_change < 0 ? 'text-danger' : 'text-success'}>{m.qty_change > 0 ? '+' : ''}{m.qty_change}</span> },
+                      { id: 'desp', label: 'Queda', numerica: true, render: m => m.qty_after },
+                      { id: 'motivo', label: 'Motivo', ocultarEnMovil: true, render: m => m.reason ?? '—' }
+                    ]}
+                    filas={ficha360.ultimos_movimientos} clave={m => String(m.id)}
+                    vacio="Sin movimientos registrados." etiqueta="Últimos movimientos" />
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-faint">No se pudo cargar el historial.</p>
+            )}
+          </div>
+        )}
+      </PanelDetalle>
     </div>
   );
 };
