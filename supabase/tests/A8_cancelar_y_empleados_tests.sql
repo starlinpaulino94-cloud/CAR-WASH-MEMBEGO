@@ -355,6 +355,12 @@ select test.check('y jefe3 sigue ahí',
   (select count(*) from public.profiles where id = test.var('emp_jefe3')::uuid) = 1);
 
 -- Se restaura el estado para lo que venga después.
+--
+-- El sujeto del token sigue siendo `emp_super`, y una de las fichas que hay
+-- que limpiar es la suya: el disparador que impide «eliminar su propia ficha»
+-- —correcto— abortaba la limpieza y con ella el resto del archivo. Se vuelve a
+-- la identidad del dueño antes de borrar.
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
 update public.profiles set is_active = true where company_id = test.var('c_a')::uuid;
 delete from public.profiles where id = test.var('emp_jefe3')::uuid;
 delete from public.profiles where id = test.var('emp_super')::uuid;

@@ -151,6 +151,10 @@ select test.set_var('sso_uid4', public.membego_sso_upsert_user('MG-A', 'mg-sub-3
 select test.set_var('sso_nueva',
   public.membego_sso_upsert_user('MG-DESCONOCIDA','s','x@y.com','EMPLEADO')::text);
 
+-- La empresa recién auto-vinculada NO es la del usuario de la sesión, así que
+-- su vínculo le queda fuera de alcance por diseño. Lo que se comprueba aquí es
+-- que el SSO lo ESCRIBIÓ, no que alguien pueda verlo: se lee como postgres.
+set role postgres;
 select test.check('SSO auto-vincula una empresa de Membego que no conocía',
   exists (select 1 from public.membego_company_links
           where membego_company_id = 'MG-DESCONOCIDA' and is_active));
@@ -170,9 +174,13 @@ set role service_role;
 
 select test.expect_error('SSO SÍ rechaza un vínculo desactivado a mano',
   $q$select public.membego_sso_upsert_user('MG-APAGADA','s3','z@y.com','EMPLEADO')$q$);
+-- Otra vez: se comprueba lo ESCRITO en una empresa ajena a la sesión. El rol
+-- activo aquí es `service_role`, que tampoco puede leer esta tabla.
+set role postgres;
 select test.check('y no lo vuelve a encender por la puerta de atrás',
   (select not is_active from public.membego_company_links
    where membego_company_id = 'MG-APAGADA'));
+set role service_role;
 select test.expect_error('SSO rechaza un rol de Membego no reconocido (403 limpio, no 500)',
   $q$select public.membego_sso_upsert_user('MG-A','s2','otro@alfa.test','ROL_DE_PLATAFORMA_NUEVO')$q$);
 

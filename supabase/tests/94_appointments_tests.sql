@@ -121,7 +121,7 @@ select test.expect_error('una cita convertida no se convierte otra vez',
 
 select test.check('la agenda quedó en la bitácora',
   (select count(*) >= 1 from public.audit_logs
-    where action = 'CONVERTIR_CITA' and entity_id = test.var('cita1')::uuid));
+    where action = 'CONVERTIR_CITA' and entity_id = test.var('cita1')));
 
 -- ---- Cancelar exige motivo.
 select test.expect_error('cancelar una cita sin motivo se rechaza',

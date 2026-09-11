@@ -103,7 +103,7 @@ select test.check('el costo asumido y el responsable quedan registrados',
 
 select test.check('el cierre quedó en la bitácora de auditoría',
   (select count(*) >= 1 from public.audit_logs
-    where action = 'CERRAR_RECLAMO' and entity_id = test.var('claim2')::uuid));
+    where action = 'CERRAR_RECLAMO' and entity_id = test.var('claim2')));
 
 -- ---- La bitácora del reclamo es de solo inserción.
 select test.expect_error('la bitácora del reclamo rechaza UPDATE',

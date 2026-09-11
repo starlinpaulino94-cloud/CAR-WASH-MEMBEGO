@@ -63,7 +63,7 @@ select test.check('el ajuste quedó en el kardex con antes/después y motivo',
 
 select test.check('el ajuste quedó en la bitácora de auditoría',
   (select count(*) >= 1 from public.audit_logs
-    where action = 'AJUSTAR_INVENTARIO' and entity_id = test.var('prod')::uuid));
+    where action = 'AJUSTAR_INVENTARIO' and entity_id = test.var('prod')));
 
 select test.check('ajustar a la misma cantidad no genera movimiento vacío',
   ((public.adjust_stock(test.var('prod')::uuid, 37, 'sin cambios reales')).stock = 37)

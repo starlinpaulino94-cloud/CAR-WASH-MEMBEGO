@@ -27,7 +27,7 @@ select test.check('la sucursal nueva nace activa y no principal',
 
 select test.check('el alta quedó en la bitácora',
   (select count(*) = 1 from public.audit_logs
-    where action = 'CREAR_SUCURSAL' and entity_id = test.var('suc2')::uuid));
+    where action = 'CREAR_SUCURSAL' and entity_id = test.var('suc2')));
 
 -- La principal se CEDE: nombrar otra deja a la anterior de secundaria, en vez
 -- de reventar contra el índice único con un error ilegible.
