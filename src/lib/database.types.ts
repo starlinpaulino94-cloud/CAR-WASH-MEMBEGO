@@ -2860,6 +2860,26 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      sales_report: {
+        Args: { p_from: string; p_to: string; p_filtros?: Json };
+        Returns: Json;
+      };
+      sales_report_invoices: {
+        Args: { p_from: string; p_to: string; p_filtros?: Json; p_page?: number; p_size?: number };
+        Returns: Json;
+      };
+      washer_report: {
+        Args: { p_from: string; p_to: string; p_branch_id?: string; p_profile_id?: string };
+        Returns: Json;
+      };
+      washer_report_orders: {
+        Args: { p_from: string; p_to: string; p_profile_id: string; p_page?: number; p_size?: number };
+        Returns: Json;
+      };
+      profit_report: {
+        Args: { p_from: string; p_to: string; p_branch_id?: string };
+        Returns: Json;
+      };
       create_service_category: {
         Args: {
           p_label: string;

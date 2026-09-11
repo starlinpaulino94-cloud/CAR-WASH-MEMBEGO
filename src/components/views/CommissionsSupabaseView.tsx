@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Target, RefreshCw, Loader2, AlertCircle } from 'lucide-react';
+import { Target, RefreshCw, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, bpsToPercent } from '../../lib/money';
@@ -9,6 +9,12 @@ import {
   fetchRendimientoLavadores, upsertMetaLavador, RendimientoLavador
 } from '../../data/payrollRepository';
 import { ViewHeader, InlineAlert } from '../common/DataViewShell';
+import { PanelDetalle } from '../common/PanelDetalle';
+import { TablaDatos } from '../common/TablaDatos';
+import {
+  fetchReporteLavadores, fetchOrdenesDelLavador,
+  RendimientoLavadorDetalle, OrdenLavador
+} from '../../data/reportsRepository';
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 
 /**
@@ -68,6 +74,12 @@ export const CommissionsSupabaseView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Detalle de un lavador: sus métricas de calidad y tiempo (que la tabla no
+  // cabe en mostrar) y sus órdenes una a una.
+  const [detalle, setDetalle] = useState<RendimientoLavadorDetalle | null>(null);
+  const [ordenes, setOrdenes] = useState<OrdenLavador[]>([]);
+  const [detalleCargando, setDetalleCargando] = useState(false);
+
   const cargar = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -81,6 +93,24 @@ export const CommissionsSupabaseView: React.FC = () => {
   }, [desde, hasta]);
 
   useEffect(() => { void cargar(); }, [cargar]);
+
+  const verDetalle = useCallback(async (profileId: string) => {
+    setDetalleCargando(true);
+    setDetalle(null);
+    setOrdenes([]);
+    try {
+      const [lav, ord] = await Promise.all([
+        fetchReporteLavadores(desde, hasta, null, profileId),
+        fetchOrdenesDelLavador(desde, hasta, profileId, 0, 100)
+      ]);
+      setDetalle(lav[0] ?? null);
+      setOrdenes(ord.rows);
+    } catch {
+      setDetalle(null);
+    } finally {
+      setDetalleCargando(false);
+    }
+  }, [desde, hasta]);
 
   // --- Fijar meta
   const [metaTarget, setMetaTarget] = useState<RendimientoLavador | null>(null);
@@ -201,7 +231,7 @@ export const CommissionsSupabaseView: React.FC = () => {
                   <TableHead className="p-3 text-right">Le cuesta</TableHead>
                   <TableHead className="p-3 text-left">Meta lavados</TableHead>
                   <TableHead className="p-3 text-left">Meta generado</TableHead>
-                  {puedeFijarMetas && <TableHead className="p-3" />}
+                  <TableHead className="p-3 text-right">Detalle</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,13 +264,18 @@ export const CommissionsSupabaseView: React.FC = () => {
                           ? `${formatCents(f.generado_cents, symbol)} / ${formatCents(f.meta_generado_cents, symbol)}`
                           : ''} />
                     </TableCell>
-                    {puedeFijarMetas && (
-                      <TableCell className="p-3 text-right">
-                        <Button size="sm" variant="secondary" onClick={() => abrirMeta(f)}>
-                          <Target className="w-4 h-4" /> Meta
+                    <TableCell className="p-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => void verDetalle(f.profile_id)}>
+                          <Eye className="w-4 h-4" /> Ver
                         </Button>
-                      </TableCell>
-                    )}
+                        {puedeFijarMetas && (
+                          <Button size="sm" variant="secondary" onClick={() => abrirMeta(f)}>
+                            <Target className="w-4 h-4" /> Meta
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -281,8 +316,71 @@ export const CommissionsSupabaseView: React.FC = () => {
             <input id="meta-monto" className={textInputClass} value={metaMonto}
               inputMode="decimal" onChange={e => setMetaMonto(e.target.value)} />
           </Field>
+
         </FormModal>
       )}
+            <PanelDetalle
+        abierto={!!detalle || detalleCargando}
+        titulo={detalle ? detalle.full_name : 'Detalle del lavador'}
+        subtitulo={`${desde} a ${hasta}`}
+        onCerrar={() => { setDetalle(null); setOrdenes([]); }}
+      >
+        {detalleCargando ? (
+          <p className="text-xs text-faint flex items-center gap-1.5">
+            <Loader2 className="w-3 h-3 animate-spin" /> Cargando…
+          </p>
+        ) : detalle ? (
+          <div className="space-y-5">
+            {/* Lo que la tabla no cabe en mostrar: calidad, tiempo y ritmo. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                ['Lavados', String(detalle.lavados)],
+                ['Generado', formatCents(detalle.generado_cents, symbol)],
+                ['Ticket promedio', formatCents(detalle.ticket_promedio_cents, symbol)],
+                ['Comisión', formatCents(detalle.comision_cents, symbol)],
+                ['Pendiente', formatCents(detalle.comision_pendiente_cents, symbol)],
+                ['Le cuesta al negocio', detalle.generado_cents > 0 ? bpsToPercent(detalle.costo_bps) : '—'],
+                ['Reprocesos', detalle.reproceso_pct === null ? '—' : `${detalle.reprocesos} (${detalle.reproceso_pct}%)`],
+                ['Aprobado a la primera', detalle.aprobacion_primera_pct === null ? '—' : `${detalle.aprobacion_primera_pct}%`],
+                ['Tiempo por vehículo', detalle.segundos_promedio > 0 ? `${Math.round(detalle.segundos_promedio / 60)} min` : '—'],
+                ['Productividad', `${detalle.productividad_dia} / día`]
+              ].map(([l, v]) => (
+                <div key={l} className="bg-canvas border border-line rounded-xl p-3">
+                  <div className="text-xs text-muted">{l}</div>
+                  <div className="text-base font-bold text-strong tabular-nums">{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-strong">Sus vehículos en el periodo</h3>
+              <TablaDatos
+                columnas={[
+                  { id: 'ord', label: 'Orden', render: (o: OrdenLavador) => (
+                    <span className="font-medium text-strong">{o.order_number}</span>) },
+                  { id: 'f', label: 'Entrega', ocultarEnMovil: true,
+                    render: o => new Date(o.delivered_at).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit' }) },
+                  { id: 'placa', label: 'Placa', render: o => o.vehicle_plate },
+                  { id: 'serv', label: 'Servicio', ocultarEnMovil: true, render: o => o.servicios ?? '—' },
+                  { id: 'parte', label: 'Su parte', numerica: true, render: o => (
+                    <>
+                      {formatCents(o.parte_cents, symbol)}
+                      {o.compartida && <span className="block text-xs text-faint">con {o.otros_lavadores}</span>}
+                    </>) },
+                  { id: 'com', label: 'Comisión', numerica: true, render: o => formatCents(o.comision_cents, symbol) },
+                  { id: 'qc', label: 'Calidad', render: o => o.calidad === 'rechazado'
+                    ? <span className="text-danger font-semibold">Reproceso</span>
+                    : o.calidad === 'aprobado' ? <span className="text-success">Aprobado</span> : '—' }
+                ]}
+                filas={ordenes} clave={o => o.order_id}
+                vacio="Sin órdenes entregadas en el periodo."
+                etiqueta="Órdenes del lavador" />
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-faint">Sin datos para este lavador en el periodo.</p>
+        )}
+      </PanelDetalle>
     </div>
   );
 };
