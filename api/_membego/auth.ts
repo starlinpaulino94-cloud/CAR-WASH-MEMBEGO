@@ -106,7 +106,7 @@ export function faltaConfiguracionAuth(): string[] {
 }
 
 /** Extrae el token del encabezado `Authorization: Bearer <jwt>`. */
-function tokenDeLaPeticion(request: Request): string {
+export function tokenDeLaPeticion(request: Request): string {
   const cabecera = request.headers.get('authorization') ?? request.headers.get('Authorization');
   if (!cabecera) return '';
   const [tipo, valor] = cabecera.split(' ');

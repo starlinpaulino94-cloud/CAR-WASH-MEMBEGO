@@ -633,6 +633,18 @@ export const PosSupabaseView: React.FC = () => {
    * el beneficio se pactó al recibir el vehículo y volver a decidirlo aquí sería
    * cobrar distinto a lo que se le dijo al cliente en la puerta.
    */
+  /**
+   * El lavado al que da derecho el plan, con su precio en ESTA categoría: el
+   * más caro de los marcados como incluibles. Es lo que la membresía vale
+   * cuando el cliente se lleva un servicio distinto del suyo.
+   */
+  const lavadoDelPlan = useMemo(() => {
+    const incluibles = services.filter(s => s.included_in_membego);
+    if (incluibles.length === 0) return null;
+    const mejor = incluibles.reduce((a, b) => (b.price_cents > a.price_cents ? b : a));
+    return { servicioId: mejor.id, precioCents: mejor.price_cents };
+  }, [services]);
+
   const cobertura = useMemo(() => {
     if (!ficha || lines.length === 0) return null;
     if (lines.some(l => l.isMembegoCovered)) return null;
@@ -647,9 +659,10 @@ export const PosSupabaseView: React.FC = () => {
         unitPriceCents: l.unitPriceCents,
         quantity: l.quantity
       })),
-      precioEnCategoriaTope: id => preciosTope?.[id] ?? null
+      precioEnCategoriaTope: id => preciosTope?.[id] ?? null,
+      lavadoDelPlan
     });
-  }, [ficha, lines, services, preciosTope]);
+  }, [ficha, lines, services, preciosTope, lavadoDelPlan]);
 
   /**
    * Las líneas tal como van a facturarse, con el beneficio ya aplicado.

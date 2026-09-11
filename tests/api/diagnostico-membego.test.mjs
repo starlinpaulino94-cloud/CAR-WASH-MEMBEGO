@@ -17,6 +17,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 
 process.env.SUPABASE_URL = 'https://proyecto.supabase.co'
 process.env.SUPABASE_ANON_KEY = 'anon-de-prueba'
@@ -184,4 +185,75 @@ test('el informe nunca lleva el secreto de Membego', async () => {
   const texto = await res.text()
   assert.ok(!texto.includes('mgs_prueba'), 'el client_secret no puede salir del servidor')
   assert.ok(!texto.includes('anon-de-prueba'), 'las claves no se devuelven, ni la anon')
+})
+
+// ── Que no invente causas ───────────────────────────────────────────────────
+//
+// Estas dos corren en un PROCESO APARTE, y no es ceremonia: `auth.ts` lee las
+// variables de entorno al cargarse, así que borrarlas desde dentro de la prueba
+// no cambia nada — el módulo ya las capturó. Un despliegue mal configurado solo
+// se reproduce arrancando con esa configuración.
+
+/** Corre el diagnóstico en un proceso con el entorno dado y devuelve el informe. */
+function informeConEntorno(entorno, cabeceras = { Authorization: 'Bearer ok' }) {
+  const guion = `
+    globalThis.fetch = async (url) => {
+      const u = String(url)
+      if (u.includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u-1' }), { status: 200 })
+      if (u.includes('/rest/v1/profiles')) return new Response(JSON.stringify([{ role: 'cajero', is_active: true }]), { status: 200 })
+      if (u.includes('/rest/v1/membego_company_links')) return new Response(JSON.stringify([{ membego_company_id: 'cmre-esta-empresa', is_active: true }]), { status: 200 })
+      if (u.includes('/oauth/token')) return new Response(JSON.stringify({ access_token: 't', expires_in: 3600 }), { status: 200 })
+      return new Response(JSON.stringify({ vehicles: [] }), { status: 200 })
+    }
+    const { POST } = await import('./api/membego/diagnostico.ts')
+    const res = await POST(new Request('https://x/api/membego/diagnostico', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...${JSON.stringify(cabeceras)} },
+      body: '{}',
+    }))
+    process.stdout.write(await res.text())
+  `
+  const salida = execFileSync(
+    process.execPath,
+    ['--import', 'tsx', '--input-type=module', '-e', guion],
+    { env: { ...process.env, ...entorno }, encoding: 'utf8' }
+  )
+  const body = JSON.parse(salida)
+  return { body, porClave: Object.fromEntries(body.pasos.map((p) => [p.clave, p])) }
+}
+
+const SIN_SUPABASE = { SUPABASE_URL: '', SUPABASE_ANON_KEY: '', MEMBEGO_COMPANY_ID: '' }
+
+test('sin variables del servidor NO se acusa a la sesión del usuario', () => {
+  // Llega un token perfectamente válido. Lo que falta es con qué comprobarlo.
+  // Decir «La petición llegó sin sesión» y mandar a «cerrar sesión y volver a
+  // entrar» manda a arreglar lo que no está roto, y hace que el siguiente
+  // informe —el correcto— tampoco se crea.
+  const { porClave } = informeConEntorno(SIN_SUPABASE)
+  assert.notEqual(porClave.sesion.estado, 'falla', 'con sesión presente, el fallo no es suyo')
+  assert.match(porClave.sesion.detalle, /no tiene contra qué validarla|faltan SUPABASE/i)
+  assert.equal(porClave.configuracion.estado, 'falla', 'el fallo de verdad sí se señala')
+})
+
+test('sí se acusa a la sesión cuando de verdad no llegó ninguna', async () => {
+  fingir()
+  const { porClave } = await informe(pedir({}, {}))
+  assert.equal(porClave.sesion.estado, 'falla')
+  assert.match(porClave.sesion.detalle, /sin sesión/i)
+})
+
+// En Vercel una variable marcada solo para Production NO existe en la vista
+// previa de una rama. Sin decir DÓNDE corre, el informe y el panel de Vercel se
+// contradicen y nadie puede saber que están mirando despliegues distintos.
+test('el informe dice en qué despliegue corre, y avisa si es una vista previa', () => {
+  const { body, porClave } = informeConEntorno({ ...SIN_SUPABASE, VERCEL_ENV: 'preview' })
+  assert.equal(body.entorno, 'preview')
+  assert.match(porClave.configuracion.detalle, /preview/)
+  assert.match(porClave.configuracion.arreglo, /VISTA PREVIA|Preview/)
+})
+
+test('en producción el consejo NO habla de vistas previas', () => {
+  const { porClave } = informeConEntorno({ ...SIN_SUPABASE, VERCEL_ENV: 'production' })
+  assert.match(porClave.configuracion.detalle, /production/)
+  assert.ok(!/VISTA PREVIA/.test(porClave.configuracion.arreglo))
 })

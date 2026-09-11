@@ -1,6 +1,6 @@
 import {
   ErrorAuth,
-  exigirConfiguracionYToken,
+  tokenDeLaPeticion,
   pasoSesion,
   pasoPerfil,
   pasoVinculo,
@@ -101,19 +101,39 @@ export async function POST(request: Request): Promise<Response> {
   const faltanAuth = faltaConfiguracionAuth();
   const faltanApi = faltaConfiguracion();
   const faltanTodas = [...new Set([...faltanAuth, ...faltanApi])];
+
+  // EN QUÉ DESPLIEGUE se está corriendo. Sin esto, el informe es ambiguo justo
+  // cuando más importa: en Vercel cada variable se marca por entorno, y una
+  // puesta solo en Production NO EXISTE en los despliegues de vista previa de
+  // una rama. El dueño ve las variables bien puestas en su panel, el
+  // diagnóstico dice que faltan, y los dos tienen razón porque están mirando
+  // despliegues distintos. Decir el entorno convierte esa contradicción en una
+  // instrucción de una línea.
+  const entorno = process.env.VERCEL_ENV ?? '';
+  const esVistaPrevia = entorno === 'preview';
+  const dondeEstoy = entorno
+    ? `Este despliegue es «${entorno}».`
+    : 'No se pudo determinar el entorno del despliegue.';
+
   pasos.push({
     clave: 'configuracion',
     titulo: 'Variables del servidor en Vercel',
     estado: faltanTodas.length === 0 ? 'ok' : 'falla',
     detalle:
       faltanTodas.length === 0
-        ? 'Están todas las variables que necesitan los bordes de Membego.'
-        : `Faltan: ${faltanTodas.join(', ')}.`,
+        ? `Están todas las variables que necesitan los bordes de Membego. ${dondeEstoy}`
+        : `Faltan: ${faltanTodas.join(', ')}. ${dondeEstoy}`,
     arreglo:
       faltanTodas.length === 0
         ? undefined
-        : 'Póngalas en Vercel → Settings → Environment Variables (Production), SIN el prefijo VITE_, ' +
-          'y vuelva a desplegar: las variables no se aplican a despliegues ya hechos.',
+        : esVistaPrevia
+          ? 'Está probando una VISTA PREVIA de una rama, y en Vercel las variables marcadas solo ' +
+            'para Production no llegan aquí. Compruébelo en el sitio de producción; si también ' +
+            'faltan allí, marque cada variable además para «Preview» (o para los tres entornos) y ' +
+            'vuelva a desplegar.'
+          : 'Póngalas en Vercel → Settings → Environment Variables, SIN el prefijo VITE_, marcadas ' +
+            'para el entorno «Production», y vuelva a desplegar: las variables no se aplican a ' +
+            'despliegues ya hechos.',
   });
 
   // ── 2. ¿El navegador y el servidor hablan del mismo Supabase? ─────────────
@@ -148,13 +168,16 @@ export async function POST(request: Request): Promise<Response> {
   // Corren en orden porque cada uno necesita lo del anterior, pero el fallo de
   // uno no cancela el informe: se marcan los siguientes como omitidos y se
   // sigue hasta las comprobaciones de Membego, que sí son independientes.
-  let token = '';
-  try {
-    token = exigirConfiguracionYToken(request);
-  } catch (e) {
-    token = '';
-    if (!(e instanceof ErrorAuth)) throw e;
-  }
+  // El token se lee DIRECTAMENTE de la cabecera, sin pasar por el guard.
+  //
+  // El guard comprueba primero la configuración y solo después el token, así
+  // que usarlo aquí hacía que a un despliegue sin variables el diagnóstico le
+  // dijera «La petición llegó sin sesión» — una causa inventada, sobre una
+  // sesión que podía estar perfecta, con un «cierre sesión y vuelva a entrar»
+  // que no arreglaba nada. Un diagnóstico que se equivoca manda a arreglar lo
+  // que no está roto; es peor que no tenerlo.
+  const token = tokenDeLaPeticion(request);
+  const faltaSupabase = !urlServidor || faltanAuth.includes('SUPABASE_ANON_KEY');
 
   let userId = '';
   let vinculoOk = false;
@@ -165,6 +188,15 @@ export async function POST(request: Request): Promise<Response> {
       estado: 'falla',
       detalle: 'La petición llegó sin sesión.',
       arreglo: 'Cierre sesión y vuelva a entrar.',
+    });
+  } else if (faltaSupabase) {
+    // Hay sesión; lo que falta es con qué comprobarla.
+    pasos.push({
+      clave: 'sesion',
+      titulo: 'Su sesión es válida',
+      estado: 'omitido',
+      detalle: 'No se pudo comprobar: al servidor le faltan SUPABASE_URL o SUPABASE_ANON_KEY. '
+        + 'Su sesión llegó bien; es el servidor el que no tiene contra qué validarla.',
     });
   } else {
     try {
@@ -388,6 +420,7 @@ export async function POST(request: Request): Promise<Response> {
       // El host, siempre: si alguien mandó una captura, esto ahorra la primera
       // pregunta de vuelta.
       apiMembego: hostApiMembego(),
+      entorno,
     },
     200
   );

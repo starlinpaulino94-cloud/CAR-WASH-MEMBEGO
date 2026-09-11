@@ -96,7 +96,10 @@ export const DiagnosticoMembego: React.FC<Props> = ({ membegoCustomerId, compact
             ))}
           </ul>
 
-          <p className="text-[11px] text-muted">API de Membego: {informe.apiMembego}</p>
+          <p className="text-[11px] text-muted">
+            API de Membego: {informe.apiMembego}
+            {informe.entorno && ` · despliegue: ${informe.entorno}`}
+          </p>
         </div>
       )}
     </div>
