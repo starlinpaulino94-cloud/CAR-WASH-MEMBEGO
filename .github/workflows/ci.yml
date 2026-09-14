@@ -63,3 +63,45 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
         run: bash supabase/tests/run.sh && bash supabase/tests/concurrency.sh && bash supabase/tests/restore.sh
+  e2e:
+    name: extremo a extremo (navegador · PostgREST · RLS)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cliente psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Navegador
+        run: npx playwright install --with-deps chromium
+      - name: PostgREST
+        # Versión fija: una release nueva no puede cambiar el resultado de una
+        # prueba sin que nadie lo haya decidido.
+        run: |
+          curl -sSL -o /tmp/pgrst.tar.xz \
+            https://github.com/PostgREST/postgrest/releases/download/v13.0.4/postgrest-v13.0.4-linux-static-x86-64.tar.xz
+          tar xJf /tmp/pgrst.tar.xz -C tests/e2e
+          chmod +x tests/e2e/postgrest
+      - name: Las seis suites
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5433'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash tests/e2e/run-all.sh
+      - name: Registros si algo falla
+        if: failure()
+        run: tail -50 tests/e2e/postgrest.log /tmp/e2e-preview.log /tmp/e2e-proxy.log || true
