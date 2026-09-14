@@ -97,6 +97,26 @@ const go = async (modulo, submodulo) => {
 //
 // De paso, el botón que envía dejó de llamarse «Registrar llegada» (ese nombre
 // lo tiene ahora solo el que ABRE el modal) y pasó a «Registrar e imprimir».
+/**
+ * Cierra los diálogos que queden abiertos tras cobrar.
+ *
+ * Al cobrar una orden el mostrador recibe DOS: el comprobante de la venta y la
+ * comanda de entrega del vehículo (`PosSupabaseView` monta
+ * `ComandaOrdenModal variante="entrega"`). Un solo Escape cerraba uno y el otro
+ * seguía tapando el menú, así que la prueba moría con un «TimeoutError» sobre
+ * un enlace de navegación — un síntoma que no nombra la causa.
+ *
+ * Se cierran todos, comprobando, en vez de contar cuántos son: mañana puede
+ * haber uno más y esto seguirá valiendo.
+ */
+async function cerrarDialogos(page, intentos = 4) {
+  for (let i = 0; i < intentos; i++) {
+    if ((await page.getByRole('dialog').count()) === 0) return;
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
+}
+
 async function cerrarComanda(page) {
   await page.keyboard.press('Escape');
   await page.waitForTimeout(700);
@@ -243,8 +263,7 @@ await page.waitForTimeout(400);
 await page.getByRole('button', { name: /^Cobrar/ }).click();
 await page.waitForTimeout(3500);
 // El comprobante se abre solo, listo para imprimir; se cierra para continuar.
-await page.keyboard.press('Escape');
-await page.waitForTimeout(300);
+await cerrarDialogos(page);
 
 const factura = sql("select id from invoices order by created_at desc limit 1");
 check('la venta emite una factura', factura.length === 36, totalTexto);
