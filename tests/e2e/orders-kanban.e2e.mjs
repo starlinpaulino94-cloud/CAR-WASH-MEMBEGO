@@ -49,6 +49,19 @@ async function login(page, email, view) {
   await page.waitForTimeout(1800);
 }
 
+// Desde que la llegada imprime comanda (`d0df4dd`), el modal NO se cierra al
+// guardar: enseña la comanda de la orden para entregarla. Es la conducta
+// correcta —y la que el mostrador usa— pero estas pruebas son de antes y daban
+// por hecho que el diálogo desaparecía solo; se quedaban con él abierto y el
+// menú lateral inalcanzable, con un timeout que no nombraba nada de esto.
+//
+// De paso, el botón que envía dejó de llamarse «Registrar llegada» (ese nombre
+// lo tiene ahora solo el que ABRE el modal) y pasó a «Registrar e imprimir».
+async function cerrarComanda(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);
+}
+
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const ctx = await browser.newContext();
 const page = await ctx.newPage();
@@ -67,14 +80,15 @@ check('el catálogo de servicios llega desde la base',
   await page.getByRole('button', { name: /Lavado Completo/ }).isVisible().catch(() => false));
 
 check('no se puede registrar sin placa ni servicios',
-  await page.getByRole('button', { name: /Registrar llegada$/ }).last().isDisabled().catch(() => false));
+  await page.getByRole('button', { name: /Registrar e imprimir/ }).isDisabled().catch(() => false));
 
 await page.getByLabel('Placa *').fill('kb-100 1');
 await page.getByLabel('Cliente nuevo').fill('Cliente Kanban');
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
-await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 check('la orden se creó en la base de datos',
   sql("select count(*) from work_orders") === '1');
@@ -271,8 +285,9 @@ check('con ficha elegida ya no se pide escribir un cliente nuevo',
 
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
-await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 check('la segunda visita NO duplica la ficha del cliente',
   sql("select count(*) from customers where name='Cliente Kanban'") === '1',

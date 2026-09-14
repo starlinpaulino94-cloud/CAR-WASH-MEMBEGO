@@ -85,6 +85,19 @@ const go = async (modulo, submodulo) => {
 };
 
 // =========================================================================
+// Desde que la llegada imprime comanda (`d0df4dd`), el modal NO se cierra al
+// guardar: enseña la comanda de la orden para entregarla. Es la conducta
+// correcta —y la que el mostrador usa— pero estas pruebas son de antes y daban
+// por hecho que el diálogo desaparecía solo; se quedaban con él abierto y el
+// menú lateral inalcanzable, con un timeout que no nombraba nada de esto.
+//
+// De paso, el botón que envía dejó de llamarse «Registrar llegada» (ese nombre
+// lo tiene ahora solo el que ABRE el modal) y pasó a «Registrar e imprimir».
+async function cerrarComanda(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);
+}
+
 paso(1, 'Llega el cliente: se registra la entrada del vehículo');
 // =========================================================================
 await go(/^Operaciones/, /^Órdenes/);
@@ -100,8 +113,9 @@ if (await chipServicio.count()) await chipServicio.click();
 const campoCliente = dlg.getByLabel('Cliente nuevo').first();
 if (await campoCliente.count()) await campoCliente.fill('Cliente Del Flujo');
 await page.waitForTimeout(300);
-await dlg.getByRole('button', { name: /Registrar|Guardar|Crear/ }).last().click();
+await dlg.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 const ordenId = sql("select id from work_orders where vehicle_plate='FLU1234' limit 1");
 check('la llegada crea una orden de trabajo', ordenId.length === 36, ordenId || 'sin orden');
