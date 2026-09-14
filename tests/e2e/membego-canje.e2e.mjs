@@ -243,6 +243,14 @@ check('y el cajero se entera AHORA, con el cliente delante',
 console.log('\n[5] Anular la factura le devuelve el lavado al cliente');
 respuestaReversa = { body: { visitId: 'MG-VISIT-1', usesLeft: 4, applied: true } };
 
+// Al cobrar queda el comprobante en pantalla —el cajero lo entrega o lo
+// imprime—, y mientras está abierto el menú lateral no se puede pulsar. La
+// prueba navegaba sin cerrarlo y moría con un «TimeoutError» sobre el enlace de
+// Facturación, que no nombra nada de lo que de verdad pasaba. Se cierra como lo
+// haría una persona.
+await page.keyboard.press('Escape');
+await page.waitForTimeout(700);
+
 await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: 'Facturación' }).click();
 await page.waitForTimeout(2500);
 
