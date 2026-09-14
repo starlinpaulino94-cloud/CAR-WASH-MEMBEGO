@@ -6,6 +6,7 @@
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:4174/';
 const results = [];
@@ -15,7 +16,8 @@ const check = (name, pass, detail = '') => {
 };
 
 const sql = (q) =>
-  execFileSync('psql', ['-h', '/tmp', '-p', '5433', '-U', 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
+  execFileSync('psql', ['-h', process.env.PGHOST ?? '/tmp', '-p', process.env.PGPORT ?? '5433',
+    '-U', process.env.PGUSER ?? 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
     .toString().trim();
 
 // Bahías y operarios que la semilla base no trae.
@@ -49,7 +51,24 @@ async function login(page, email, view) {
   await page.waitForTimeout(1800);
 }
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+// Desde que la llegada imprime comanda (`d0df4dd`), el modal NO se cierra al
+// guardar: enseña la comanda de la orden para entregarla. Es la conducta
+// correcta —y la que el mostrador usa— pero estas pruebas son de antes y daban
+// por hecho que el diálogo desaparecía solo; se quedaban con él abierto y el
+// menú lateral inalcanzable, con un timeout que no nombraba nada de esto.
+//
+// De paso, el botón que envía dejó de llamarse «Registrar llegada» (ese nombre
+// lo tiene ahora solo el que ABRE el modal) y pasó a «Registrar e imprimir».
+async function cerrarComanda(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);
+}
+
+// El navegador: la ruta de este contenedor si existe, y si no, la que resuelva
+// Playwright (lo que pasa en CI tras `playwright install`). Estaba fija, así que
+// la suite solo arrancaba aquí.
+const CHROMIUM = process.env.E2E_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch(existsSync(CHROMIUM) ? { executablePath: CHROMIUM } : {});
 const ctx = await browser.newContext();
 const page = await ctx.newPage();
 
@@ -67,14 +86,18 @@ check('el catálogo de servicios llega desde la base',
   await page.getByRole('button', { name: /Lavado Completo/ }).isVisible().catch(() => false));
 
 check('no se puede registrar sin placa ni servicios',
-  await page.getByRole('button', { name: /Registrar llegada$/ }).last().isDisabled().catch(() => false));
+  await page.getByRole('button', { name: /Registrar e imprimir/ }).isDisabled().catch(() => false));
 
 await page.getByLabel('Placa *').fill('kb-100 1');
+// Ver la nota de `flujo-completo`: la ficha del cliente viene plegada.
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
 await page.getByLabel('Cliente nuevo').fill('Cliente Kanban');
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
-await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 check('la orden se creó en la base de datos',
   sql("select count(*) from work_orders") === '1');
@@ -255,6 +278,8 @@ await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
 await page.waitForTimeout(1500);
 
 await page.getByLabel('Placa *').fill('kb-200 2');
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
 await page.getByLabel('Buscar cliente registrado').fill('Kanban');
 await page.waitForTimeout(1200);
 
@@ -271,8 +296,9 @@ check('con ficha elegida ya no se pide escribir un cliente nuevo',
 
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
-await page.getByRole('button', { name: /Registrar llegada$/ }).last().click();
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 check('la segunda visita NO duplica la ficha del cliente',
   sql("select count(*) from customers where name='Cliente Kanban'") === '1',
@@ -289,14 +315,23 @@ await page.waitForTimeout(1200);
 await page.getByLabel('Placa *').fill('KB1001');
 await page.waitForTimeout(1500);
 
+// Dos cambios, y el segundo no es de redacción sino de conducta.
+//
+// El aviso pasó a decir «Ya vino antes: <carro>, de <dueño>». Y sobre todo: el
+// dueño YA NO HAY QUE ADOPTARLO. Al escribir una placa conocida el formulario
+// lo pone solo (`duenoPropuesto`), que era justo lo que se pidió — que al
+// teclear la placa salga el nombre del cliente sin más gestos. El botón «Usar a
+// <nombre>» solo queda para cuando NO se adoptó, así que esperarlo aquí era
+// esperar la señal de que el automatismo había fallado.
+//
+// Se comprueba entonces lo que de verdad importa ahora: que con la placa basta.
 check('la placa conocida avisa de que el vehículo ya está registrado',
-  await page.getByText(/Este vehículo ya está registrado/).isVisible().catch(() => false));
+  await page.getByText(/Ya vino antes/).isVisible().catch(() => false));
 
-await page.getByRole('button', { name: 'Usar este cliente' }).click();
-await page.waitForTimeout(400);
-check('el dueño del vehículo se puede adoptar con un toque',
-  (await page.getByLabel('Buscar cliente registrado').count()) === 0
-  && await page.getByText('Cliente Kanban').first().isVisible().catch(() => false));
+check('y su dueño queda puesto SOLO, sin tocar nada más',
+  await page.getByText('Cliente Kanban').first().isVisible().catch(() => false)
+  && (await page.getByRole('button', { name: /^Usar a / }).count()) === 0,
+  'la placa trae al dueño; el botón de adoptarlo ya no hace falta');
 
 await page.keyboard.press('Escape');
 await page.waitForTimeout(500);

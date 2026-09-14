@@ -30,6 +30,7 @@ import {
   type EfectoPromocion
 } from '../../lib/coberturaMembego';
 import { PanelFichaMembego } from '../common/FichaMembego';
+import { fetchCoberturasDePlan } from '../../data/membegoRepository';
 import { useVehicleCategories } from '../../hooks/useVehicleCategories';
 import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
 import { filtrarServicios, categoriasConServicios, normalizar, TODAS } from '../../lib/filtroServicios';
@@ -633,6 +634,25 @@ export const PosSupabaseView: React.FC = () => {
    * el beneficio se pactó al recibir el vehículo y volver a decidirlo aquí sería
    * cobrar distinto a lo que se le dijo al cliente en la puerta.
    */
+  /**
+   * Qué lavado incluye cada plan de Membego. Es lo que convierte «la membresía
+   * cubre» en «cubre hasta cuánto»: un plan de básico no paga un premium
+   * entero, pone lo que vale el básico y el cliente abona el salto.
+   */
+  const [coberturasPlan, setCoberturasPlan] =
+    useState<Map<string, { servicio: string; serviceId: string }>>(new Map());
+
+  useEffect(() => {
+    let vivo = true;
+    fetchCoberturasDePlan()
+      .then(m => { if (vivo) setCoberturasPlan(m); })
+      // Sin esto la caja sigue cobrando: se cubre completo, como antes, y el
+      // aviso de la cobertura lo dice. Un ajuste que no carga no puede parar
+      // una venta.
+      .catch(() => { /* se cubre completo y se avisa */ });
+    return () => { vivo = false; };
+  }, []);
+
   /** Los servicios que una membresía SÍ puede pagar, para poder nombrarlos. */
   const nombresIncluibles = useMemo(
     () => services.filter(s => s.included_in_membego).map(s => s.name),
@@ -654,9 +674,19 @@ export const PosSupabaseView: React.FC = () => {
         quantity: l.quantity
       })),
       precioEnCategoriaTope: id => preciosTope?.[id] ?? null,
-      nombresIncluibles
+      nombresIncluibles,
+      // Del nombre del plan al lavado que incluye, y de ahí a su precio EN LA
+      // CATEGORÍA que está en el mostrador: un plan de básico vale 600 en sedán
+      // y 900 en pickup, y cobrar el de sedán a una pickup sería regalar.
+      coberturaDelPlan: nombrePlan => {
+        const c = coberturasPlan.get(nombrePlan.trim().toLowerCase());
+        if (!c) return null;
+        const precio = services.find(s => s.id === c.serviceId)?.price_cents;
+        if (precio === undefined) return null;
+        return { servicio: c.servicio, topeCents: precio };
+      }
     });
-  }, [ficha, lines, services, preciosTope, nombresIncluibles]);
+  }, [ficha, lines, services, preciosTope, nombresIncluibles, coberturasPlan]);
 
   /**
    * Las líneas tal como van a facturarse, con el beneficio ya aplicado.

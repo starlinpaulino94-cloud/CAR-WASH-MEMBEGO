@@ -132,11 +132,23 @@ const AppContent: React.FC = () => {
       <Navbar />
 
       {/* min-h-0 permite que la barra lateral y el contenido tengan CADA UNO su
-          propio scroll, en vez de arrastrarse juntos con el scroll de la página. */}
-      <div className="flex flex-1 min-h-0">
+          propio scroll, en vez de arrastrarse juntos con el scroll de la página.
+          `min-w-0` es su pareja en el otro eje, y faltaba.
+
+          Un hijo flexible NO se encoge por debajo del ancho de su contenido a
+          menos que se le diga. Sin esto, `main` crecía hasta lo que midiera la
+          tabla más ancha —1.600 px con el catálogo de servicios— dentro de una
+          cáscara `overflow-hidden`: el contenido quedaba fuera de la pantalla y
+          no había forma de desplazarse hasta él. En un teléfono, media
+          aplicación era inalcanzable.
+
+          Con `min-w-0`, `main` se ciñe a la pantalla y cada bloque ancho usa su
+          propio `overflow-x-auto`, que es donde el desplazamiento tiene
+          sentido: se desliza la tabla, no la aplicación entera. */}
+      <div className="flex flex-1 min-h-0 min-w-0">
         <Sidebar />
 
-        <main className="flex-1 min-h-0">
+        <main className="flex-1 min-h-0 min-w-0">
           <ModulePage>
             <Suspense fallback={<ChunkFallback />}>
               <ActiveView />

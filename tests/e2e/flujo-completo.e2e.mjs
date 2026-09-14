@@ -18,6 +18,7 @@
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:4174/';
 const results = [];
@@ -28,7 +29,8 @@ const check = (name, pass, detail = '') => {
 };
 
 const sql = (q) =>
-  execFileSync('psql', ['-h', '/tmp', '-p', '5433', '-U', 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
+  execFileSync('psql', ['-h', process.env.PGHOST ?? '/tmp', '-p', process.env.PGPORT ?? '5433',
+    '-U', process.env.PGUSER ?? 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
     .toString().trim();
 
 const EMPRESA  = '11111111-1111-1111-1111-111111111111';
@@ -64,9 +66,11 @@ begin
   perform set_config('app.payroll_ctx', '', true);
 end $$;`);
 
-const browser = await chromium.launch({
-  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'
-});
+// El navegador: la ruta de este contenedor si existe, y si no, la que resuelva
+// Playwright (lo que pasa en CI tras `playwright install`). Estaba fija, así que
+// la suite solo arrancaba aquí.
+const CHROMIUM = process.env.E2E_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch(existsSync(CHROMIUM) ? { executablePath: CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 
 await page.goto(URL, { waitUntil: 'networkidle' });
@@ -85,6 +89,39 @@ const go = async (modulo, submodulo) => {
 };
 
 // =========================================================================
+// Desde que la llegada imprime comanda (`d0df4dd`), el modal NO se cierra al
+// guardar: enseña la comanda de la orden para entregarla. Es la conducta
+// correcta —y la que el mostrador usa— pero estas pruebas son de antes y daban
+// por hecho que el diálogo desaparecía solo; se quedaban con él abierto y el
+// menú lateral inalcanzable, con un timeout que no nombraba nada de esto.
+//
+// De paso, el botón que envía dejó de llamarse «Registrar llegada» (ese nombre
+// lo tiene ahora solo el que ABRE el modal) y pasó a «Registrar e imprimir».
+/**
+ * Cierra los diálogos que queden abiertos tras cobrar.
+ *
+ * Al cobrar una orden el mostrador recibe DOS: el comprobante de la venta y la
+ * comanda de entrega del vehículo (`PosSupabaseView` monta
+ * `ComandaOrdenModal variante="entrega"`). Un solo Escape cerraba uno y el otro
+ * seguía tapando el menú, así que la prueba moría con un «TimeoutError» sobre
+ * un enlace de navegación — un síntoma que no nombra la causa.
+ *
+ * Se cierran todos, comprobando, en vez de contar cuántos son: mañana puede
+ * haber uno más y esto seguirá valiendo.
+ */
+async function cerrarDialogos(page, intentos = 4) {
+  for (let i = 0; i < intentos; i++) {
+    if ((await page.getByRole('dialog').count()) === 0) return;
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
+}
+
+async function cerrarComanda(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(700);
+}
+
 paso(1, 'Llega el cliente: se registra la entrada del vehículo');
 // =========================================================================
 await go(/^Operaciones/, /^Órdenes/);
@@ -94,14 +131,24 @@ await page.getByRole('dialog').waitFor();
 const dlg = page.getByRole('dialog');
 await dlg.getByLabel(/Placa/i).fill('FLU-1234');
 await page.waitForTimeout(400);
+// La ficha del cliente viene PLEGADA desde que se reordenó el formulario de
+// llegada: el caso más común es no poner a nadie («Cliente General»). Quien sí
+// quiere nombrarlo despliega la sección, que es lo que hace el mostrador.
+//
+// Esto lo tapaba un `if (await campo.count())`: si el campo no estaba, la
+// prueba SEGUÍA sin rellenarlo y la orden nacía sin cliente. El fallo salía
+// mucho después —«la factura queda enlazada a la ficha del cliente»— señalando
+// a la facturación, que no tenía la culpa. Un `if` que se salta un paso en
+// silencio convierte un cambio de formulario en un misterio de otra pantalla.
 // El servicio del catálogo que se le va a hacer.
-const chipServicio = dlg.getByRole('button', { name: /Lavado/ }).first();
-if (await chipServicio.count()) await chipServicio.click();
-const campoCliente = dlg.getByLabel('Cliente nuevo').first();
-if (await campoCliente.count()) await campoCliente.fill('Cliente Del Flujo');
+await dlg.getByRole('button', { name: /Lavado/ }).first().click();
+await dlg.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
+await dlg.getByLabel('Cliente nuevo').fill('Cliente Del Flujo');
 await page.waitForTimeout(300);
-await dlg.getByRole('button', { name: /Registrar|Guardar|Crear/ }).last().click();
+await dlg.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
+await cerrarComanda(page);
 
 const ordenId = sql("select id from work_orders where vehicle_plate='FLU1234' limit 1");
 check('la llegada crea una orden de trabajo', ordenId.length === 36, ordenId || 'sin orden');
@@ -216,8 +263,7 @@ await page.waitForTimeout(400);
 await page.getByRole('button', { name: /^Cobrar/ }).click();
 await page.waitForTimeout(3500);
 // El comprobante se abre solo, listo para imprimir; se cierra para continuar.
-await page.keyboard.press('Escape');
-await page.waitForTimeout(300);
+await cerrarDialogos(page);
 
 const factura = sql("select id from invoices order by created_at desc limit 1");
 check('la venta emite una factura', factura.length === 36, totalTexto);

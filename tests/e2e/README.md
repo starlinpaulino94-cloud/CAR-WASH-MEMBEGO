@@ -3,8 +3,31 @@
 Ejecuta las vistas migradas contra la pila real —navegador → `supabase-js` →
 PostgREST → PostgreSQL con RLS— sin necesidad del proyecto alojado.
 
-**250 comprobaciones** en seis ensayos (`pos-cash`, `invoices`,
-`orders-kanban`, `admin-views`, `flujo-completo` y `membego-canje`).
+**256 comprobaciones** en seis ensayos (`pos-cash` 39, `invoices` 26,
+`orders-kanban` 48, `admin-views` 84, `flujo-completo` 30 y `membego-canje` 29).
+
+## Cómo se corren
+
+CI las ejecuta en cada push y cada PR (trabajo `e2e`). En local hacen falta
+PostgreSQL en el 5433 y el binario de PostgREST aquí dentro:
+
+```bash
+curl -sSL -o /tmp/pgrst.tar.xz \
+  https://github.com/PostgREST/postgrest/releases/download/v13.0.4/postgrest-v13.0.4-linux-static-x86-64.tar.xz
+tar xJf /tmp/pgrst.tar.xz -C tests/e2e && chmod +x tests/e2e/postgrest
+npm run test:e2e
+```
+
+> **Estuvieron muertas.** Tenían su script en `package.json` y no las corría
+> nadie: ni CI, ni `npm test`. Al volver a ejecutarlas, cuatro de las seis
+> suites fallaban — ninguna por un fallo del producto, todas porque la interfaz
+> había cambiado por debajo (la llegada imprime comanda, la ficha del cliente
+> viene plegada, el dueño se adopta solo al teclear la placa). Una de ellas solo
+> habría seguido en verde si esa última mejora se rompía.
+>
+> Además el arnés traía fijos el socket de PostgreSQL y la ruta del navegador,
+> así que solo arrancaba en la máquina de quien lo escribió. Por eso están ahora
+> en CI: una prueba que no se ejecuta no protege nada, y encima da confianza.
 Lo que verifican no es que el código compile, sino que el dinero acabe donde
 debe:
 

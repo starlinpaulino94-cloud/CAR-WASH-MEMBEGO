@@ -7,6 +7,7 @@
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:4174/';
 const results = [];
@@ -16,7 +17,8 @@ const check = (name, pass, detail = '') => {
 };
 
 const sql = (q) =>
-  execFileSync('psql', ['-h', '/tmp', '-p', '5433', '-U', 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
+  execFileSync('psql', ['-h', process.env.PGHOST ?? '/tmp', '-p', process.env.PGPORT ?? '5433',
+    '-U', process.env.PGUSER ?? 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
     .toString().trim();
 
 // Datos de partida: bahías, una venta de hoy y algunos clientes.
@@ -61,7 +63,11 @@ const go = async (page, modulo, submodulo) => {
   await page.waitForTimeout(1800);
 };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+// El navegador: la ruta de este contenedor si existe, y si no, la que resuelva
+// Playwright (lo que pasa en CI tras `playwright install`). Estaba fija, así que
+// la suite solo arrancaba aquí.
+const CHROMIUM = process.env.E2E_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch(existsSync(CHROMIUM) ? { executablePath: CHROMIUM } : {});
 let ctx = await browser.newContext();
 let page = await ctx.newPage();
 
@@ -135,8 +141,14 @@ check('el cajero no ve el módulo de Reportes (auditoría vedada)',
   !(await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Reportes/ }).isVisible().catch(() => false)));
 
 await go(page, /^Configuración/);
+// No se busca la FRASE exacta: el aviso cambió al dar acceso al superadmin
+// («o un superadministrador») y esta comprobación llevaba meses en rojo sin que
+// nadie lo viera, porque la suite no se ejecutaba. Se busca el aviso —tiene
+// `role="status"`— y que hable de modificar; eso sobrevive a una reescritura y
+// sigue fallando si el aviso desaparece, que es lo que de verdad importa.
 check('el cajero ve los ajustes en solo lectura',
-  await page.getByText(/Solo el propietario puede modificar/).isVisible().catch(() => false));
+  await page.getByRole('status').filter({ hasText: /modificar/ }).first()
+    .isVisible().catch(() => false));
 
 await go(page, /^Personal/);
 check('el cajero solo ve sus propias comisiones',
@@ -200,18 +212,28 @@ check('marcar una bahía fuera de servicio se refleja en la base',
 // --- Reportes
 // Auditoría es la tercera pestaña de Reportes (Ventas y Rentabilidad van antes).
 await go(page, /^Reportes/, /^Auditoría/);
+// Cada informe lleva ahora una isla de impresión (`ReporteImprimible`) que
+// repite en papel lo que hay en pantalla: mismo título, misma tabla. Está bien
+// hecha —`aria-hidden` y `display:none` en pantalla— pero `getByText` y un
+// `locator('tbody tr')` a secas la cuentan igual, así que el título salía
+// duplicado (Playwright falla por ambiguo) y las filas, dobladas.
+//
+// Se pregunta por lo que el usuario VE: el encabezado por su rol —los roles no
+// existen bajo `aria-hidden`— y las filas con `:visible`.
+const filasBitacora = () => page.locator('tbody tr:visible').count();
+
 check('el propietario sí ve la bitácora de auditoría',
-  await page.getByText('Bitácora de auditoría').isVisible().catch(() => false));
+  await page.getByRole('heading', { name: 'Bitácora de auditoría' })
+    .isVisible().catch(() => false));
 check('la bitácora está paginada y muestra eventos reales',
-  (await page.locator('tbody tr').count()) > 0
-  && (await page.locator('tbody tr').count()) <= 25,
-  `${await page.locator('tbody tr').count()} filas de ${sql('select count(*) from audit_logs')} eventos`);
+  (await filasBitacora()) > 0 && (await filasBitacora()) <= 25,
+  `${await filasBitacora()} filas de ${sql('select count(*) from audit_logs')} eventos`);
 
 await page.getByLabel('Buscar en la bitácora').fill('REGISTRAR_GASTO');
 await page.waitForTimeout(1300);
 check('la bitácora se filtra en el servidor',
-  (await page.locator('tbody tr').count()) === 1,
-  `${await page.locator('tbody tr').count()} fila(s)`);
+  (await filasBitacora()) === 1,
+  `${await filasBitacora()} fila(s)`);
 
 // --- Ajustes (la nota de pie vive en el submódulo Impresión)
 await go(page, /^Configuración/, /^Impresión/);
