@@ -95,26 +95,26 @@ export async function fetchPlanesMembego(): Promise<PlanConCobertura[]> {
   return (data ?? []) as unknown as PlanConCobertura[];
 }
 
-/** Asigna —o quita, con `serviceId` nulo— el lavado que incluye un plan. */
+/**
+ * Asigna —o quita, con `serviceId` nulo— el lavado que incluye un plan.
+ *
+ * Va por RPC y no por `upsert` porque el índice único de la tabla es sobre una
+ * EXPRESIÓN —el nombre del plan normalizado— y `ON CONFLICT` desde el navegador
+ * solo sabe nombrar columnas planas: la base contestaba «there is no unique or
+ * exclusion constraint matching the ON CONFLICT specification».
+ *
+ * Aflojar el índice habría sido peor que el error: el mismo plan escrito con
+ * otras mayúsculas entraría dos veces y el tope de la membresía —lo que se
+ * cobra— dependería de cómo viniera escrito el nombre desde Membego.
+ */
 export async function asignarLavadoDelPlan(
   planName: string,
   serviceId: string | null
 ): Promise<void> {
-  const supabase = requireSupabase();
-  const { data: empresa } = await supabase.from('profiles')
-    .select('company_id').limit(1).maybeSingle();
-  const companyId = (empresa as { company_id?: string } | null)?.company_id;
-  if (!companyId) throw new Error('No se pudo determinar la empresa.');
-
-  if (serviceId === null) {
-    const { error } = await supabase.from('membego_plan_coberturas')
-      .delete().eq('plan_name', planName);
-    if (error) throw new Error(error.message);
-    return;
-  }
-  const { error } = await supabase.from('membego_plan_coberturas')
-    .upsert({ company_id: companyId, plan_name: planName, service_id: serviceId, is_active: true },
-            { onConflict: 'company_id,plan_name' });
+  const { error } = await requireSupabase().rpc('membego_asignar_lavado_del_plan', {
+    p_plan_name: planName,
+    p_service_id: serviceId
+  });
   if (error) throw new Error(error.message);
 }
 

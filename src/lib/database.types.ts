@@ -3543,6 +3543,10 @@ export interface Database {
         };
         Returns: Database['public']['Tables']['purchases']['Row'];
       };
+      membego_asignar_lavado_del_plan: {
+        Args: { p_plan_name: string; p_service_id: string | null };
+        Returns: undefined;
+      };
       membego_planes_con_cobertura: {
         Args: Record<string, never>;
         Returns: Json;
