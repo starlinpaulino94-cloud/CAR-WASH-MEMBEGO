@@ -353,6 +353,27 @@ export async function cancelOrder(orderId: string, reason: string): Promise<Work
   return data as unknown as WorkOrder;
 }
 
+/**
+ * Borrar una orden del todo. Solo superadmin.
+ *
+ * No sustituye a cancelar, y no es «cancelar con más fuerza». Cancelar deja
+ * constancia de que ese vehículo entró; borrar la quita de la base junto con sus
+ * líneas, sus asignaciones y sus revisiones. Es para la orden que nunca debió
+ * existir —la placa equivocada, el doble clic, la prueba—, no para la que salió
+ * mal.
+ *
+ * El servidor se niega si la orden tiene factura viva, comisión ya pagada o
+ * consumo de inventario, y explica cuál de las tres es. Aquí no se repite esa
+ * comprobación: una segunda copia de la regla en el navegador acabaría
+ * discrepando de la de la base, y la que manda es la de la base.
+ */
+export async function deleteWorkOrder(orderId: string): Promise<void> {
+  const { error } = await requireSupabase().rpc('delete_work_order', {
+    p_order_id: orderId
+  });
+  if (error) throw new Error(translate(error.message));
+}
+
 export interface EditOrderParams {
   orderId: string;
   category: VehicleCategory;

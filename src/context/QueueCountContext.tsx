@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 import { ACTIVE_STATUSES } from '../data/ordersRepository';
 
 interface QueueCountValue {
-  /** Vehículos en taller ahora mismo. `null` mientras no se sabe. */
+  /** Órdenes abiertas y SIN cobrar. `null` mientras no se sabe. */
   count: number | null;
   /** Fuerza una relectura. La llaman las vistas tras mover una orden. */
   refresh: () => void;
@@ -16,7 +16,18 @@ const QueueCountContext = createContext<QueueCountValue>({ count: null, refresh:
 const POLL_MS = 60_000;
 
 /**
- * Contador de la cola activa para el badge de la barra lateral.
+ * Contador de lo que queda por hacer, para el badge de la barra lateral.
+ *
+ * Cuenta las órdenes en un estado activo que además siguen pendientes de cobro.
+ * Las dos condiciones importan: el estado dice que el trabajo no ha terminado,
+ * y el cobro dice que la orden todavía es asunto del mostrador. Una orden ya
+ * facturada no es «pendiente» en ningún sentido útil, aunque nadie la haya
+ * marcado entregada — y en la práctica casi nadie lo hace, porque no hay nada
+ * en el flujo de cobro que lo pida.
+ *
+ * Cae fuera del badge, a propósito, el coche pagado por adelantado que sigue en
+ * la bahía: ese ya no es dinero por cobrar. Sigue estando donde tiene que estar
+ * para el taller —en la Cola, en su columna— porque su ESTADO no se toca aquí.
  *
  * Se consulta con `head: true`: PostgREST devuelve solo la cabecera con el
  * total, sin transferir una sola fila. Contar trayéndose las órdenes sería
@@ -48,7 +59,13 @@ export const QueueCountProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .from('work_orders')
         .select('*', { count: 'exact', head: true })
         .eq('branch_id', branch.id)
-        .in('status', ACTIVE_STATUSES);
+        .in('status', ACTIVE_STATUSES)
+        // Facturada es facturada: sale de la cuenta en el momento en que se
+        // cobra, sin esperar a que alguien se acuerde de marcarla entregada.
+        // Sin esto el número solo subía —nada en el flujo normal mueve la orden
+        // a «entregado»— y acababa siendo un total histórico disfrazado de
+        // pendientes, que es peor que no tener número.
+        .eq('payment_status', 'pendiente');
 
       // Un fallo aquí no debe romper nada: es un adorno informativo, no un
       // dato operativo. Se deja el valor anterior y se reintenta al siguiente

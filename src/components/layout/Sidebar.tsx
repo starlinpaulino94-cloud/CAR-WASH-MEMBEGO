@@ -54,14 +54,16 @@ const NavList: React.FC<{ iconsOnly?: boolean }> = ({ iconsOnly = false }) => {
             </span>
 
             {badge !== undefined && !iconsOnly && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-extrabold ${
+              <span title={`${badge} órdenes abiertas y sin cobrar`}
+                className={`px-2 py-0.5 rounded-full text-xs font-extrabold ${
                 isActive ? 'bg-surface text-brand' : 'bg-brand/30 text-brand-hi border border-brand/30'
               }`}>
                 {badge}
               </span>
             )}
             {badge !== undefined && iconsOnly && (
-              <span className="absolute top-1.5 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-brand text-on-accent text-xs font-extrabold grid place-items-center">
+              <span title={`${badge} órdenes abiertas y sin cobrar`}
+                className="absolute top-1.5 right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-brand text-on-accent text-xs font-extrabold grid place-items-center">
                 {badge}
               </span>
             )}

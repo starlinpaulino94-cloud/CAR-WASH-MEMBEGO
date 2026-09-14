@@ -88,7 +88,8 @@ const SubModuleTabs: React.FC = () => {
           >
             {item.label}
             {badge !== undefined && (
-              <span className="px-1.5 py-0.5 rounded-full bg-brand/30 text-brand-hi border border-brand/30 text-xs font-extrabold">
+              <span title={`${badge} órdenes abiertas y sin cobrar`}
+                className="px-1.5 py-0.5 rounded-full bg-brand/30 text-brand-hi border border-brand/30 text-xs font-extrabold">
                 {badge}
               </span>
             )}

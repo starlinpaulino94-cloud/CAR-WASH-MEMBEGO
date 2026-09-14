@@ -104,4 +104,4 @@ jobs:
         run: bash tests/e2e/run-all.sh
       - name: Registros si algo falla
         if: failure()
-        run: tail -50 tests/e2e/postgrest.log /tmp/e2e-preview.log /tmp/e2e-proxy.log || true
+        run: tail -n 50 tests/e2e/postgrest.log /tmp/e2e-preview.log /tmp/e2e-proxy.log || true

@@ -257,6 +257,21 @@ check('el punto de venta permite fiar a un cliente con cupo',
   metodos.some(t => /cr[ée]dito/i.test(t)),
   `formas de pago ofrecidas: ${metodos.join(', ')}`);
 
+/**
+ * El contador de pendientes, ANTES de cobrar.
+ *
+ * Se lee de la barra lateral, que es donde lo ve el usuario: leerlo de la base
+ * probaría la consulta, no el badge, y el badge es lo que se quedaba clavado.
+ */
+const leerBadge = async () => {
+  const b = page.locator('nav[aria-label="Módulos"] a', { hasText: 'Operaciones' })
+                .locator('span[title$="órdenes abiertas y sin cobrar"]');
+  return (await b.count()) === 0 ? 0 : Number((await b.first().innerText()).trim());
+};
+const pendientesAntes = await leerBadge();
+check('la orden sin cobrar cuenta en el contador de pendientes',
+  pendientesAntes >= 1, `badge = ${pendientesAntes}`);
+
 const totalTexto = await page.getByText(/RD\$/).last().innerText().catch(() => '');
 await page.getByLabel(/Recibido|Efectivo|Monto/i).first().fill('5000').catch(() => {});
 await page.waitForTimeout(400);
@@ -284,6 +299,20 @@ check('la factura queda enlazada a la ficha del cliente',
 check('la factura queda enlazada a la orden que se lavó',
   sql(`select coalesce(work_order_id::text,'sin enlace') from invoices where id='${factura}'`) === ordenId,
   sql(`select coalesce(work_order_id::text,'sin enlace') from invoices where id='${factura}'`));
+
+/*
+ * Y EL CONTADOR BAJA EN EL ACTO.
+ *
+ * Sin recargar y sin cambiar de pantalla: el sondeo de la cola es de un minuto,
+ * así que si esto pasa es porque el cobro avisó, no porque alguien esperó. Esa
+ * era la queja: «cobré y la orden sigue contando como pendiente». Se comprueba
+ * en la barra lateral, que es donde se mira el número.
+ */
+await page.waitForTimeout(1200);
+const pendientesDespues = await leerBadge();
+check('al facturar, la orden sale del contador de pendientes en el acto',
+  pendientesDespues === pendientesAntes - 1,
+  `antes = ${pendientesAntes}, después = ${pendientesDespues}`);
 
 // =========================================================================
 paso(5, 'Se entrega el vehículo y se paga la comisión al operario');

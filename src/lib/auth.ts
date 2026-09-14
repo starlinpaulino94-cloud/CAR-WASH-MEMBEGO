@@ -65,7 +65,12 @@ export const PERMISSIONS = {
   cancelOrder:       ['propietario', 'administrador', 'supervisor', 'superadmin'],
   // Editar una orden mueve el importe que se va a cobrar. Mismos roles que
   // cancelarla, y los MISMOS que el gate de edit_work_order() en 0042.
-  editOrder:         ['propietario', 'administrador', 'supervisor', 'superadmin']
+  editOrder:         ['propietario', 'administrador', 'supervisor', 'superadmin'],
+  // Borrar una orden NO es cancelarla. Cancelar deja el rastro de que el
+  // vehículo entró; borrar lo quita del todo, y con él las líneas, las
+  // asignaciones y las revisiones. Se reserva a superadmin —la lista más corta
+  // que existe aquí— y coincide con el gate de delete_work_order() en 0043.
+  deleteOrder:       ['superadmin']
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

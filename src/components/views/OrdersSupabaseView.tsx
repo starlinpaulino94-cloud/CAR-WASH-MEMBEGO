@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Car, Plus, AlertCircle, Loader2, Printer, PackageCheck, ClipboardCheck, Clock, AlertTriangle, Pencil } from 'lucide-react';
+import { Car, Plus, AlertCircle, Loader2, Printer, PackageCheck, ClipboardCheck, Clock, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
 import { formatCents } from '../../lib/money';
 import {
-  fetchOrdersPage, fetchDetalleOrden, fetchWorkOrderById, fetchAssignees, fetchOperators,
+  fetchOrdersPage, fetchDetalleOrden, fetchWorkOrderById, fetchAssignees, fetchOperators, deleteWorkOrder,
   FiltrosOrden, OrdenOperacion, DetalleOrden, WorkOrder, OrderStatus, STATUS_LABEL, Profile
 } from '../../data/ordersRepository';
 import { fetchServicesWithPrices, ServiceWithPrices } from '../../data/adminRepository';
@@ -19,6 +19,7 @@ import { InspectionModal } from '../modals/InspectionModal';
 import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
 import { EditOrderSupabaseModal } from '../modals/EditOrderSupabaseModal';
 import { can } from '../../lib/auth';
+import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 
 const PAGE_SIZE = 25;
 
@@ -58,6 +59,9 @@ export const OrdersSupabaseView: React.FC = () => {
   const { branch, company, phase, profile } = useAuth();
   // El mismo permiso que exige `edit_work_order` en la base.
   const puedeEditar = can(profile, 'editOrder');
+  const puedeBorrar = can(profile, 'deleteOrder');
+  /** La orden cuyo borrado se está confirmando. El diálogo pone el resto. */
+  const [borrando, setBorrando] = useState<OrdenOperacion | null>(null);
   const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
@@ -277,6 +281,17 @@ export const OrdersSupabaseView: React.FC = () => {
                   title="Editar la orden" aria-label={`Editar la orden ${o.order_number}`}
                   className="p-1.5 text-body hover:text-strong rounded-lg hover:bg-surface-2">
                   <Pencil className="w-4 h-4" /></button>)}
+              {/* Borrar. Se ofrece siempre que el rol lo permita, sin filtrar
+                  aquí por factura o comisión: esas tres negativas las decide el
+                  servidor, que es quien las sabe de verdad, y las explica una
+                  por una. Repetirlas en la fila obligaría a traerse la factura y
+                  las comisiones de cada orden solo para pintar —o esconder— un
+                  botón, y escondido no enseña por qué. */}
+              {puedeBorrar && (
+                <button onClick={() => setBorrando(o)}
+                  title="Borrar la orden" aria-label={`Borrar la orden ${o.order_number}`}
+                  className="p-1.5 text-danger rounded-lg hover:bg-danger/10">
+                  <Trash2 className="w-4 h-4" /></button>)}
             </div>) }
         ]}
         filas={data.rows}
@@ -396,6 +411,17 @@ export const OrdersSupabaseView: React.FC = () => {
       {inspecting && (
         <InspectionModal orderId={inspecting.id} orderNumber={inspecting.order_number}
           plate={inspecting.vehicle_plate} onClose={() => setInspecting(null)} />
+      )}
+
+      {borrando && (
+        <ConfirmarEliminar
+          queEs="la orden"
+          nombre={`${borrando.order_number}${borrando.vehicle_plate ? ` · ${borrando.vehicle_plate}` : ''}`}
+          nota="Si la orden está facturada, tiene comisiones pagadas o ya consumió inventario, el servidor lo impedirá y le dirá cuál de las tres es. Para esas, lo correcto es cancelarla."
+          onEliminar={() => deleteWorkOrder(borrando.id)}
+          onCerrar={() => setBorrando(null)}
+          onHecho={() => { void load(); refreshQueue(); }}
+        />
       )}
     </div>
   );
