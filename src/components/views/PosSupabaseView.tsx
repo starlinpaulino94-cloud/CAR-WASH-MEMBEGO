@@ -6,6 +6,7 @@ import {
   CheckCircle2, Loader2, AlertCircle, RefreshCw, Receipt, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useQueueCount } from '../../context/QueueCountContext';
 import { can } from '../../lib/auth';
 import { formatCents, parseAmountToCents, centsToInput, desglosarItbis, bpsToPercent } from '../../lib/money';
 import { validatePromotion, PromotionPreview } from '../../data/promotionRepository';
@@ -70,6 +71,7 @@ const METHODS: { id: PaymentMethod; label: string; icon: typeof Banknote }[] = [
  */
 export const PosSupabaseView: React.FC = () => {
   const { profile, company, branch } = useAuth();
+  const { refresh: refrescarPendientes } = useQueueCount();
   const { categorias: catsServicio } = useCategoriasServicio();
 
   const CATEGORIES = useVehicleCategories();
@@ -849,6 +851,12 @@ export const PosSupabaseView: React.FC = () => {
       });
 
       setLastInvoice(invoice);
+      // El badge de pendientes, en el acto. `create_invoice` acaba de marcar la
+      // orden como cobrada, así que el número de la barra lateral ya está de
+      // más; sin este aviso seguiría enseñando la orden hasta el siguiente
+      // sondeo, que es de un minuto. «Cobré y sigue ahí» es justo lo que hace
+      // que nadie se fíe del número.
+      refrescarPendientes();
       // El comprobante sale de una vez, listo para imprimir.
       setTicketInvoice(invoice);
       // Se guarda la orden AQUÍ porque el cierre de la venta la limpia unas

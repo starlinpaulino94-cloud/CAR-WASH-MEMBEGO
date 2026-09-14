@@ -39,10 +39,19 @@ interface Props {
   onCerrar: () => void;
   /** Se llama cuando algo salió bien, para que la vista recargue. */
   onHecho: () => void;
+  /**
+   * Sustituye la letra pequeña de debajo.
+   *
+   * La de por defecto habla de archivar, que es la salida del catálogo y de las
+   * fichas. Donde no existe esa salida —una orden de trabajo, por ejemplo—
+   * prometerla sería mentir en el único sitio donde el usuario va a buscar qué
+   * hacer si le dicen que no.
+   */
+  nota?: string;
 }
 
 export const ConfirmarEliminar: React.FC<Props> = ({
-  nombre, queEs, onEliminar, onArchivar, onCerrar, onHecho
+  nombre, queEs, onEliminar, onArchivar, onCerrar, onHecho, nota
 }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,8 +117,7 @@ export const ConfirmarEliminar: React.FC<Props> = ({
                 Esto no se puede deshacer.
               </p>
               <p className="text-xs text-faint">
-                Si tiene facturas, órdenes o movimientos, la base lo va a impedir y le
-                ofrecerá archivarlo.
+                {nota ?? 'Si tiene facturas, órdenes o movimientos, la base lo va a impedir y le ofrecerá archivarlo.'}
               </p>
             </>
           )}
