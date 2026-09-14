@@ -83,6 +83,9 @@ check('no se puede registrar sin placa ni servicios',
   await page.getByRole('button', { name: /Registrar e imprimir/ }).isDisabled().catch(() => false));
 
 await page.getByLabel('Placa *').fill('kb-100 1');
+// Ver la nota de `flujo-completo`: la ficha del cliente viene plegada.
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
 await page.getByLabel('Cliente nuevo').fill('Cliente Kanban');
 await page.getByRole('button', { name: /Lavado Completo/ }).click();
 await page.waitForTimeout(300);
@@ -269,6 +272,8 @@ await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
 await page.waitForTimeout(1500);
 
 await page.getByLabel('Placa *').fill('kb-200 2');
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
 await page.getByLabel('Buscar cliente registrado').fill('Kanban');
 await page.waitForTimeout(1200);
 

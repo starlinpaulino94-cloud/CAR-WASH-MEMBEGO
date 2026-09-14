@@ -107,11 +107,20 @@ await page.getByRole('dialog').waitFor();
 const dlg = page.getByRole('dialog');
 await dlg.getByLabel(/Placa/i).fill('FLU-1234');
 await page.waitForTimeout(400);
+// La ficha del cliente viene PLEGADA desde que se reordenó el formulario de
+// llegada: el caso más común es no poner a nadie («Cliente General»). Quien sí
+// quiere nombrarlo despliega la sección, que es lo que hace el mostrador.
+//
+// Esto lo tapaba un `if (await campo.count())`: si el campo no estaba, la
+// prueba SEGUÍA sin rellenarlo y la orden nacía sin cliente. El fallo salía
+// mucho después —«la factura queda enlazada a la ficha del cliente»— señalando
+// a la facturación, que no tenía la culpa. Un `if` que se salta un paso en
+// silencio convierte un cambio de formulario en un misterio de otra pantalla.
 // El servicio del catálogo que se le va a hacer.
-const chipServicio = dlg.getByRole('button', { name: /Lavado/ }).first();
-if (await chipServicio.count()) await chipServicio.click();
-const campoCliente = dlg.getByLabel('Cliente nuevo').first();
-if (await campoCliente.count()) await campoCliente.fill('Cliente Del Flujo');
+await dlg.getByRole('button', { name: /Lavado/ }).first().click();
+await dlg.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
+await dlg.getByLabel('Cliente nuevo').fill('Cliente Del Flujo');
 await page.waitForTimeout(300);
 await dlg.getByRole('button', { name: /Registrar e imprimir/ }).click();
 await page.waitForTimeout(2500);
