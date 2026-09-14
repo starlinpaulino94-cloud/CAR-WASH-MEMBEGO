@@ -4,7 +4,10 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 PORT="${PGPORT:-5433}"
-PSQL=(psql -h /tmp -p "$PORT" -U postgres)
+# El host sale del entorno, como en `supabase/tests/run.sh`: en local es el
+# socket de /tmp y en CI el Postgres de servicio, por TCP. Estaba fijo a /tmp,
+# así que esta suite no podía correr en ninguna máquina que no fuera esta.
+PSQL=(psql -h "${PGHOST:-/tmp}" -p "$PORT" -U "${PGUSER:-postgres}")
 
 pkill -f postgrest 2>/dev/null || true
 sleep 1

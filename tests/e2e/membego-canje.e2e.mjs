@@ -17,6 +17,7 @@
  */
 import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const URL = 'http://127.0.0.1:4174/';
 const results = [];
@@ -26,7 +27,8 @@ const check = (name, pass, detail = '') => {
 };
 
 const sql = (q) =>
-  execFileSync('psql', ['-h', '/tmp', '-p', '5433', '-U', 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
+  execFileSync('psql', ['-h', process.env.PGHOST ?? '/tmp', '-p', process.env.PGPORT ?? '5433',
+    '-U', process.env.PGUSER ?? 'postgres', '-d', 'membego_e2e', '-tA', '-c', q])
     .toString().trim();
 
 // ------------------------------------------------------- Datos de partida
@@ -68,7 +70,11 @@ const membresia = (over = {}) => ({
   }
 });
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+// El navegador: la ruta de este contenedor si existe, y si no, la que resuelva
+// Playwright (lo que pasa en CI tras `playwright install`). Estaba fija, así que
+// la suite solo arrancaba aquí.
+const CHROMIUM = process.env.E2E_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch(existsSync(CHROMIUM) ? { executablePath: CHROMIUM } : {});
 const ctx = await browser.newContext();
 const page = await ctx.newPage();
 page.on('console', m => { if (m.type() === 'error') console.log('    [consola]', m.text().slice(0, 140)); });
