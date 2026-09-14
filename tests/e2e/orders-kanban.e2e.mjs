@@ -309,10 +309,15 @@ await page.waitForTimeout(1200);
 await page.getByLabel('Placa *').fill('KB1001');
 await page.waitForTimeout(1500);
 
+// El aviso pasó a decir «Ya vino antes: <carro>, de <dueño>», y el botón a
+// «Usar a <nombre>»: el formulario propone al dueño por su nombre en vez de
+// hablar de «este cliente». Lo que se comprueba sigue siendo lo mismo —que la
+// placa conocida se reconozca y su dueño se adopte de un toque—, así que se
+// mira por lo que la frase SIGNIFICA y no por cómo estaba redactada.
 check('la placa conocida avisa de que el vehículo ya está registrado',
-  await page.getByText(/Este vehículo ya está registrado/).isVisible().catch(() => false));
+  await page.getByText(/Ya vino antes/).isVisible().catch(() => false));
 
-await page.getByRole('button', { name: 'Usar este cliente' }).click();
+await page.getByRole('button', { name: /^Usar a / }).click();
 await page.waitForTimeout(400);
 check('el dueño del vehículo se puede adoptar con un toque',
   (await page.getByLabel('Buscar cliente registrado').count()) === 0
