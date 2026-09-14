@@ -269,5 +269,77 @@ console.log('\n[8] Un servicio sin marcar NO se cobra a ojo');
     !/no está marcado/i.test(r.explicacion), r.explicacion);
 }
 
+console.log('\n[9] El plan cubre SU lavado, no cualquiera');
+{
+  // El caso del negocio: plan de «Lavado Básico» (900 en esta categoría), al
+  // cliente le hacen un «Premium» de 1.500. Antes la membresía absorbía los
+  // 1.500 enteros porque el premium estaba marcado como incluible; el lavadero
+  // regalaba 600 en cada visita y nada lo delataba.
+  const plan = () => ({ servicio: 'Lavado Básico', topeCents: 90000 });
+  const r = aplicarCobertura({
+    membresias: [membresia({ })],
+    lineas: [lavado({ serviceId: 'srv-premium', unitPriceCents: 150000 })],
+    precioEnCategoriaTope: sinPrecioTope,
+    coberturaDelPlan: plan
+  });
+  check('la membresía pone lo que vale el lavado de SU plan', r.coveredCents === 90000);
+  check('y el cliente paga la diferencia', r.differenceCents === 60000);
+  check('lo cubierto más la diferencia es el precio real',
+    r.coveredCents + r.differenceCents === 150000);
+  check('el aviso nombra el lavado que sí incluye el plan',
+    /Lavado Básico/.test(r.explicacion), r.explicacion);
+}
+{
+  // Al revés: su plan incluye el premium y se lleva un básico. Va cubierto
+  // entero y NO hay vuelto: una membresía da derecho a un lavado hasta cierto
+  // valor, no a un saldo a favor.
+  const r = aplicarCobertura({
+    membresias: [membresia()],
+    lineas: [lavado({ serviceId: 'srv-basico', unitPriceCents: 90000 })],
+    precioEnCategoriaTope: sinPrecioTope,
+    coberturaDelPlan: () => ({ servicio: 'Lavado Premium', topeCents: 150000 })
+  });
+  check('un lavado más barato que su plan va cubierto entero',
+    r.coveredCents === 90000 && r.differenceCents === 0);
+}
+{
+  // Plan sin configurar: se cubre completo —como hasta ahora— y se DICE. Dejar
+  // de cubrir de golpe a todos los socios el día del despliegue, por un ajuste
+  // que nadie ha tenido ocasión de rellenar, sería romper el mostrador.
+  const r = aplicarCobertura({
+    membresias: [membresia()],
+    lineas: [lavado({ unitPriceCents: 150000 })],
+    precioEnCategoriaTope: sinPrecioTope
+  });
+  check('un plan sin configurar sigue cubriendo el lavado entero',
+    r.coveredCents === 150000 && r.differenceCents === 0);
+  check('pero se avisa de que falta asignarle su lavado',
+    /no tiene lavado asignado/i.test(r.explicacion), r.explicacion);
+}
+{
+  // Los dos topes se acumulan: plan de básico Y carro por encima del plan.
+  // Manda el MENOR; aplicar uno solo regalaría el otro.
+  const r = aplicarCobertura({
+    membresias: [membresia({ covers: false, reason: 'VEHICLE_LEVEL_ABOVE_PLAN' })],
+    lineas: [lavado({ unitPriceCents: 150000 })],
+    precioEnCategoriaTope: () => 120000,
+    coberturaDelPlan: () => ({ servicio: 'Lavado Básico', topeCents: 90000 })
+  });
+  check('con plan básico Y carro grande, manda el tope más bajo',
+    r.coveredCents === 90000, `cubrió ${r.coveredCents}`);
+  check('y el resto lo paga el cliente', r.differenceCents === 60000);
+}
+{
+  // Sin lavados disponibles no se regala nada, tenga el plan que tenga.
+  const r = aplicarCobertura({
+    membresias: [membresia({ covers: false, reason: 'NO_USES_LEFT', usesLeft: 0 })],
+    lineas: [lavado({ unitPriceCents: 150000 })],
+    precioEnCategoriaTope: sinPrecioTope,
+    coberturaDelPlan: () => ({ servicio: 'Lavado Básico', topeCents: 90000 })
+  });
+  check('sin lavados disponibles el plan no cubre nada',
+    r.coveredCents === 0 && r.lineaIndex === null);
+}
+
 console.log(`\n${pass} pasan · ${fail} fallan`);
 if (fail > 0) process.exit(1);

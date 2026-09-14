@@ -365,6 +365,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      membego_plan_coberturas: {
+        Row: {
+          id: string;
+          company_id: string;
+          plan_name: string;
+          service_id: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          plan_name: string;
+          service_id: string;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          plan_name?: string;
+          service_id?: string;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       membego_company_links: {
         Row: {
           company_id: string;
@@ -3515,6 +3542,10 @@ export interface Database {
           p_cash_session_id?: string | null;
         };
         Returns: Database['public']['Tables']['purchases']['Row'];
+      };
+      membego_planes_con_cobertura: {
+        Args: Record<string, never>;
+        Returns: Json;
       };
       membego_link_company: {
         Args: { p_membego_company_id: string };

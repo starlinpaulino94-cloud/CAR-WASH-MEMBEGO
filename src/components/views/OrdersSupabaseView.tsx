@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Car, Plus, AlertCircle, Loader2, Printer, PackageCheck, ClipboardCheck, Clock, AlertTriangle } from 'lucide-react';
+import { Car, Plus, AlertCircle, Loader2, Printer, PackageCheck, ClipboardCheck, Clock, AlertTriangle, Pencil } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { useQueueCount } from '../../context/QueueCountContext';
@@ -17,6 +17,8 @@ import { SeleccionFecha, rangoDeFechas } from '../../lib/rangosFecha';
 import { NewArrivalSupabaseModal } from '../modals/NewArrivalSupabaseModal';
 import { InspectionModal } from '../modals/InspectionModal';
 import { ComandaOrdenModal } from '../modals/ComandaOrdenModal';
+import { EditOrderSupabaseModal } from '../modals/EditOrderSupabaseModal';
+import { can } from '../../lib/auth';
 
 const PAGE_SIZE = 25;
 
@@ -53,7 +55,9 @@ function fmtDur(seg: number | null): string {
  * siente conectado: del número al carro y su historia.
  */
 export const OrdersSupabaseView: React.FC = () => {
-  const { branch, company, phase } = useAuth();
+  const { branch, company, phase, profile } = useAuth();
+  // El mismo permiso que exige `edit_work_order` en la base.
+  const puedeEditar = can(profile, 'editOrder');
   const { refresh: refreshQueue } = useQueueCount();
   const symbol = company?.currency_symbol ?? 'RD$';
 
@@ -74,6 +78,7 @@ export const OrdersSupabaseView: React.FC = () => {
 
   const [creating, setCreating] = useState(false);
   const [inspecting, setInspecting] = useState<WorkOrder | null>(null);
+  const [editando, setEditando] = useState<WorkOrder | null>(null);
   const [imprimiendo, setImprimiendo] = useState<{ order: WorkOrder; variante: 'llegada' | 'entrega' } | null>(null);
   const [lavadoresImpresion, setLavadoresImpresion] = useState<string[]>([]);
 
@@ -257,6 +262,21 @@ export const OrdersSupabaseView: React.FC = () => {
               <button onClick={() => void conOrdenCompleta(o.id, setInspecting)}
                 title="Inspección del vehículo" className="p-1.5 text-info rounded-lg hover:bg-surface-2">
                 <ClipboardCheck className="w-4 h-4" /></button>
+              {/* Corregir la orden. El editor existía desde la migración 0042 y
+                  se podía abrir SOLO desde el tablero de la Cola; en este
+                  listado —que es donde se busca una orden por su número o su
+                  placa— no había forma de llegar a él, así que corregir un
+                  servicio mal elegido obligaba a cancelar y registrar de nuevo,
+                  perdiendo el número de orden y el histórico de la llegada.
+
+                  Las mismas condiciones que en la Cola, porque son las que el
+                  servidor exige: en el taller, sin cobrar y sin facturar. */}
+              {puedeEditar && o.payment_status === 'pendiente'
+                && o.status !== 'cancelado' && o.status !== 'entregado' && (
+                <button onClick={() => void conOrdenCompleta(o.id, setEditando)}
+                  title="Editar la orden" aria-label={`Editar la orden ${o.order_number}`}
+                  className="p-1.5 text-body hover:text-strong rounded-lg hover:bg-surface-2">
+                  <Pencil className="w-4 h-4" /></button>)}
             </div>) }
         ]}
         filas={data.rows}
@@ -365,6 +385,14 @@ export const OrdersSupabaseView: React.FC = () => {
         <ComandaOrdenModal order={imprimiendo.order} company={company} branch={branch}
           lavadores={lavadoresImpresion} variante={imprimiendo.variante} onClose={() => setImprimiendo(null)} />
       )}
+      {editando && (
+        <EditOrderSupabaseModal
+          order={editando}
+          onClose={() => setEditando(null)}
+          onSaved={() => { setEditando(null); void load(); refreshQueue(); }}
+        />
+      )}
+
       {inspecting && (
         <InspectionModal orderId={inspecting.id} orderNumber={inspecting.order_number}
           plate={inspecting.vehicle_plate} onClose={() => setInspecting(null)} />

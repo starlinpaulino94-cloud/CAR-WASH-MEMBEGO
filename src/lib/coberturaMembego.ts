@@ -35,6 +35,7 @@ import type { VehicleCategory } from '../types';
 /** Lo que Membego contestó sobre una membresía. Subconjunto de `BeneficioMembego`. */
 export interface MembresiaEvaluada {
   id: string;
+  /** El nombre del plan tal como lo manda Membego. La clave de la cobertura. */
   nombre: string;
   usesLeft: number;
   coverage: {
@@ -210,8 +211,20 @@ export function aplicarCobertura(params: {
    * aviso cuando la venta no trae ninguno. Solo sirve para explicar.
    */
   nombresIncluibles?: readonly string[];
+  /**
+   * Qué lavado incluye el plan del cliente, y cuánto vale ESE lavado en la
+   * categoría del vehículo que está en el mostrador.
+   *
+   * Es lo que convierte «la membresía cubre» en «la membresía cubre HASTA
+   * CUÁNTO». Sin esto, un plan de básico pagaba un premium entero. Devuelve
+   * `null` cuando el plan no está configurado, y entonces no se inventa nada.
+   */
+  coberturaDelPlan?: (nombrePlan: string) => { servicio: string; topeCents: number } | null;
 }): AplicacionCobertura {
-  const { membresias, lineas, precioEnCategoriaTope, nombresIncluibles = [] } = params;
+  const {
+    membresias, lineas, precioEnCategoriaTope,
+    nombresIncluibles = [], coberturaDelPlan = () => null
+  } = params;
 
   // Solo servicios marcados como incluibles. Un producto —una fragancia, un
   // café— nunca lo paga una membresía de lavados.
@@ -277,16 +290,38 @@ export function aplicarCobertura(params: {
   const precioLinea = elegida.l.unitPriceCents;
   const cobertura = usable.coverage;
 
+  // Qué lavado incluye SU plan, y cuánto vale aquí. Es el tope de la membresía.
+  const plan = coberturaDelPlan(usable.nombre);
+
   if (cobertura.covers === true) {
     // Una membresía cubre UN lavado, no la cantidad que se teclee. Si el cajero
     // puso 2, el segundo se cobra.
+    //
+    // Y cubre HASTA EL VALOR DE SU PLAN, no cualquier lavado. Un plan de básico
+    // al que se le hace un premium pone lo que vale el básico y el cliente paga
+    // el salto; antes absorbía el premium entero y el lavadero regalaba la
+    // diferencia en cada visita, sin que nada lo delatara.
+    //
+    // Si el plan NO está configurado se cubre completo, como hasta ahora, y se
+    // dice. Dejar de cubrir de golpe a todos los socios el día del despliegue
+    // —por un ajuste que nadie ha tenido ocasión de rellenar— sería romper el
+    // mostrador para arreglar la contabilidad.
+    const cubierto = plan === null
+      ? precioLinea
+      : Math.max(0, Math.min(plan.topeCents, precioLinea));
+
     return {
       lineaIndex: elegida.i,
       membershipId: usable.id,
       membershipNombre: usable.nombre,
-      coveredCents: precioLinea,
-      differenceCents: 0,
-      explicacion: `${usable.nombre} cubre este lavado.`
+      coveredCents: cubierto,
+      differenceCents: precioLinea - cubierto,
+      explicacion: plan === null
+        ? `${usable.nombre} cubre este lavado. Este plan no tiene lavado asignado: ` +
+          'se cubre completo. Asígnelo en Ajustes → Membego.'
+        : cubierto >= precioLinea
+          ? `${usable.nombre} cubre este lavado.`
+          : `${usable.nombre} incluye «${plan.servicio}». La diferencia se cobra.`
     };
   }
 
@@ -305,7 +340,13 @@ export function aplicarCobertura(params: {
     // El tope no puede pasarse del precio real: si alguien configuró la
     // camioneta más barata que el sedán, la membresía cubre el lavado entero y
     // no le devuelve dinero al cliente.
-    const cubierto = Math.max(0, Math.min(tope, precioLinea));
+    //
+    // Y si además su plan incluye un lavado concreto, MANDA EL MENOR de los dos
+    // topes: un cliente con plan de básico que llega en camioneta no puede
+    // cobrarse como premium por el camino de la categoría. Aplicar un solo
+    // límite regalaría el otro.
+    const topeEfectivo = plan === null ? tope : Math.min(tope, plan.topeCents);
+    const cubierto = Math.max(0, Math.min(topeEfectivo, precioLinea));
     return {
       lineaIndex: elegida.i,
       membershipId: usable.id,

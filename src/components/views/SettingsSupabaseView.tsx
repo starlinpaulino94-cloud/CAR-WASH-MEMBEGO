@@ -19,6 +19,7 @@ import { ViewHeader, InlineAlert, ReadOnlyNotice } from '../common/DataViewShell
 import { fetchMembegoLogs, MembegoSyncLog } from '../../data/adminRepository';
 import { NivelesMembego } from '../settings/NivelesMembego';
 import { DiagnosticoMembego } from '../common/DiagnosticoMembego';
+import { CoberturaPorPlan } from '../settings/CoberturaPorPlan';
 import { ServiciosIncluibles } from '../settings/ServiciosIncluibles';
 
 /**
@@ -470,6 +471,7 @@ export const SettingsSupabaseView: React.FC<{ seccion?: 'empresa' | 'impresion' 
           membresía no cubra lo que debería. */}
       {show('membego') && canManageMembego && <NivelesMembego editable={editable} />}
       {show('membego') && canManageMembego && <ServiciosIncluibles />}
+      {show('membego') && canManageMembego && <CoberturaPorPlan />}
 
       {/* Perfil de la empresa traído de Membego (Fase 1): datos maestros y
           sucursales. Es un snapshot informativo; no pisa los datos fiscales ni
