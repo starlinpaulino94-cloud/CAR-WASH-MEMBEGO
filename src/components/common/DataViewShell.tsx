@@ -47,8 +47,12 @@ export const ViewHeader: React.FC<{
     }`}>
       <h2 className="sr-only">{title}</h2>
       {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+      {/* `flex-wrap`: en un teléfono, tres acciones no caben en una línea y la
+          última —que suele ser la principal, «Nuevo…»— quedaba cortada contra
+          el borde derecho. Sin envolver, la fila crecía más que la pantalla y
+          el botón que más se usa era el que no se podía pulsar. */}
       {actions && (
-        <div className="flex items-center gap-2 self-start sm:self-auto sm:ml-auto">{actions}</div>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto sm:ml-auto">{actions}</div>
       )}
     </div>
   );

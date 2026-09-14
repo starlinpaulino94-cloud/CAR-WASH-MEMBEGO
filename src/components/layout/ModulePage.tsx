@@ -135,7 +135,7 @@ export const ModulePage: React.FC<{ children: React.ReactNode }> = ({ children }
   const { profile } = useAuth();
   const conPestañas = visibleItems(profile, mod).length > 1;
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-col h-full min-h-0 min-w-0">
       <div className="flex-shrink-0 bg-canvas/95 backdrop-blur border-b border-line px-6 pt-3">
         <Breadcrumb conPestañas={conPestañas} />
         {conPestañas && (

@@ -34,7 +34,7 @@ for _ in $(seq 1 20); do
   sleep 1
 done
 
-SUITES=(admin-views flujo-completo invoices pos-cash orders-kanban membego-canje)
+SUITES=(admin-views flujo-completo invoices pos-cash orders-kanban membego-canje responsive)
 fallos=0
 for s in "${SUITES[@]}"; do
   echo "──────── $s"
