@@ -381,7 +381,17 @@ export async function updateProduct(id: string, patch: Omit<Partial<Product>, 's
  * y deja el movimiento en el kardex y la acción en la bitácora. Editar
  * `products.stock` directo está bloqueado por trigger desde 0019.
  */
-export async function adjustStock(productId: string, newQty: number, reason: string): Promise<Product> {
+/**
+ * Ajusta la existencia de un producto.
+ *
+ * `reason` es opcional: exigirlo no producía buenos motivos, producía «xxxxx»
+ * —o que no se ajustara y el inventario siguiera mintiendo—. Lo que hace
+ * auditable un ajuste no es la frase sino el rastro, y ese lo sella el
+ * servidor: producto, antes, después, autor y hora en el kardex.
+ */
+export async function adjustStock(
+  productId: string, newQty: number, reason: string | null = null
+): Promise<Product> {
   const { data, error } = await requireSupabase().rpc('adjust_stock', {
     p_product_id: productId, p_new_qty: newQty, p_reason: reason
   });

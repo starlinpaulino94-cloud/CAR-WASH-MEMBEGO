@@ -208,13 +208,11 @@ export const ProductsSupabaseView: React.FC = () => {
       setActionError('La existencia debe ser un número entero.');
       return;
     }
-    if (adjustReason.trim().length < 5) {
-      setActionError('Explique el motivo del ajuste (mínimo 5 caracteres).');
-      return;
-    }
     setBusy(true); setActionError(null);
     try {
-      await adjustStock(adjusting.id, value, adjustReason.trim());
+      // El motivo es opcional. Vacío va como nulo y no como cadena vacía: el
+      // kardex tiene que poder distinguir «no se dijo nada» de «se dijo esto».
+      await adjustStock(adjusting.id, value, adjustReason.trim() || null);
       setAdjusting(null);
       q.reload();
     } catch (err) {
@@ -537,15 +535,15 @@ export const ProductsSupabaseView: React.FC = () => {
         >
           <p className="text-sm text-muted">
             Existencia actual: <strong className="text-strong tabular-nums">{adjusting.stock} {adjusting.unit}</strong>.
-            El ajuste queda registrado en el kardex con su motivo, autor y fecha.
+            El ajuste queda registrado en el kardex con el antes, el después, su autor y la fecha.
           </p>
           <Field label="Nueva existencia *" htmlFor="adj-qty">
             <input id="adj-qty" type="number" autoFocus className={textInputClass} value={adjustQty}
               aria-label={`Nueva existencia de ${adjusting.name}`}
               onChange={e => setAdjustQty(e.target.value)} />
           </Field>
-          <Field label="Motivo del ajuste *" htmlFor="adj-reason"
-            hint="Ej.: conteo físico, merma, derrame, corrección de entrada.">
+          <Field label="Motivo del ajuste (opcional)" htmlFor="adj-reason"
+            hint="Si hay algo que explicar: conteo físico, merma, derrame, corrección de entrada.">
             <input id="adj-reason" className={textInputClass} value={adjustReason}
               onChange={e => setAdjustReason(e.target.value)}
               placeholder="Conteo físico: diferencia de almacén" />
