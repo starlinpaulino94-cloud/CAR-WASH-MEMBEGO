@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Printer } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import {
-  fetchReporteVentas, fetchFacturasDelReporte, ReporteVentas, FiltrosReporte, FacturaReporte
+  fetchReporteVentas, fetchFacturasDelReporte, fetchRenglonesDelReporte,
+  ReporteVentas, FiltrosReporte, FacturaReporte, RenglonReporte
 } from '../../data/reportsRepository';
 import { fetchActiveBranches, Branch } from '../../data/branchRepository';
 import { fetchTeam, fetchServicesWithPrices, Profile, ServiceWithPrices } from '../../data/adminRepository';
@@ -15,7 +16,7 @@ import { FiltrosReporteBar, OpcionSelect } from '../common/FiltrosReporte';
 import { RejillaKpi, Kpi } from '../common/RejillaKpi';
 import { TablaDatos } from '../common/TablaDatos';
 import { PanelDetalle } from '../common/PanelDetalle';
-import { ReporteImprimible, BotonImprimir } from '../common/ReporteImprimible';
+import { ReporteImprimible, imprimirReporte } from '../common/ReporteImprimible';
 import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 import { useCategoriasServicio } from '../../hooks/useCategoriasServicio';
 import { etiquetaMetodo } from '../../lib/etiquetas';
@@ -47,6 +48,18 @@ export const SalesReportSupabaseView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Imprimir con detalle o solo con cantidades.
+   *
+   * Por defecto, CON detalle: un reporte que solo dice «Lavado Básico · 2» no
+   * sirve para revisar nada, y quien quiere el resumen corto puede pedirlo. Al
+   * revés —resumen por defecto— el detalle no lo encuentra nadie.
+   */
+  const [conDetalle, setConDetalle] = useState(true);
+  const [renglones, setRenglones] = useState<RenglonReporte[] | null>(null);
+  const [recortado, setRecortado] = useState(false);
+  const [preparando, setPreparando] = useState(false);
+
   // Drill-down: las facturas del universo, o de una fila concreta.
   const [drill, setDrill] = useState<{ titulo: string; filtros: FiltrosReporte } | null>(null);
   const [facturas, setFacturas] = useState<FacturaReporte[]>([]);
@@ -72,6 +85,60 @@ export const SalesReportSupabaseView: React.FC = () => {
   }, [phase, allowed, desde, hasta, filtros]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  // Si cambia el universo, el detalle que hubiera cargado ya no corresponde:
+  // imprimirlo mezclaría el resumen de un filtro con los renglones de otro.
+  useEffect(() => { setRenglones(null); setRecortado(false); }, [desde, hasta, filtros]);
+
+  /**
+   * Imprimir: primero se traen los renglones, LUEGO se imprime.
+   *
+   * Como en el kardex, `window.print()` compone con lo que haya en el DOM en
+   * ese instante, así que pedir y mandar a imprimir en la misma tanda sacaría
+   * el papel sin el detalle. Se guardan en el estado y el efecto de abajo
+   * imprime cuando el navegador ya los pintó.
+   *
+   * En modo «solo cantidades» no se pide nada: se imprime directo.
+   */
+  const prepararImpresion = async () => {
+    if (preparando || !report) return;
+    if (!conDetalle) { imprimirReporte('carta'); return; }
+    if (renglones) { imprimirReporte('carta'); return; }
+    setPreparando(true); setError(null);
+    try {
+      const r = await fetchRenglonesDelReporte(desde, hasta, filtros);
+      setRenglones(r.rows);
+      setRecortado(r.truncated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo preparar el detalle');
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!renglones) return;
+    imprimirReporte('carta');
+  }, [renglones]);
+
+  /** Los renglones agrupados por concepto, que es como se leen en el papel. */
+  const detallePorConcepto = useMemo(() => {
+    if (!renglones) return [];
+    const grupos = new Map<string, RenglonReporte[]>();
+    for (const r of renglones) {
+      const k = `${r.kind}·${r.item_name}`;
+      const lista = grupos.get(k);
+      if (lista) lista.push(r); else grupos.set(k, [r]);
+    }
+    return [...grupos.entries()].map(([clave, filas]) => ({
+      clave,
+      nombre: filas[0].item_name,
+      esServicio: filas[0].kind === 'service',
+      unidades: filas.reduce((a, f) => a + f.quantity, 0),
+      importe: filas.reduce((a, f) => a + f.amount_cents, 0),
+      filas
+    })).sort((a, b) => b.importe - a.importe);
+  }, [renglones]);
 
   const abrirDrill = useCallback((titulo: string, extra: FiltrosReporte) => {
     const combinado = { ...filtros, ...extra };
@@ -165,7 +232,29 @@ export const SalesReportSupabaseView: React.FC = () => {
         subtitle="Qué se vendió, quién lo cobró y cómo se pagó"
         actions={
           <>
-            <BotonImprimir disabled={!report || loading} />
+            {/* El interruptor va PEGADO al botón de imprimir, no escondido en
+                los filtros: es una decisión sobre el papel, y se toma justo
+                antes de pulsar. */}
+            <div className="inline-flex rounded-lg border border-line overflow-hidden" role="group"
+              aria-label="Nivel de detalle al imprimir">
+              <button type="button" onClick={() => setConDetalle(true)}
+                aria-pressed={conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Detallado
+              </button>
+              <button type="button" onClick={() => setConDetalle(false)}
+                aria-pressed={!conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  !conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Solo cantidades
+              </button>
+            </div>
+            <Button variant="outline" size="sm" disabled={!report || loading || preparando}
+              onClick={() => void prepararImpresion()}>
+              {preparando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              {preparando ? 'Preparando…' : 'Imprimir'}
+            </Button>
             <Button variant="outline" size="sm" disabled={!report || loading} onClick={exportCsv}>
               <Download className="w-4 h-4" /> Exportar filtrado
             </Button>
@@ -296,7 +385,63 @@ export const SalesReportSupabaseView: React.FC = () => {
           <table><thead><tr><th>Cajero</th><th className="num">Facturas</th><th className="num">Importe</th></tr></thead>
             <tbody>{report.por_cajero.map(x => (
               <tr key={x.profile_id}><td>{x.name}</td><td className="num">{x.invoice_count}</td><td className="num">{money(x.sales_cents)}</td></tr>))}</tbody></table>
-          <p className="pr-nota">Ventas de facturas vigentes; las anuladas se cuentan aparte y las notas de crédito quedan fuera. Cobros según los movimientos de caja del periodo.</p>
+          {/* EL DETALLE. Lo que estaba detrás de cada cantidad y no salía en
+              ninguna parte: cuáles fueron esos dos lavados básicos, a qué
+              vehículo, en qué factura y quién los cobró. */}
+          {conDetalle && renglones && (
+            <>
+              <h3>Detalle de cada venta</h3>
+              {/* Sin esta línea, quien sume la columna de importes y la compare
+                  con la tarjeta «Ventas» de arriba va a encontrar una
+                  diferencia y pensar que el reporte está mal. Son los mismos
+                  importes que «Ventas por servicio»: base gravable, sin ITBIS.
+                  Un reporte que invita a una resta equivocada no está
+                  terminado. */}
+              <p className="pr-nota">
+                Los importes son los mismos de «Ventas por servicio»: base sin ITBIS. La tarjeta
+                «Ventas» de arriba incluye el impuesto, por eso suma más.
+              </p>
+              {recortado && (
+                <p className="pr-nota">
+                  ATENCIÓN: hay más renglones de los que caben en un reporte. Se imprimen los
+                  primeros {renglones.length}. Acote el periodo o use los filtros para verlos todos.
+                </p>
+              )}
+              {detallePorConcepto.map(g => (
+                <table key={g.clave}>
+                  <thead>
+                    <tr>
+                      <th colSpan={3}>
+                        {g.nombre} {g.esServicio ? '' : '(producto)'} · {g.unidades} {g.unidades === 1 ? 'unidad' : 'unidades'}
+                      </th>
+                      <th className="num" colSpan={3}>{money(g.importe)}</th>
+                    </tr>
+                    <tr>
+                      <th>Fecha</th><th>Factura</th><th>Vehículo / cliente</th>
+                      <th className="num">Cant.</th><th className="num">Importe</th><th>Facturó</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.filas.map((r, i) => (
+                      <tr key={`${r.invoice_id}-${i}`}>
+                        <td>{new Date(r.created_at).toLocaleString('es-DO', {
+                          day: '2-digit', month: '2-digit', year: '2-digit',
+                          hour: '2-digit', minute: '2-digit'
+                        })}</td>
+                        <td>{r.invoice_number}</td>
+                        <td>{[r.vehicle_plate, r.customer_name].filter(Boolean).join(' · ') || '—'}</td>
+                        <td className="num">{r.quantity}</td>
+                        <td className="num">{money(r.amount_cents)}</td>
+                        <td>{r.cashier_name ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ))}
+            </>
+          )}
+
+          <p className="pr-nota">Ventas de facturas vigentes; las anuladas se cuentan aparte y las notas de crédito quedan fuera. Cobros según los movimientos de caja del periodo.{conDetalle && renglones ? ' El detalle solo incluye facturas vigentes, para que sume lo mismo que el resumen.' : ''}</p>
         </ReporteImprimible>
       )}
     </div>
