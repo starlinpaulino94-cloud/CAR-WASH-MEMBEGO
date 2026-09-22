@@ -787,6 +787,42 @@ check('el cambio de rol se guardó',
   sql("select role::text from profiles where full_name='Cajero E2E'") === 'supervisor',
   sql("select role::text from profiles where full_name='Cajero E2E'"));
 
+// --- Poner el nombre a una ficha que llegó en blanco.
+//
+// Quien entra por el enlace de Membego llega SIN nombre —el token trae correo,
+// rol y empresa, nunca cómo se llama— y hasta ahora no había forma de
+// arreglarlo desde ninguna pantalla: `full_name` solo se escribía al dar de
+// alta a mano. Se prueba por la interfaz porque lo que faltaba era justamente
+// el botón; la base ya lo permitía.
+sql(`update public.profiles set full_name = '' where id='33333333-3333-3333-3333-333333333333';`);
+await go(page, /^Configuración/, /^Impresión/);
+await go(page, /^Configuración/, /^Usuarios/);
+
+check('una ficha sin nombre se ve como «(sin nombre)», no como un hueco',
+  (await page.getByText('(sin nombre)').count()) > 0);
+
+await page.getByRole('button', { name: /Editar la ficha de cajero@example\.com/i }).click();
+await page.waitForTimeout(600);
+await page.getByLabel(/Nombre completo/).fill('Cajero Con Nombre E2E');
+await page.getByLabel(/Teléfono/).fill('809-555-4321');
+await page.getByRole('button', { name: 'Guardar ficha' }).click();
+await page.waitForTimeout(2200);
+
+check('el nombre puesto desde la pantalla se guardó',
+  sql("select full_name from profiles where id='33333333-3333-3333-3333-333333333333'")
+    === 'Cajero Con Nombre E2E',
+  sql("select coalesce(nullif(full_name,''),'(vacío)') from profiles where id='33333333-3333-3333-3333-333333333333'"));
+
+check('y el teléfono también',
+  sql("select coalesce(phone,'(nulo)') from profiles where id='33333333-3333-3333-3333-333333333333'")
+    === '809-555-4321');
+
+check('el correo NO se edita aquí: sigue siendo la llave del acceso',
+  (await page.getByRole('textbox', { name: /Correo/i }).count()) === 0);
+
+// Se devuelve el nombre que esperan las comprobaciones de más abajo.
+sql(`update public.profiles set full_name = 'Cajero E2E' where id='33333333-3333-3333-3333-333333333333';`);
+
 // La base impide ascenderse a uno mismo, aunque se llame al API directamente.
 check('nadie se asciende a sí mismo, ni el propietario',
   (() => {

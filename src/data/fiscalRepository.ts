@@ -145,6 +145,36 @@ export async function updateProfileAccess(
   return data[0];
 }
 
+/**
+ * Corrige la FICHA de una persona: su nombre y su teléfono.
+ *
+ * Existe porque quien entra por el enlace de Membego llega SIN nombre. El token
+ * del SSO trae `sub`, `email`, `rol` y la empresa —nunca cómo se llama la
+ * persona— así que el perfil nace con el nombre en blanco y hasta ahora no
+ * había forma de arreglarlo: `full_name` solo se escribía al dar de alta a
+ * alguien a mano. La lista quedaba llena de «(sin nombre)» para siempre.
+ *
+ * No toca el correo a propósito. El correo es la llave con la que Membego
+ * reencuentra a la persona en cada entrada y con la que inicia sesión, y vive
+ * en `auth.users`, no aquí: cambiarlo en esta tabla dejaría las dos versiones
+ * distintas —la pantalla enseñando una y el acceso funcionando con la otra— sin
+ * que nada avisara. Tampoco toca el rol ni el acceso, que tienen sus propios
+ * controles en esta misma pantalla, ni la sucursal o el pago, que van por sus
+ * funciones con guardia.
+ */
+export async function updateProfileIdentity(
+  id: string, patch: { full_name?: string; phone?: string | null }
+): Promise<Profile> {
+  const { data, error } = await requireSupabase()
+    .from('profiles').update(patch).eq('id', id).select();
+  if (error) throw fallaDatos(error);
+  // RLS filtra en silencio: 0 filas significa denegado, no éxito.
+  if (!data || data.length === 0) {
+    throw new Error('No se pudo guardar: su rol no alcanza para editar esta ficha.');
+  }
+  return data[0];
+}
+
 export async function resetEmployeePassword(profileId: string, password: string): Promise<void> {
   const { error } = await requireSupabase().rpc('reset_employee_password', {
     p_profile_id: profileId, p_password: password
