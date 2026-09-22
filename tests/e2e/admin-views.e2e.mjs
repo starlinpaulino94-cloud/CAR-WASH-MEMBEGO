@@ -1027,6 +1027,84 @@ await page.waitForTimeout(600);
 check('el modo noche vuelve a oscurecer',
   luminancia(await fondo()) < 0.2, await fondo());
 
+// =========================================================================
+console.log('\n[16] Reporte de ventas: el detalle detrás de las cantidades');
+// =========================================================================
+//
+// La queja era: «si dice que hay dos lavados básicos y le doy a imprimir, me
+// debe aparecer el detalle de esos dos lavados y quién los facturó». Se montan
+// DOS facturas del mismo servicio para que el resumen diga «2» y el papel tenga
+// algo que desglosar.
+// Factura el DUEÑO y no el cajero: una prueba anterior de esta misma suite le
+// cambió el rol a supervisor, y un supervisor no emite facturas (la RLS de
+// `invoices` no lo incluye, igual que el permiso `issueInvoice`). Lo que se
+// comprueba aquí es que el papel diga quién facturó, no cuál de los dos fue.
+sql(`
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'e2e-det-1',
+    jsonb_build_array(jsonb_build_object('item_type','service',
+      'service_id','44444444-4444-4444-4444-444444444444','name','Lavado Completo',
+      'quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    jsonb_build_array(jsonb_build_object('method','tarjeta','amount_cents',
+      (select round(price_cents * 1.18)::bigint from service_prices
+        where service_id='44444444-4444-4444-4444-444444444444' and vehicle_category='sedan'))),
+    'sedan', null, null, 'Cliente Detalle Uno', null, 'DET001', null, null);
+  select public.create_invoice('22222222-2222-2222-2222-222222222222'::uuid,'e2e-det-2',
+    jsonb_build_array(jsonb_build_object('item_type','service',
+      'service_id','44444444-4444-4444-4444-444444444444','name','Lavado Completo',
+      'quantity',1,'discount_cents',0,'is_membego_covered',false)),
+    jsonb_build_array(jsonb_build_object('method','tarjeta','amount_cents',
+      (select round(price_cents * 1.18)::bigint from service_prices
+        where service_id='44444444-4444-4444-4444-444444444444' and vehicle_category='sedan'))),
+    'sedan', null, null, 'Cliente Detalle Dos', null, 'DET002', null, null);
+`);
+
+await go(page, /^Reportes/, /^Ventas/);
+await page.waitForTimeout(2500);
+await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+check('«Detallado» viene marcado por defecto, sin tener que pedirlo',
+  (await page.getByRole('button', { name: 'Detallado' }).getAttribute('aria-pressed')) === 'true');
+
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(3500);
+
+check('imprimir en detalle llega a disparar la impresión',
+  (await page.evaluate(() => window.__imprimio)) === 1);
+
+const papel = await page.locator('.print-report').innerText();
+
+check('el papel ya no se queda en la cantidad: trae el detalle de cada venta',
+  papel.includes('Detalle de cada venta'));
+check('y nombra CADA una de las dos ventas por su factura',
+  papel.includes('DET001') && papel.includes('DET002'),
+  `DET001=${papel.includes('DET001')} DET002=${papel.includes('DET002')}`);
+check('con el vehículo o el cliente de cada una',
+  papel.includes('Cliente Detalle Uno') && papel.includes('Cliente Detalle Dos'));
+// Esta comprobación se acotó a la SECCIÓN de detalle a propósito. Escrita
+// contra el papel entero pasaba igual con el detalle apagado, porque «Dueño
+// E2E» también aparece en el resumen «Ventas por cajero»: comprobaba que el
+// nombre existe en algún sitio, no que acompañe a cada venta.
+const soloDetalle = papel.slice(papel.indexOf('Detalle de cada venta'));
+check('y QUIÉN las facturó, junto a cada venta y no solo en el resumen',
+  soloDetalle.includes('Facturó') && soloDetalle.includes('Dueño E2E'),
+  `sección de detalle: ${soloDetalle.length} caracteres`);
+check('el papel avisa de que los importes van sin ITBIS, para que nadie reste mal',
+  papel.includes('sin ITBIS'));
+
+// Y el otro modo: quien quiera el resumen corto lo tiene.
+await page.getByRole('button', { name: 'Solo cantidades' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(1500);
+
+const papelCorto = await page.locator('.print-report').innerText();
+check('en «solo cantidades» el detalle NO sale',
+  !papelCorto.includes('Detalle de cada venta'));
+check('pero el resumen por servicio sigue ahí',
+  papelCorto.includes('Ventas por servicio'));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

@@ -79,6 +79,52 @@ export async function fetchFacturasDelReporte(
   return data as unknown as PaginaFacturas;
 }
 
+// ─────────────────────────── El detalle que hay detrás de cada cantidad
+
+export interface RenglonReporte {
+  kind: 'service' | 'product';
+  item_id: string | null;
+  item_name: string;
+  quantity: number;
+  amount_cents: number;
+  invoice_id: string;
+  invoice_number: string;
+  created_at: string;
+  customer_name: string;
+  vehicle_plate: string;
+  cashier_name: string | null;
+}
+
+export interface RenglonesReporte {
+  total: number;
+  rows: RenglonReporte[];
+  limit: number;
+  /** true cuando había más renglones que el tope: el papel enseña una parte. */
+  truncated: boolean;
+}
+
+/**
+ * Los renglones detrás de las cantidades del reporte de ventas.
+ *
+ * El resumen dice «Lavado Básico · 2 · RD$ 1,000»; esto dice CUÁLES fueron esos
+ * dos, a qué vehículo, en qué factura y quién los cobró. Mismo universo y
+ * mismos filtros que `fetchReporteVentas`, así que lo que se imprime debajo de
+ * una cifra siempre es lo que forma esa cifra.
+ *
+ * Se pide aparte y no dentro del reporte porque solo hace falta al imprimir en
+ * detalle: cargarlo en cada refresco de la pantalla sería traerse miles de
+ * renglones que nadie va a mirar.
+ */
+export async function fetchRenglonesDelReporte(
+  from: string, to: string, filtros: FiltrosReporte = {}, limite = 2000
+): Promise<RenglonesReporte> {
+  const { data, error } = await requireSupabase().rpc('sales_report_lines', {
+    p_from: from, p_to: to, p_filtros: limpiarFiltros(filtros), p_limit: limite
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as RenglonesReporte;
+}
+
 export interface RendimientoLavadorDetalle {
   profile_id: string;
   full_name: string;

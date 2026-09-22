@@ -166,6 +166,103 @@ select test.check('KPI y drill-down suman igual',
      from jsonb_array_elements(public.sales_report_invoices('2099-06-15','2099-06-15') -> 'rows') r)
    = (public.sales_report('2099-06-15','2099-06-15') -> 'kpis' ->> 'ventas_cents')::bigint);
 
+-- ── EL DETALLE DETRÁS DE LAS CANTIDADES ──
+--
+-- Lo que se protege aquí es que el papel no se contradiga: el detalle tiene que
+-- sumar EXACTAMENTE lo que dice el resumen de arriba. Si el detalle incluyera
+-- las anuladas —que sí entran al universo, porque el KPI «anulado» las cuenta
+-- aparte— el reporte impreso tendría una tabla que no cuadra con su propio
+-- encabezado, y eso es peor que no tener detalle.
+-- El detalle se imprime DEBAJO de «Ventas por servicio», así que tiene que
+-- sumar lo que suman esas tablas: la base gravable (cantidad × precio −
+-- descuento), no el KPI «Ventas», que lleva el ITBIS encima. Esta prueba se
+-- escribió primero contra el KPI y falló con razón — 150000 contra 177000, que
+-- son exactamente los 27000 de impuesto. El fallo era de la prueba, no de la
+-- función, y la comprobación correcta es además la que importa: lo que el ojo
+-- va a cotejar en el papel es la columna de al lado, no la tarjeta de arriba.
+select test.check('el detalle suma lo MISMO que «por servicio» + «por producto»',
+  (select coalesce(sum((r ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r)
+   = coalesce((select sum((x ->> 'sales_cents')::bigint) from jsonb_array_elements(
+        public.sales_report('2099-06-15','2099-06-15') -> 'por_servicio') x), 0)
+   + coalesce((select sum((x ->> 'sales_cents')::bigint) from jsonb_array_elements(
+        public.sales_report('2099-06-15','2099-06-15') -> 'por_producto') x), 0));
+
+-- Y la diferencia con el KPI es exactamente el impuesto, ni un centavo más.
+select test.check('lo que le falta al detalle para llegar al KPI es el ITBIS, exacto',
+  (select coalesce(sum((r ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r)
+   + (public.sales_report('2099-06-15','2099-06-15') -> 'kpis' ->> 'impuesto_cents')::bigint
+   = (public.sales_report('2099-06-15','2099-06-15') -> 'kpis' ->> 'ventas_cents')::bigint);
+
+-- El renglón de la factura ANULADA no puede aparecer: su importe está en el KPI
+-- «anulado», no en «ventas».
+select test.check('los renglones de una factura anulada NO salen en el detalle',
+  (select count(*) from jsonb_array_elements(
+     public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r
+   where (r ->> 'amount_cents')::bigint = 20000) = 0);
+
+-- Lo que el dueño pidió: quién facturó cada renglón.
+select test.check('cada renglón dice quién lo facturó',
+  (select count(*) from jsonb_array_elements(
+     public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r
+   where coalesce(r ->> 'cashier_name', '') = '') = 0);
+
+select test.check('y con qué factura y qué vehículo',
+  (select count(*) from jsonb_array_elements(
+     public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r
+   where coalesce(r ->> 'invoice_number', '') = ''
+      or r ->> 'created_at' is null) = 0);
+
+-- Los filtros son los MISMOS que los del resumen: si no, el detalle de una
+-- pantalla filtrada enseñaría ventas que la pantalla no está mostrando.
+select test.check('el detalle respeta el filtro por método igual que el resumen',
+  (select coalesce(sum((r ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(
+       public.sales_report_lines('2099-06-15','2099-06-15',
+         '{"payment_method":"tarjeta"}'::jsonb) -> 'rows') r)
+   = coalesce((select sum((x ->> 'sales_cents')::bigint) from jsonb_array_elements(
+        public.sales_report('2099-06-15','2099-06-15',
+          '{"payment_method":"tarjeta"}'::jsonb) -> 'por_servicio') x), 0)
+   + coalesce((select sum((x ->> 'sales_cents')::bigint) from jsonb_array_elements(
+        public.sales_report('2099-06-15','2099-06-15',
+          '{"payment_method":"tarjeta"}'::jsonb) -> 'por_producto') x), 0));
+
+-- Y de verdad acota: con el filtro sale MENOS que sin él. Sin esta línea, la
+-- de arriba pasaría igual si el filtro no hiciera nada, porque compararía dos
+-- consultas sin filtrar.
+select test.check('y filtrar deja fuera ventas de verdad',
+  (select coalesce(sum((r ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(
+       public.sales_report_lines('2099-06-15','2099-06-15',
+         '{"payment_method":"tarjeta"}'::jsonb) -> 'rows') r)
+   < (select coalesce(sum((r ->> 'amount_cents')::bigint), 0)
+        from jsonb_array_elements(
+          public.sales_report_lines('2099-06-15','2099-06-15') -> 'rows') r));
+
+-- El tope se DICE. Con `p_limit` a 1 sobre un periodo con más de un renglón,
+-- `truncated` tiene que salir true: cortar en silencio convertiría el reporte
+-- en una mentira con buena letra.
+select test.check('cuando hay más renglones que el tope, se avisa',
+  (public.sales_report_lines('2099-06-15','2099-06-15','{}'::jsonb, 1) ->> 'truncated')::boolean
+  and jsonb_array_length(
+    public.sales_report_lines('2099-06-15','2099-06-15','{}'::jsonb, 1) -> 'rows') = 1);
+
+select test.check('y sin recorte, no se avisa de nada',
+  not (public.sales_report_lines('2099-06-15','2099-06-15') ->> 'truncated')::boolean);
+
+-- Mismo portero que el resumen: quien no ve el reporte tampoco ve el desglose,
+-- que dice más.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+select test.expect_error('un cajero no puede pedir el detalle del reporte',
+  $q$select public.sales_report_lines('2099-06-15','2099-06-15')$q$);
+
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_owner_a'), false);
+set role authenticated;
+
 -- ── washer_report ──
 select test.check('op1 tiene 1 lavado en el periodo',
   (select (w ->> 'lavados')::int from jsonb_array_elements(

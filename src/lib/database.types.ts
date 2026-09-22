@@ -2957,6 +2957,10 @@ export interface Database {
         Args: { p_from: string; p_to: string; p_filtros?: Json };
         Returns: Json;
       };
+      sales_report_lines: {
+        Args: { p_from: string; p_to: string; p_filtros?: Json; p_limit?: number };
+        Returns: Json;
+      };
       sales_report_invoices: {
         Args: { p_from: string; p_to: string; p_filtros?: Json; p_page?: number; p_size?: number };
         Returns: Json;
