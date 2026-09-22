@@ -1105,6 +1105,58 @@ check('en «solo cantidades» el detalle NO sale',
 check('pero el resumen por servicio sigue ahí',
   papelCorto.includes('Ventas por servicio'));
 
+// =========================================================================
+console.log('\n[17] Cierre de caja: el detalle detrás del descuadre');
+// =========================================================================
+//
+// El cierre impreso llevaba solo el arqueo. Un descuadre se VEÍA —«faltan
+// 500»— pero no se podía rastrear: el movimiento que lo explica estaba en la
+// pantalla y no en el papel que se archiva.
+await go(page, /^Caja/, /^Caja actual/);
+await page.waitForTimeout(2500);
+
+const sesionesCaja = page.locator('table:has(caption:text-is("Histórico de cajas")) tbody tr');
+const hayCajas = await sesionesCaja.count();
+check('el histórico de cajas trae al menos una sesión que revisar',
+  hayCajas > 0, `${hayCajas} sesión(es)`);
+
+if (hayCajas > 0) {
+  await sesionesCaja.first().click();
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+  check('el cierre de caja también viene en «Detallado» por defecto',
+    (await page.getByRole('button', { name: 'Detallado' }).getAttribute('aria-pressed')) === 'true');
+
+  await page.getByRole('button', { name: /^Imprimir/ }).click();
+  await page.waitForTimeout(1500);
+  check('imprimir el cierre dispara la impresión',
+    (await page.evaluate(() => window.__imprimio)) === 1);
+
+  const papelCaja = await page.locator('.print-report').innerText();
+  check('el cierre impreso ya no se queda en el arqueo: trae los movimientos',
+    papelCaja.includes('Movimientos de la caja'));
+
+  // Acotado a la sección de movimientos: «Registró» solo existe en esa tabla,
+  // así que buscarlo en el papel entero no distinguiría un cierre con detalle
+  // de uno sin él.
+  const soloMovs = papelCaja.slice(papelCaja.indexOf('Movimientos de la caja'));
+  check('cada movimiento dice de qué factura salió y quién lo anotó',
+    soloMovs.includes('Factura') && soloMovs.includes('Registró'),
+    `sección: ${soloMovs.length} caracteres`);
+  check('el papel avisa de que el neto incluye todos los métodos, no solo la gaveta',
+    papelCaja.includes('pasa por la gaveta'));
+
+  // Y el modo corto sigue existiendo para quien solo quiere el arqueo.
+  await page.getByRole('button', { name: 'Solo totales' }).click();
+  await page.waitForTimeout(400);
+  const papelCorto2 = await page.locator('.print-report').innerText();
+  check('en «solo totales» los movimientos NO salen',
+    !papelCorto2.includes('Movimientos de la caja'));
+  check('pero el arqueo sigue completo',
+    papelCorto2.includes('Efectivo esperado') && papelCorto2.includes('Diferencia'));
+}
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
