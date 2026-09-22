@@ -198,6 +198,56 @@ select test.check('SSO: SUPERADMIN se mapea a superadmin (admin máximo, acotado
   (select role = 'superadmin' and company_id = test.var('c_a')::uuid
      from public.profiles where id = test.var('sso_uid4')::uuid));
 
+-- ---- EL ROL QUE PONE EL CAR WASH MANDA SOBRE EL DE MEMBEGO
+--
+-- El síntoma era: «le doy administrador y pasado un tiempo vuelve a cajero».
+-- No era el tiempo, era la siguiente entrada por el enlace de Membego, que
+-- reescribía el rol con el del token y no lo contaba en ninguna parte.
+--
+-- Membego decide el rol la PRIMERA vez —es como la persona consigue entrar—;
+-- en cuanto alguien del car wash lo fija aquí, aquí manda.
+set role postgres;
+
+select test.check('el rol que puso el SSO NO viene marcado como decisión del car wash',
+  (select not role_set_locally from public.profiles where id = test.var('sso_uid')::uuid));
+
+-- El dueño lo asciende desde Personal (la pantalla escribe la tabla directa).
+select set_config('app.branch_ctx', 'ok', true);
+update public.profiles set role = 'administrador' where id = test.var('sso_uid')::uuid;
+select set_config('app.branch_ctx', '', true);
+
+select test.check('ascenderlo en el car wash lo marca como decisión propia',
+  (select role = 'administrador' and role_set_locally
+     from public.profiles where id = test.var('sso_uid')::uuid));
+
+-- Vuelve a entrar por Membego, que sigue diciendo GERENTE (→ supervisor).
+select public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE');
+
+select test.check('volver a entrar por Membego YA NO le quita el rol que le dieron aquí',
+  (select role = 'administrador' from public.profiles where id = test.var('sso_uid')::uuid));
+
+-- La otra mitad, que era peor: `is_active` se forzaba a true en cada entrada,
+-- así que dar de baja a alguien en Personal no servía de nada — volvía a
+-- entrar por el enlace y se reactivaba solo.
+update public.profiles set is_active = false where id = test.var('sso_uid')::uuid;
+select public.membego_sso_upsert_user('MG-A', 'mg-sub-1', 'gerente@alfa.test', 'GERENTE');
+
+select test.check('a quien se dio de baja aquí, entrar por Membego NO lo reactiva',
+  (select not is_active from public.profiles where id = test.var('sso_uid')::uuid));
+
+-- Se deja como estaba para las pruebas que vienen detrás.
+update public.profiles set is_active = true where id = test.var('sso_uid')::uuid;
+
+-- Y lo que NO cambia: quien llega nuevo estrena el rol que diga Membego. Sin
+-- esto, nadie podría entrar nunca la primera vez.
+select test.set_var('sso_nuevo',
+  public.membego_sso_upsert_user('MG-A', 'mg-sub-9', 'recien@alfa.test', 'RECEPCION')::text);
+select test.check('un empleado nuevo SÍ estrena el rol que manda Membego',
+  (select role = 'recepcionista' and not role_set_locally
+     from public.profiles where id = test.var('sso_nuevo')::uuid));
+
+set role authenticated;
+
 set role postgres;
 -- La 20260807150000 dejó de generar contraseña a propósito, y es MÁS seguro:
 -- estos usuarios entran siempre por enlace mágico, así que un hash de una
