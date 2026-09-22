@@ -75,14 +75,21 @@ export const ErrorState: React.FC<{ message: string; onRetry: () => void; title?
 );
 
 export const InlineAlert: React.FC<{
-  tone: 'error' | 'success' | 'warning';
+  /**
+   * `info` explica cómo funciona algo; no avisa de nada que haya salido mal.
+   * Existe para no tener que pintar de amarillo una regla que el usuario
+   * necesita conocer: si todo lo que informa parece una advertencia, se dejan
+   * de leer las advertencias.
+   */
+  tone: 'error' | 'success' | 'warning' | 'info';
   children: React.ReactNode;
   onDismiss?: () => void;
 }> = ({ tone, children, onDismiss }) => {
   const styles = {
     error:   'bg-danger/50 border-danger/40 text-danger',
     success: 'bg-success/40 border-success/40 text-success',
-    warning: 'bg-warning/40 border-warning/40 text-warning'
+    warning: 'bg-warning/40 border-warning/40 text-warning',
+    info:    'bg-info/20 border-info/40 text-info'
   }[tone];
   return (
     <div role={tone === 'error' ? 'alert' : 'status'}

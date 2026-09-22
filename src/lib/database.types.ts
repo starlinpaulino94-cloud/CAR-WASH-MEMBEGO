@@ -2391,6 +2391,14 @@ export interface Database {
           branch_scope: Database['public']['Enums']['branch_scope'];
           /** false = empleado sin cuenta (lavador): no puede entrar al sistema. */
           has_login: boolean;
+          /**
+           * true cuando el rol lo fijó alguien del car wash. Mientras lo sea, el
+           * SSO de Membego no lo reescribe. NO está en Update: lo enciende el
+           * trigger `profiles_role_origin`, no el cliente — si el navegador
+           * pudiera apagarlo, la protección duraría lo que tarda alguien en
+           * mandar un PATCH.
+           */
+          role_set_locally: boolean;
           promotion_kind: "porcentaje" | "importe";
           promotion_scope: "total" | "servicio" | "categoria";
           notification_kind: "orden_lista" | "recordatorio_cita" | "stock_bajo" | "cuenta_vencida" | "mantenimiento_pendiente" | "caja_sin_cerrar" | "otro";

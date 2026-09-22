@@ -163,6 +163,18 @@ export const UsersSupabaseView: React.FC = () => {
         serlo. Estas reglas las aplica la base de datos, no esta pantalla.
       </InlineAlert>
 
+      {/* Hasta la 20260922140000, cada entrada por el enlace de Membego
+          reescribía el rol con el del token: el ascenso dado aquí se deshacía
+          solo, sin aviso ni rastro. Ahora manda el de aquí, y se dice en la
+          pantalla donde se asignan los roles para que nadie tenga que
+          descubrirlo por su cuenta. */}
+      <InlineAlert tone="info">
+        El rol que se asigna aquí manda. Quien entra por Membego estrena el rol que
+        traiga de allá la primera vez; a partir de ahí, lo que usted ponga en esta
+        pantalla se queda, aunque vuelva a entrar por el enlace. Dar de baja a
+        alguien aquí tampoco se deshace al volver a entrar.
+      </InlineAlert>
+
       <div className="bg-surface/80 border border-line rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <Table className="text-xs">
