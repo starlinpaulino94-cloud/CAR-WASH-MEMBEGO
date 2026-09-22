@@ -3182,7 +3182,7 @@ export interface Database {
         Returns: Database['public']['Tables']['profiles']['Row'];
       };
       adjust_stock: {
-        Args: { p_product_id: string; p_new_qty: number; p_reason: string };
+        Args: { p_product_id: string; p_new_qty: number; p_reason?: string | null };
         Returns: Database['public']['Tables']['products']['Row'];
       };
       register_purchase: {

@@ -201,6 +201,78 @@ check('el ajuste quedó en el kardex con su motivo',
        join products p on p.id = m.product_id
        where p.code='AR1' and m.kind='ajuste' and m.reason='Conteo físico E2E'`) === '1');
 
+// --- Y AHORA SIN MOTIVO, que es el caso que reventaba en el mostrador.
+//
+// El formulario exigía cinco caracteres y, si no llegaban, no dejaba registrar
+// el ajuste. Quien contaba la nevera y veía 24 donde el sistema decía 1 se
+// quedaba sin poder corregirlo. Se prueba por la PANTALLA —abrir, escribir la
+// cantidad, dejar el motivo en blanco y pulsar— porque la validación que
+// molestaba vivía ahí: comprobar la función no habría probado el botón.
+await page.getByRole('button', { name: /Existencia de Aromatizante/ }).click();
+await page.waitForTimeout(400);
+await page.getByLabel(/Nueva existencia de Aromatizante/).fill('55');
+await page.getByRole('button', { name: 'Registrar ajuste' }).click();
+await page.waitForTimeout(2000);
+
+check('se puede ajustar la existencia SIN escribir un motivo',
+  sql("select stock from products where code='AR1'") === '55',
+  sql("select stock from products where code='AR1'"));
+
+check('y el movimiento queda igual en el kardex, con autor y hora',
+  sql(`select count(*) from inventory_movements m
+       join products p on p.id = m.product_id
+       where p.code='AR1' and m.kind='ajuste'
+         and m.qty_before=42 and m.qty_after=55
+         and m.reason is null and m.created_by is not null`) === '1');
+
+check('el formulario no se queda quejándose del motivo',
+  (await page.getByText(/motivo del ajuste \(mínimo/i).count()) === 0);
+
+// --- El reporte imprimible de los movimientos.
+//
+// `window.print()` se sustituye antes de pulsar: en el navegador de pruebas
+// abriría un diálogo que nadie va a cerrar. Lo que se comprueba no es que
+// imprima, sino lo que IRÍA al papel — que es todo lo filtrado y no la página
+// visible, que era el punto de tener un reporte.
+// Antes de imprimir se fabrican movimientos de sobra. Sin esto la prueba no
+// podría distinguir «imprime todo» de «imprime la página visible»: con cuatro
+// movimientos en la base, ambas cosas dan cuatro filas y la comprobación
+// pasaría sin comprobar nada. Con más de una página, solo pasa si el papel
+// lleva de verdad todo lo filtrado.
+sql(`
+  select set_config('request.jwt.claim.sub','66666666-6666-6666-6666-666666666666',false);
+  set role authenticated;
+  do $$
+  declare v_prod uuid := '55555555-5555-5555-5555-555555555555';
+  begin
+    for i in 1..30 loop
+      perform public.adjust_stock(v_prod, 100 + i, 'relleno e2e ' || i);
+    end loop;
+  end $$;
+`);
+
+await go(page, /^Inventario/, /^Movimientos/);
+await page.waitForTimeout(1500);
+await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(3000);
+
+check('el botón de imprimir llega a disparar la impresión',
+  (await page.evaluate(() => window.__imprimio)) === 1);
+
+const filasPapel = await page.locator('.print-report tbody tr').count();
+const filasPantalla = await page.locator('tbody tr:visible').count();
+const totalMovs = Number(sql("select count(*) from inventory_movements"));
+check('el papel lleva TODOS los movimientos del filtro, no solo la página visible',
+  filasPapel === totalMovs && filasPapel > filasPantalla,
+  `papel ${filasPapel} · pantalla ${filasPantalla} · base ${totalMovs}`);
+
+check('el papel dice de qué empresa y quién lo generó',
+  (await page.locator('.print-report .pr-cabecera').innerText()).includes('Generado por'));
+
+check('y el ajuste sin motivo se explica en el papel, no sale en blanco',
+  (await page.locator('.print-report tbody').innerText()).includes('sin motivo indicado'));
+
 // --- Bahías
 await go(page, /^Operaciones/, /^Bahías/);
 await page.getByRole('button', { name: /Fuera de servicio/ }).click();
@@ -659,6 +731,13 @@ sql(`
     'sedan', null, null, 'Cliente NC E2E', null, 'NCE001', null, null);
 `);
 
+// La existencia ANTES de acreditar. Se mide el movimiento, no un número
+// absoluto: lo que esta prueba afirma es que la nota devuelve una unidad al
+// inventario, y eso no debería depender de cuánto ajustó una prueba anterior
+// cincuenta líneas más arriba. Con el número fijo, tocar cualquier otra prueba
+// rompía ésta sin que nada estuviera mal.
+const stockAntesNC = Number(sql("select stock from products where code='AR1'"));
+
 await go(page, /^Facturación/, /^Notas de crédito/);
 await page.getByRole('button', { name: /Emitir nota/ }).click();
 await page.waitForTimeout(600);
@@ -680,8 +759,8 @@ check('la nota parcial acredita solo una unidad y deja viva la factura',
 check('la línea recuerda lo acreditado y el inventario volvió por una unidad',
   sql(`select i.credited_quantity::text from invoice_items i
        join invoices f on f.id = i.invoice_id
-       where f.client_request_id='e2e-nc-1'`) === '1' && stockNC === 40,
-  `stock=${stockNC}`);
+       where f.client_request_id='e2e-nc-1'`) === '1' && stockNC === stockAntesNC + 1,
+  `stock ${stockAntesNC} → ${stockNC}`);
 
 // --- Fiscal: cargar un rango NCF y verlo vigente.
 await go(page, /^Facturación/, /^Fiscal/);

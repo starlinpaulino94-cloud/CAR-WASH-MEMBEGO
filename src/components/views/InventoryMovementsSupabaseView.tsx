@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, ExternalLink, Download, Loader2, Printer } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '../../context/NavigationContext';
@@ -10,9 +10,10 @@ import {
 import { ViewHeader, ErrorState, SearchBox, Pagination, ReadOnlyNotice, FilterChips } from '../common/DataViewShell';
 import { TablaDatos } from '../common/TablaDatos';
 import { FiltroFechas } from '../common/FiltroFechas';
-import { SeleccionFecha, rangoDeFechas } from '../../lib/rangosFecha';
+import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 import { etiquetaMovimiento } from '../../lib/etiquetas';
 import { toCsv, downloadCsv, stampedName } from '../../lib/csv';
+import { ReporteImprimible, imprimirReporte } from '../common/ReporteImprimible';
 
 const PAGE_SIZE = 25;
 
@@ -49,7 +50,7 @@ const RUTA_DOC: Record<string, string> = {
  * auditar.
  */
 export const InventoryMovementsSupabaseView: React.FC = () => {
-  const { phase, company } = useAuth();
+  const { phase, company, profile } = useAuth();
   const { navigate } = useNavigation();
   const symbol = company?.currency_symbol ?? 'RD$';
 
@@ -60,6 +61,15 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   const [data, setData] = useState<{ total: number; rows: MovimientoKardex[] }>({ total: 0, rows: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Las filas que van AL PAPEL, que no son las de la pantalla.
+   *
+   * La pantalla pagina de 25 en 25; un reporte de inventario que sale con 25
+   * de 400 movimientos no es un reporte, es un recorte. Al pulsar Imprimir se
+   * traen todas las del filtro y se imprime eso.
+   */
+  const [paraImprimir, setParaImprimir] = useState<MovimientoKardex[] | null>(null);
+  const [preparando, setPreparando] = useState(false);
 
   const { desde, hasta } = rangoDeFechas(sel);
 
@@ -80,13 +90,19 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
   // Al cambiar cualquier filtro se vuelve a la primera página.
   useEffect(() => { setPage(0); }, [desde, hasta, tipo, busqueda]);
 
-  const exportar = async () => {
+  /** Todo lo que cae dentro del filtro, no solo la página visible. */
+  const traerTodasLasFiltradas = useCallback(async (): Promise<MovimientoKardex[]> => {
     const todas: MovimientoKardex[] = [];
     for (let p = 0; p < 40; p++) {
       const r = await fetchKardexPage(filtros, p, 500);
       todas.push(...r.rows);
       if (r.rows.length < 500) break;
     }
+    return todas;
+  }, [filtros]);
+
+  const exportar = async () => {
+    const todas = await traerTodasLasFiltradas();
     downloadCsv(stampedName('kardex'), toCsv<MovimientoKardex>([
       { header: 'fecha', value: m => new Date(m.created_at).toLocaleString('es-DO') },
       { header: 'producto', value: m => m.product_name },
@@ -101,6 +117,42 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
       { header: 'motivo', value: m => m.reason ?? '' }
     ], todas));
   };
+
+  /**
+   * Imprimir: primero se traen las filas, LUEGO se imprime.
+   *
+   * No se llama a `window.print()` aquí mismo: el papel se compone con lo que
+   * haya en el DOM en ese instante, y las filas recién pedidas todavía no lo
+   * están. Se guardan en el estado y el efecto de abajo imprime cuando el
+   * navegador ya las ha pintado.
+   */
+  const prepararImpresion = async () => {
+    if (preparando) return;
+    setPreparando(true); setError(null);
+    try {
+      setParaImprimir(await traerTodasLasFiltradas());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo preparar el reporte');
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!paraImprimir) return;
+    imprimirReporte('carta');
+  }, [paraImprimir]);
+
+  /** Lo que resume el papel: cuánto entró, cuánto salió y qué valor movió. */
+  const resumen = useMemo(() => {
+    const filas = paraImprimir ?? [];
+    let entradas = 0, salidas = 0, valor = 0;
+    for (const m of filas) {
+      if (m.qty_change > 0) entradas += m.qty_change; else salidas += -m.qty_change;
+      valor += m.valor_cents;
+    }
+    return { entradas, salidas, valor, filas: filas.length };
+  }, [paraImprimir]);
 
   if (phase !== 'ready') {
     return (
@@ -120,9 +172,16 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
         title="Movimientos de inventario"
         subtitle="Cada cambio de existencia con su valor, responsable y documento de origen"
         actions={
-          <Button variant="outline" size="sm" disabled={loading} onClick={() => void exportar()}>
-            <Download className="w-4 h-4" /> Exportar filtrado
-          </Button>
+          <>
+            <Button variant="outline" size="sm" disabled={loading || preparando}
+              onClick={() => void prepararImpresion()}>
+              {preparando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              {preparando ? 'Preparando…' : 'Imprimir'}
+            </Button>
+            <Button variant="outline" size="sm" disabled={loading} onClick={() => void exportar()}>
+              <Download className="w-4 h-4" /> Exportar filtrado
+            </Button>
+          </>
         }
       />
 
@@ -171,6 +230,73 @@ export const InventoryMovementsSupabaseView: React.FC = () => {
         pageSize={PAGE_SIZE} loading={loading} onPage={setPage} />
 
       {loading && <p className="text-xs text-faint flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Cargando…</p>}
+
+      {/* El papel. Invisible en pantalla; en la impresora es lo único que sale.
+          Lleva TODAS las filas del filtro, no la página que se esté viendo. */}
+      {paraImprimir && (
+        <ReporteImprimible
+          empresa={company?.trade_name}
+          titulo="Movimientos de inventario"
+          periodo={describirRango(sel)}
+          filtros={[
+            `Clase: ${TIPOS.find(t => t.id === tipo)?.label ?? 'Todos'}`,
+            ...(busqueda ? [`Producto: ${busqueda}`] : []),
+            `Movimientos: ${resumen.filas}`
+          ]}
+          generadoPor={profile?.full_name}
+        >
+          <div className="pr-kpis">
+            <div>
+              <div className="pr-kpi-label">Entradas</div>
+              <div className="pr-kpi-valor">+{resumen.entradas}</div>
+            </div>
+            <div>
+              <div className="pr-kpi-label">Salidas</div>
+              <div className="pr-kpi-valor">−{resumen.salidas}</div>
+            </div>
+            <div>
+              <div className="pr-kpi-label">Valor movido</div>
+              <div className="pr-kpi-valor">{formatCents(resumen.valor, symbol)}</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Producto</th><th>Clase</th>
+                <th className="num">Cambio</th><th className="num">Antes</th><th className="num">Después</th>
+                <th className="num">Valor</th><th>Documento / motivo</th><th>Responsable</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paraImprimir.map(m => (
+                <tr key={m.id}>
+                  <td>{new Date(m.created_at).toLocaleString('es-DO', {
+                    day: '2-digit', month: '2-digit', year: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                  })}</td>
+                  <td>{m.product_name}<br /><small>{m.product_code}</small></td>
+                  <td>{etiquetaMovimiento(m.kind)}</td>
+                  <td className="num">{m.qty_change > 0 ? `+${m.qty_change}` : m.qty_change}</td>
+                  <td className="num">{m.qty_before}</td>
+                  <td className="num">{m.qty_after}</td>
+                  <td className="num">{formatCents(m.valor_cents, symbol)}</td>
+                  {/* El motivo puede faltar —es opcional— y eso se dice, no se
+                      deja en blanco: un hueco en un papel archivado se lee como
+                      un dato perdido, no como un dato que nunca existió. */}
+                  <td>{m.doc_ref ?? m.reason ?? (m.kind === 'ajuste' ? 'sin motivo indicado' : '—')}</td>
+                  <td>{m.responsable ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p className="pr-nota">
+            Cada línea es un cambio de existencia registrado por el sistema con su autor y su
+            hora. La existencia no se puede editar por ningún otro camino.
+          </p>
+        </ReporteImprimible>
+      )}
     </div>
   );
 };
