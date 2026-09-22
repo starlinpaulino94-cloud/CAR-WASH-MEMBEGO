@@ -71,6 +71,24 @@ begin
   values (p_name, coalesce(v_ok,false), case when coalesce(v_ok,false) then 'bloqueado, estado intacto' else 'EL ESTADO CAMBIÓ' end);
 end $$;
 
+-- El espejo de `expect_no_effect`, y hace falta por el mismo motivo: si la RLS
+-- deja pasar la sentencia pero un guardia la recorta por otro lado, `expect_ok`
+-- diría que todo bien —no hubo excepción— con el estado sin cambiar. Aquí se
+-- exige que el cambio HAYA OCURRIDO, y si la sentencia revienta se cuenta como
+-- fallo con el mensaje, no en silencio.
+create or replace function test.expect_effect(p_name text, p_sql text, p_now_true text)
+returns void language plpgsql as $$
+declare v_ok boolean; v_err text := '';
+begin
+  begin execute p_sql; exception when others then v_err := left(sqlerrm, 60); end;
+  execute 'select (' || p_now_true || ')' into v_ok;
+  insert into test.results(name, passed, detail)
+  values (p_name, coalesce(v_ok, false),
+          case when coalesce(v_ok, false) then 'aplicado'
+               when v_err <> '' then 'NO SE APLICÓ · ' || v_err
+               else 'NO SE APLICÓ (sin error: lo filtró la RLS)' end);
+end $$;
+
 -- =============================================================== Datos base
 -- Como superusuario: dos empresas competidoras y sus usuarios.
 
@@ -419,6 +437,54 @@ select test.expect_no_effect('un administrador NO puede ascender a nadie a propi
 select test.expect_no_effect('un administrador NO puede auto-ascenderse',
   format('update public.profiles set role = ''propietario'' where id = %L', test.var('u_admin_a')),
   format('(select role from public.profiles where id = %L) = ''administrador''', test.var('u_admin_a')));
+
+-- ---- CORREGIR LA FICHA: el nombre y el teléfono, ya creada la cuenta.
+--
+-- Quien entra por el enlace de Membego llega SIN nombre: el token del SSO trae
+-- correo, rol y empresa, nunca cómo se llama la persona. Hasta ahora `full_name`
+-- solo se escribía al dar de alta a alguien a mano, así que esas fichas se
+-- quedaban en «(sin nombre)» para siempre. Escribir el nombre NO es cambiar
+-- permisos, y por eso la regla es más suelta que la del rol.
+select test.expect_effect('un administrador SÍ puede ponerle el nombre a una ficha en blanco',
+  format('update public.profiles set full_name = ''Cajero Con Nombre'' where id = %L',
+         test.var('u_cashier_a')),
+  format('(select full_name from public.profiles where id = %L) = ''Cajero Con Nombre''',
+         test.var('u_cashier_a')));
+
+select test.expect_effect('y también el teléfono',
+  format('update public.profiles set phone = ''809-555-7788'' where id = %L',
+         test.var('u_cashier_a')),
+  format('(select phone from public.profiles where id = %L) = ''809-555-7788''',
+         test.var('u_cashier_a')));
+
+-- El caso que más se da: el propio administrador arreglando SU fila, que la
+-- pantalla excluía del botón de editar porque usaba la regla del rol.
+select test.expect_effect('un administrador puede corregir su PROPIO nombre',
+  format('update public.profiles set full_name = ''Admin Con Nombre'' where id = %L',
+         test.var('u_admin_a')),
+  format('(select full_name from public.profiles where id = %L) = ''Admin Con Nombre''',
+         test.var('u_admin_a')));
+
+-- Y lo que sigue cerrado: corregir la ficha no es una rendija para el rol.
+select test.expect_no_effect('corregir la ficha NO deja colar un ascenso de paso',
+  format('update public.profiles set full_name = ''X'', role = ''propietario'' where id = %L',
+         test.var('u_admin_a')),
+  format('(select role from public.profiles where id = %L) = ''administrador''', test.var('u_admin_a')));
+
+-- Un cajero no edita fichas ajenas: `profiles_admin_manage` es de los tres roles
+-- de arriba, y la suya propia solo la toca por `profiles_update_self`.
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
+set role authenticated;
+select test.expect_no_effect('un cajero NO puede renombrar a otra persona',
+  format('update public.profiles set full_name = ''Nombre Puesto Por El Cajero'' where id = %L',
+         test.var('u_admin_a')),
+  format('(select full_name from public.profiles where id = %L) = ''Admin Con Nombre''',
+         test.var('u_admin_a')));
+
+set role postgres;
+select set_config('request.jwt.claim.sub', test.var('u_admin_a'), false);
+set role authenticated;
 
 -- La empresa Beta no ve nada de lo creado por Alfa.
 set role postgres;

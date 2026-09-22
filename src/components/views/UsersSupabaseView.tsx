@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Button } from '../ui/button';
-import { KeyRound, Trash2 } from 'lucide-react';
+import { KeyRound, Trash2, Pencil } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { can, outranks } from '../../lib/auth';
 import {
-  fetchProfiles, updateProfileAccess, resetEmployeePassword, Profile, Role
+  fetchProfiles, updateProfileAccess, updateProfileIdentity, resetEmployeePassword, Profile, Role
 } from '../../data/fiscalRepository';
 import {
   ViewHeader, ErrorState, InlineAlert, ReadOnlyNotice, SkeletonRows, EmptyRow
@@ -13,6 +13,16 @@ import {
 import { FormModal, Field, textInputClass } from '../common/FormModal';
 import { ConfirmarEliminar } from '../common/ConfirmarEliminar';
 import { eliminarEmpleado } from '../../data/adminRepository';
+
+/**
+ * Cómo nombrar a alguien que todavía no tiene nombre.
+ *
+ * Quien entra por Membego llega con `full_name` vacío, así que media pantalla
+ * decía « ahora es Administrador» con un hueco delante. El correo identifica
+ * igual y no deja frases mancas.
+ */
+const nombreDe = (p: { full_name?: string | null; email?: string | null }): string =>
+  (p.full_name ?? '').trim() || p.email || 'este usuario';
 
 const ROLES: { id: Role; label: string; nota: string }[] = [
   { id: 'operario',      label: 'Operario',      nota: 'Lava. Ve sus comisiones y su turno.' },
@@ -74,7 +84,7 @@ export const UsersSupabaseView: React.FC = () => {
     setBusy(true); setError(null);
     try {
       await updateProfileAccess(p.id, { role });
-      setNotice(`${p.full_name} ahora es ${ROLES.find(r => r.id === role)?.label}.`);
+      setNotice(`${nombreDe(p)} ahora es ${ROLES.find(r => r.id === role)?.label}.`);
       setNonce(n => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el rol');
@@ -89,11 +99,47 @@ export const UsersSupabaseView: React.FC = () => {
     try {
       await updateProfileAccess(p.id, { is_active: !p.is_active });
       setNotice(p.is_active
-        ? `${p.full_name} ya no puede entrar.`
-        : `${p.full_name} vuelve a tener acceso.`);
+        ? `${nombreDe(p)} ya no puede entrar.`
+        : `${nombreDe(p)} vuelve a tener acceso.`);
       setNonce(n => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // --- Corregir la ficha (nombre y teléfono)
+  const [fichaTarget, setFichaTarget] = useState<Profile | null>(null);
+  const [fichaNombre, setFichaNombre] = useState('');
+  const [fichaTel, setFichaTel] = useState('');
+
+  const abrirFicha = (p: Profile) => {
+    setFichaTarget(p);
+    setFichaNombre(p.full_name ?? '');
+    setFichaTel(p.phone ?? '');
+    setError(null);
+  };
+
+  const guardarFicha = async () => {
+    if (!fichaTarget || busy) return;
+    if (fichaNombre.trim().length < 2) {
+      setError('Escriba el nombre de la persona.');
+      return;
+    }
+    setBusy(true); setError(null);
+    try {
+      await updateProfileIdentity(fichaTarget.id, {
+        full_name: fichaNombre.trim(),
+        // Vacío va como nulo: «no tiene teléfono» y «tiene el teléfono ""» no
+        // son lo mismo, y el segundo no significa nada.
+        phone: fichaTel.trim() || null
+      });
+      setFichaTarget(null);
+      setNotice(`Ficha de ${fichaNombre.trim()} actualizada.`);
+      setNonce(n => n + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la ficha');
     } finally {
       setBusy(false);
     }
@@ -110,7 +156,7 @@ export const UsersSupabaseView: React.FC = () => {
     try {
       await resetEmployeePassword(claveTarget.id, clave);
       setClaveTarget(null); setClave('');
-      setNotice(`Contraseña de ${claveTarget.full_name} reiniciada. Dígasela en persona.`);
+      setNotice(`Contraseña de ${nombreDe(claveTarget)} reiniciada. Dígasela en persona.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo reiniciar la contraseña');
     } finally {
@@ -140,6 +186,23 @@ export const UsersSupabaseView: React.FC = () => {
     && p.id !== profile?.id
     && (p.role !== 'propietario' && p.role !== 'superadmin'
         || ['propietario', 'superadmin'].includes(profile?.role ?? ''));
+
+  /**
+   * Corregir el NOMBRE no es lo mismo que cambiar el ROL, así que la regla no
+   * puede ser la misma.
+   *
+   * `editable` excluye a uno mismo y a los propietarios: tiene sentido para los
+   * permisos —nadie se asciende solo— pero no para escribir cómo se llama
+   * alguien. La base ya lo dice: `profiles_admin_manage` deja a un
+   * administrador corregir cualquier ficha de su empresa, la suya incluida,
+   * mientras no toque el rol ni la empresa. Y TIENE que dejarlo: quien entra
+   * por Membego llega sin nombre, y el primero que se topa con eso suele ser el
+   * propio administrador mirando su propia fila.
+   *
+   * Poner aquí una regla más estricta que la de la base sería inventarse una
+   * segunda verdad y esconder un botón que sí habría funcionado.
+   */
+  const puedeCorregirFicha = canManage;
 
   const rolesOfrecidos = ROLES.filter(r =>
     r.id !== 'propietario' || ['propietario', 'superadmin'].includes(profile?.role ?? ''));
@@ -196,7 +259,7 @@ export const UsersSupabaseView: React.FC = () => {
                   <TableRow key={p.id} className="hover:bg-surface-2/40">
                     <TableCell className="p-3">
                       <div className="font-bold text-strong">
-                        {p.full_name || '(sin nombre)'}
+                        {(p.full_name ?? '').trim() || '(sin nombre)'}
                         {p.id === profile?.id && (
                           <span className="ml-1.5 text-xs font-normal text-faint">(usted)</span>
                         )}
@@ -209,7 +272,7 @@ export const UsersSupabaseView: React.FC = () => {
                     <TableCell className="p-3">
                       {editable(p) ? (
                         <select
-                          aria-label={`Rol de ${p.full_name}`}
+                          aria-label={`Rol de ${nombreDe(p)}`}
                           className="bg-canvas border border-line rounded-lg px-2 py-1 text-xs text-strong"
                           value={p.role ?? ''}
                           onChange={e => void cambiarRol(p, e.target.value as Role)}>
@@ -228,6 +291,17 @@ export const UsersSupabaseView: React.FC = () => {
                     </TableCell>
                     {canManage && (
                       <TableCell className="p-3 text-right whitespace-nowrap">
+                        {/* Corregir la ficha va FUERA del `editable(p)`: su
+                            regla es otra —ver `puedeCorregirFicha`— y el caso
+                            más común es un administrador arreglando su propia
+                            fila, que `editable` excluye. */}
+                        {puedeCorregirFicha && (
+                          <Button variant="secondary" size="xs" className="mr-1"
+                            onClick={() => abrirFicha(p)}
+                            aria-label={`Editar la ficha de ${nombreDe(p)}`}>
+                            <Pencil /> Ficha
+                          </Button>
+                        )}
                         {editable(p) ? (
                           <>
                             <Button variant="secondary" size="xs" onClick={() => { setClaveTarget(p); setClave(''); setError(null); }}>
@@ -239,7 +313,7 @@ export const UsersSupabaseView: React.FC = () => {
                             {puedeBorrar && (
                               <Button variant="ghost" size="icon-xs" className="ml-1 text-muted hover:text-danger"
                                 onClick={() => setBorrando(p)}
-                                aria-label={`Eliminar la ficha de ${p.full_name}`}
+                                aria-label={`Eliminar la ficha de ${nombreDe(p)}`}
                                 title="Solo se puede si nunca trabajó">
                                 <Trash2 />
                               </Button>
@@ -262,19 +336,52 @@ export const UsersSupabaseView: React.FC = () => {
       {borrando && (
         <ConfirmarEliminar
           queEs="la ficha de"
-          nombre={borrando.full_name ?? 'este empleado'}
+          nombre={nombreDe(borrando)}
           onEliminar={() => eliminarEmpleado(borrando.id)}
           onCerrar={() => setBorrando(null)}
           onHecho={() => { setNonce(n => n + 1); setNotice(
-            `Ficha de ${borrando.full_name} eliminada. Su credencial de acceso sigue existiendo ` +
+            `Ficha de ${nombreDe(borrando)} eliminada. Su credencial de acceso sigue existiendo ` +
             'en Supabase Auth: bórrela también en Authentication › Users si quiere quitarla del todo.'
           ); }}
         />
       )}
 
+      {fichaTarget && (
+        <FormModal
+          title={`Ficha — ${nombreDe(fichaTarget)}`}
+          submitLabel="Guardar ficha"
+          busy={busy}
+          error={error}
+          onSubmit={() => void guardarFicha()}
+          onClose={() => setFichaTarget(null)}
+          onDismissError={() => setError(null)}
+        >
+          <Field label="Nombre completo *" htmlFor="ficha-nombre">
+            <input id="ficha-nombre" className={textInputClass} value={fichaNombre} autoFocus
+              onChange={e => setFichaNombre(e.target.value)}
+              placeholder="Juan Pérez" />
+          </Field>
+          <Field label="Teléfono (opcional)" htmlFor="ficha-tel">
+            <input id="ficha-tel" className={textInputClass} value={fichaTel}
+              onChange={e => setFichaTel(e.target.value)}
+              placeholder="809-555-0000" />
+          </Field>
+          <Field label="Correo" htmlFor="ficha-correo"
+            hint="No se edita aquí: es con lo que inicia sesión y con lo que Membego lo reconoce en cada entrada. Cambiarlo solo en esta pantalla dejaría el acceso funcionando con el correo viejo.">
+            <p id="ficha-correo" className={`${textInputClass} text-muted`}>
+              {fichaTarget.email ?? 'sin correo'}
+            </p>
+          </Field>
+          <p className="text-xs text-faint">
+            El rol y el acceso se cambian en esta misma lista. La sucursal se asigna en
+            Configuración › Sucursales, y el sueldo y la comisión en Personal › Nómina.
+          </p>
+        </FormModal>
+      )}
+
       {claveTarget && (
         <FormModal
-          title={`Reiniciar clave — ${claveTarget.full_name}`}
+          title={`Reiniciar clave — ${nombreDe(claveTarget)}`}
           submitLabel="Reiniciar contraseña"
           busy={busy}
           error={error}
