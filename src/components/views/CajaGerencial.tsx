@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Printer } from 'lucide-react';
+import { Button } from '../ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
 import {
@@ -12,7 +13,7 @@ import { FiltroFechas } from '../common/FiltroFechas';
 import { RejillaKpi, Kpi } from '../common/RejillaKpi';
 import { TablaDatos } from '../common/TablaDatos';
 import { PanelDetalle } from '../common/PanelDetalle';
-import { ReporteImprimible, BotonImprimir } from '../common/ReporteImprimible';
+import { ReporteImprimible, imprimirReporte } from '../common/ReporteImprimible';
 import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 import { etiquetaMetodo } from '../../lib/etiquetas';
 
@@ -47,6 +48,19 @@ export const CajaGerencial: React.FC<{ branchId: string }> = ({ branchId }) => {
   const [sesion, setSesion] = useState<SesionCaja | null>(null);
   const [movs, setMovs] = useState<CashMovement[]>([]);
   const [movsCargando, setMovsCargando] = useState(false);
+
+  /**
+   * Imprimir el cierre con detalle o solo con los totales.
+   *
+   * Por defecto CON detalle, igual que en Ventas. El cierre impreso llevaba
+   * solo el arqueo, así que un descuadre se veía —«faltan 500»— pero no se
+   * podía rastrear: el movimiento que lo explica estaba en la pantalla y no en
+   * el papel que se archiva.
+   *
+   * Los movimientos ya están cargados en esta pantalla, así que aquí no hay
+   * nada que ir a buscar antes de imprimir: basta con ponerlos en el papel.
+   */
+  const [conDetalle, setConDetalle] = useState(true);
 
   const { desde, hasta } = rangoDeFechas(sel);
 
@@ -140,7 +154,26 @@ export const CajaGerencial: React.FC<{ branchId: string }> = ({ branchId }) => {
         titulo={sesion ? `Caja de ${sesion.cashier ?? '—'}` : 'Caja'}
         subtitulo={sesion ? new Date(sesion.opened_at).toLocaleDateString('es-DO') : undefined}
         onCerrar={() => setSesion(null)}
-        acciones={sesion ? <BotonImprimir /> : undefined}
+        acciones={sesion ? (
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border border-line overflow-hidden" role="group"
+              aria-label="Nivel de detalle al imprimir">
+              <button type="button" onClick={() => setConDetalle(true)} aria-pressed={conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Detallado
+              </button>
+              <button type="button" onClick={() => setConDetalle(false)} aria-pressed={!conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  !conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Solo totales
+              </button>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => imprimirReporte('carta')}>
+              <Printer className="w-4 h-4" /> Imprimir
+            </Button>
+          </div>
+        ) : undefined}
       >
         {sesion && (
           <div className="space-y-5">
@@ -209,6 +242,58 @@ export const CajaGerencial: React.FC<{ branchId: string }> = ({ branchId }) => {
                 <tr><td>Efectivo contado</td><td className="num">{sesion.counted_cash_cents == null ? '—' : money(sesion.counted_cash_cents)}</td></tr>
                 <tr><td><strong>Diferencia</strong></td><td className="num"><strong>{sesion.difference_cents == null ? '—' : money(sesion.difference_cents)}</strong></td></tr>
               </tbody></table>
+              {/* Los movimientos, uno por uno. Sin esto el papel enseñaba un
+                  descuadre sin la forma de rastrearlo: el cierre decía «faltan
+                  500» y el movimiento que lo explica se quedaba en la
+                  pantalla. Va cada cobro y cada salida con su hora, su
+                  concepto, de qué factura salió y quién lo anotó. */}
+              {conDetalle && movs.length > 0 && (
+                <>
+                  <h3>Movimientos de la caja</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Hora</th><th>Concepto</th><th>Factura</th>
+                        <th>Método</th><th className="num">Importe</th><th>Registró</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...movs].reverse().map(m => (
+                        <tr key={m.id}>
+                          <td>{new Date(m.created_at).toLocaleTimeString('es-DO', {
+                            hour: '2-digit', minute: '2-digit'
+                          })}</td>
+                          <td>{m.reason}</td>
+                          <td>{m.invoice_number ?? '—'}</td>
+                          <td>{etiquetaMetodo(m.method)}</td>
+                          <td className="num">
+                            {m.type === 'inflow' ? '+' : '−'}{money(m.amount_cents)}
+                          </td>
+                          <td>{m.registrado_por ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={4}>Entradas − salidas</td>
+                        <td className="num">
+                          {money(movs.reduce((a, m) =>
+                            a + (m.type === 'inflow' ? m.amount_cents : -m.amount_cents), 0))}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {/* El neto de los movimientos NO es el efectivo esperado: ahí
+                      entran tarjeta y transferencia, que no pasan por la
+                      gaveta. Decirlo evita la resta equivocada. */}
+                  <p className="pr-nota">
+                    El neto de arriba incluye TODOS los métodos. El efectivo esperado solo cuenta
+                    lo que pasa por la gaveta: fondo inicial + ventas en efectivo − salidas.
+                  </p>
+                </>
+              )}
+
               <p className="pr-nota">Diferencia = efectivo contado − efectivo esperado. Positiva es sobrante; negativa, faltante.</p>
             </ReporteImprimible>
           </div>

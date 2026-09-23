@@ -33,7 +33,22 @@ export interface MembegoCanjeFields {
 
 export type Invoice = Tables<'invoices'> & Partial<MembegoCanjeFields>;
 export type CashSession = Tables<'cash_sessions'>;
-export type CashMovement = Tables<'cash_movements'>;
+/**
+ * Un movimiento de caja, con lo que hace falta para poder AUDITARLO: de qué
+ * factura salió y quién lo registró.
+ *
+ * Los dos venían del `select('*')` de siempre como dos `uuid` que en el papel
+ * no dicen nada. El cierre de caja impreso llevaba solo los totales, así que un
+ * descuadre no se podía rastrear hasta el movimiento que lo causó sin volver a
+ * la pantalla.
+ */
+export type CashMovement = Tables<'cash_movements'> & {
+  /** Número de la factura que originó el cobro, si lo hubo. */
+  invoice_number?: string | null;
+  /** Quién lo registró. No siempre es el cajero de la caja: una salida la
+   *  puede anotar un supervisor sobre la caja de otro. */
+  registrado_por?: string | null;
+};
 export type VehicleCategory = Enums['vehicle_category'];
 export type PaymentMethod = Enums['payment_method'];
 export type NcfType = Enums['ncf_type'];
@@ -152,12 +167,25 @@ export async function fetchCashSessionHistory(branchId: string, limit = 20): Pro
 export async function fetchCashMovements(sessionId: string): Promise<CashMovement[]> {
   const { data, error } = await requireSupabase()
     .from('cash_movements')
-    .select('*')
+    // La factura y el autor se traen EMBEBIDOS, no con dos consultas más:
+    // PostgREST los resuelve por la clave ajena en la misma ida. El nombre del
+    // constraint va explícito en `profiles` porque `created_by` no es la única
+    // forma de llegar a esa tabla y sin él la relación sería ambigua.
+    .select('*, invoices(invoice_number), profiles!cash_movements_created_by_fkey(full_name)')
     .eq('cash_session_id', sessionId)
     .order('created_at', { ascending: false });
 
   if (error) throw fallaDatos(error);
-  return data ?? [];
+
+  type Embebido = Tables<'cash_movements'> & {
+    invoices: { invoice_number: string } | null;
+    profiles: { full_name: string } | null;
+  };
+  return ((data ?? []) as unknown as Embebido[]).map(m => ({
+    ...m,
+    invoice_number: m.invoices?.invoice_number ?? null,
+    registrado_por: m.profiles?.full_name ?? null
+  }));
 }
 
 export async function openCashSession(params: {

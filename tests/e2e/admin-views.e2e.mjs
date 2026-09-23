@@ -1105,6 +1105,107 @@ check('en «solo cantidades» el detalle NO sale',
 check('pero el resumen por servicio sigue ahí',
   papelCorto.includes('Ventas por servicio'));
 
+// =========================================================================
+console.log('\n[17] Cierre de caja: el detalle detrás del descuadre');
+// =========================================================================
+//
+// El cierre impreso llevaba solo el arqueo. Un descuadre se VEÍA —«faltan
+// 500»— pero no se podía rastrear: el movimiento que lo explica estaba en la
+// pantalla y no en el papel que se archiva.
+await go(page, /^Caja/, /^Caja actual/);
+await page.waitForTimeout(2500);
+
+const sesionesCaja = page.locator('table:has(caption:text-is("Histórico de cajas")) tbody tr');
+const hayCajas = await sesionesCaja.count();
+check('el histórico de cajas trae al menos una sesión que revisar',
+  hayCajas > 0, `${hayCajas} sesión(es)`);
+
+if (hayCajas > 0) {
+  await sesionesCaja.first().click();
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+  check('el cierre de caja también viene en «Detallado» por defecto',
+    (await page.getByRole('button', { name: 'Detallado' }).getAttribute('aria-pressed')) === 'true');
+
+  await page.getByRole('button', { name: /^Imprimir/ }).click();
+  await page.waitForTimeout(1500);
+  check('imprimir el cierre dispara la impresión',
+    (await page.evaluate(() => window.__imprimio)) === 1);
+
+  const papelCaja = await page.locator('.print-report').innerText();
+  check('el cierre impreso ya no se queda en el arqueo: trae los movimientos',
+    papelCaja.includes('Movimientos de la caja'));
+
+  // Acotado a la sección de movimientos: «Registró» solo existe en esa tabla,
+  // así que buscarlo en el papel entero no distinguiría un cierre con detalle
+  // de uno sin él.
+  const soloMovs = papelCaja.slice(papelCaja.indexOf('Movimientos de la caja'));
+  check('cada movimiento dice de qué factura salió y quién lo anotó',
+    soloMovs.includes('Factura') && soloMovs.includes('Registró'),
+    `sección: ${soloMovs.length} caracteres`);
+  check('el papel avisa de que el neto incluye todos los métodos, no solo la gaveta',
+    papelCaja.includes('pasa por la gaveta'));
+
+  // Y el modo corto sigue existiendo para quien solo quiere el arqueo.
+  await page.getByRole('button', { name: 'Solo totales' }).click();
+  await page.waitForTimeout(400);
+  const papelCorto2 = await page.locator('.print-report').innerText();
+  check('en «solo totales» los movimientos NO salen',
+    !papelCorto2.includes('Movimientos de la caja'));
+  check('pero el arqueo sigue completo',
+    papelCorto2.includes('Efectivo esperado') && papelCorto2.includes('Diferencia'));
+}
+
+// =========================================================================
+console.log('\n[18] Rentabilidad: qué hay detrás de un margen');
+// =========================================================================
+//
+// La pantalla ya avisa de cuántos servicios se vendieron por debajo de su
+// costo, pero el papel no daba NADA con qué averiguar por qué. Un aviso sin el
+// detrás es una alarma que no se puede atender.
+// El panel de la caja sigue abierto del paso anterior y su fondo intercepta
+// los clics. Se cierra con Escape, igual que haría el usuario.
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+
+await go(page, /^Reportes/, /^Rentabilidad/);
+await page.waitForTimeout(2500);
+await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+check('Rentabilidad también viene en «Detallado» por defecto',
+  (await page.getByRole('button', { name: 'Detallado' }).getAttribute('aria-pressed')) === 'true');
+
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(3500);
+
+check('imprimir Rentabilidad en detalle dispara la impresión',
+  (await page.evaluate(() => window.__imprimio)) === 1);
+
+const papelRent = await page.locator('.print-report').innerText();
+check('el papel trae el detalle por servicio, no solo el margen',
+  papelRent.includes('Detalle por servicio'));
+
+// Acotado a la sección de detalle: «Lavado Completo» y los importes también
+// salen en el resumen de arriba, así que buscarlos en el papel entero no
+// distinguiría un reporte con detalle de uno sin él.
+const soloRent = papelRent.slice(papelRent.indexOf('Detalle por servicio'));
+check('bajo cada servicio salen sus ventas, con factura y quién cobró',
+  soloRent.includes('Facturó') && (soloRent.includes('DET001') || soloRent.includes('DET002')),
+  `sección: ${soloRent.length} caracteres`);
+
+// Lo que NO se hace, y es una decisión: no se mezclan en una fila.
+check('el papel explica por qué ventas, insumos y comisiones van por separado',
+  papelRent.includes('no se reparten entre cada venta'));
+
+await page.getByRole('button', { name: 'Solo totales' }).click();
+await page.waitForTimeout(400);
+const rentCorto = await page.locator('.print-report').innerText();
+check('en «solo totales» el detalle por servicio NO sale',
+  !rentCorto.includes('Detalle por servicio'));
+check('pero la cascada y el margen por servicio siguen',
+  rentCorto.includes('Resultado operativo estimado') && rentCorto.includes('Margen por servicio'));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

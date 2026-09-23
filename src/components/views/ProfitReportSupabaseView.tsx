@@ -1,13 +1,18 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
-import { fetchReporteRentabilidad, ReporteRentabilidad } from '../../data/reportsRepository';
+import {
+  fetchReporteRentabilidad, fetchRenglonesRentabilidad,
+  ReporteRentabilidad, RenglonesRentabilidad
+} from '../../data/reportsRepository';
 import { fetchActiveBranches, Branch } from '../../data/branchRepository';
 import { ViewHeader, ErrorState, ReadOnlyNotice, InlineAlert, HelpNote } from '../common/DataViewShell';
 import { FiltroFechas } from '../common/FiltroFechas';
 import { TablaDatos } from '../common/TablaDatos';
-import { ReporteImprimible, BotonImprimir } from '../common/ReporteImprimible';
+import { ReporteImprimible, imprimirReporte } from '../common/ReporteImprimible';
+import { Button } from '../ui/button';
+import { Loader2, Printer } from 'lucide-react';
 import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 
 /**
@@ -31,6 +36,19 @@ export const ProfitReportSupabaseView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Imprimir con detalle o solo con los totales. Con detalle por defecto,
+   * igual que Ventas y Caja.
+   *
+   * Aquí importa más que en los otros dos: la pantalla ya avisa de cuántos
+   * servicios se vendieron POR DEBAJO DE SU COSTO, y el papel no daba nada con
+   * qué averiguar por qué. Un aviso sin el detrás es una alarma que no se puede
+   * atender.
+   */
+  const [conDetalle, setConDetalle] = useState(true);
+  const [renglones, setRenglones] = useState<RenglonesRentabilidad | null>(null);
+  const [preparando, setPreparando] = useState(false);
+
   useEffect(() => {
     if (phase !== 'ready' || !allowed) return;
     fetchActiveBranches().then(setBranches).catch(() => setBranches([]));
@@ -48,6 +66,55 @@ export const ProfitReportSupabaseView: React.FC = () => {
   }, [phase, allowed, desde, hasta, branchId]);
 
   useEffect(() => { reload(); }, [reload]);
+
+  // Cambió el universo: el detalle cargado ya no corresponde.
+  useEffect(() => { setRenglones(null); }, [desde, hasta, branchId]);
+
+  const prepararImpresion = async () => {
+    if (preparando || !report) return;
+    if (!conDetalle || renglones) { imprimirReporte('carta'); return; }
+    setPreparando(true); setError(null);
+    try {
+      setRenglones(await fetchRenglonesRentabilidad(desde, hasta, branchId || null));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo preparar el detalle');
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!renglones) return;
+    imprimirReporte('carta');
+  }, [renglones]);
+
+  /**
+   * Los tres orígenes agrupados por servicio, para poder imprimir cada margen
+   * con lo que lo forma debajo.
+   *
+   * Las comisiones se agrupan por NOMBRE y las otras dos por id cuando lo hay:
+   * es exactamente como las casa `profit_report`, y alinear la agrupación con
+   * el cálculo es lo que hace que el detalle sume lo que dice el resumen.
+   */
+  const detallePorServicio = useMemo(() => {
+    if (!renglones) return new Map<string, {
+      ventas: typeof renglones.ventas; insumos: typeof renglones.insumos;
+      comisiones: typeof renglones.comisiones;
+    }>();
+    const mapa = new Map<string, {
+      ventas: typeof renglones.ventas; insumos: typeof renglones.insumos;
+      comisiones: typeof renglones.comisiones;
+    }>();
+    const cubo = (nombre: string) => {
+      let c = mapa.get(nombre);
+      if (!c) { c = { ventas: [], insumos: [], comisiones: [] }; mapa.set(nombre, c); }
+      return c;
+    };
+    for (const v of renglones.ventas) cubo(v.service_name).ventas.push(v);
+    for (const i of renglones.insumos) if (i.service_name) cubo(i.service_name).insumos.push(i);
+    for (const c of renglones.comisiones) cubo(c.service_name).comisiones.push(c);
+    return mapa;
+  }, [renglones]);
 
   if (phase !== 'ready' || !allowed) {
     return (
@@ -87,7 +154,28 @@ export const ProfitReportSupabaseView: React.FC = () => {
       <ViewHeader
         title="Rentabilidad"
         subtitle="Estado de resultados estimado: cada línea dice qué descuenta"
-        actions={<BotonImprimir disabled={!r || loading} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-lg border border-line overflow-hidden" role="group"
+              aria-label="Nivel de detalle al imprimir">
+              <button type="button" onClick={() => setConDetalle(true)} aria-pressed={conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Detallado
+              </button>
+              <button type="button" onClick={() => setConDetalle(false)} aria-pressed={!conDetalle}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  !conDetalle ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Solo totales
+              </button>
+            </div>
+            <Button variant="outline" size="sm" disabled={!r || loading || preparando}
+              onClick={() => void prepararImpresion()}>
+              {preparando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              {preparando ? 'Preparando…' : 'Imprimir'}
+            </Button>
+          </div>
+        }
       />
 
       <div className="flex flex-col lg:flex-row lg:items-start gap-3 justify-between bg-surface/60 border border-line rounded-2xl p-4">
@@ -180,6 +268,102 @@ export const ProfitReportSupabaseView: React.FC = () => {
                 <td className="num">{money(m.consumption_cents)}</td><td className="num">{money(m.commission_cents)}</td>
                 <td className="num">{money(m.margin_cents)}</td><td className="num">{m.margin_pct === null ? '—' : `${m.margin_pct}%`}</td></tr>))}</tbody>
           </table>
+          {/* EL DETALLE. Tres listas bajo cada servicio, no tres columnas en la
+              misma fila: `profit_report` no atribuye un insumo ni una comisión
+              a una venta concreta —los suma por servicio en el periodo, y la
+              comisión casando por nombre—. Ponerlos en la misma línea
+              inventaría una precisión que el número no tiene. */}
+          {conDetalle && renglones && (
+            <>
+              <h3>Detalle por servicio</h3>
+              {renglones.truncated && (
+                <p className="pr-nota">
+                  ATENCIÓN: hay más renglones de los que caben en un reporte. Se imprimen los
+                  primeros {renglones.limit} de cada lista. Acote el periodo para verlos todos.
+                </p>
+              )}
+              <p className="pr-nota">
+                Las ventas, los insumos y las comisiones van por separado porque el margen se
+                calcula así: los insumos y las comisiones se suman POR SERVICIO en todo el
+                periodo, no se reparten entre cada venta.
+              </p>
+
+              {margin.map(m => {
+                const d = detallePorServicio.get(m.name);
+                if (!d) return null;
+                return (
+                  <React.Fragment key={m.service_id ?? m.name}>
+                    <h3>
+                      {m.name} · margen {money(m.margin_cents)}
+                      {m.margin_cents < 0 ? ' (POR DEBAJO DE SU COSTO)' : ''}
+                    </h3>
+
+                    {d.ventas.length > 0 && (
+                      <table>
+                        <thead>
+                          <tr><th colSpan={5}>Ventas · {money(m.sales_cents)}</th></tr>
+                          <tr>
+                            <th>Fecha</th><th>Factura</th><th>Vehículo / cliente</th>
+                            <th className="num">Importe</th><th>Facturó</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {d.ventas.map((v, i) => (
+                            <tr key={`v${i}`}>
+                              <td>{new Date(v.created_at).toLocaleDateString('es-DO')}</td>
+                              <td>{v.invoice_number}</td>
+                              <td>{[v.vehicle_plate, v.customer_name].filter(Boolean).join(' · ') || '—'}</td>
+                              <td className="num">{money(v.amount_cents)}</td>
+                              <td>{v.cashier_name ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {d.insumos.length > 0 && (
+                      <table>
+                        <thead>
+                          <tr><th colSpan={4}>Insumos consumidos · {money(m.consumption_cents)}</th></tr>
+                          <tr><th>Fecha</th><th>Orden</th><th>Producto</th><th className="num">Costo</th></tr>
+                        </thead>
+                        <tbody>
+                          {d.insumos.map((x, i) => (
+                            <tr key={`i${i}`}>
+                              <td>{new Date(x.created_at).toLocaleDateString('es-DO')}</td>
+                              <td>{x.order_number}</td>
+                              <td>{x.product_name ?? '—'}</td>
+                              <td className="num">{money(x.cost_cents)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {d.comisiones.length > 0 && (
+                      <table>
+                        <thead>
+                          <tr><th colSpan={4}>Comisiones · {money(m.commission_cents)}</th></tr>
+                          <tr><th>Fecha</th><th>Orden</th><th>Lavador</th><th className="num">Importe</th></tr>
+                        </thead>
+                        <tbody>
+                          {d.comisiones.map((c, i) => (
+                            <tr key={`c${i}`}>
+                              <td>{new Date(c.earned_on).toLocaleDateString('es-DO')}</td>
+                              <td>{c.order_number ?? '—'}</td>
+                              <td>{c.lavador ?? '—'}{c.is_paid ? '' : ' (sin pagar)'}</td>
+                              <td className="num">{money(c.amount_cents)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </>
+          )}
+
           <p className="pr-nota">Resultado operativo estimado: no incluye costos fijos sin registrar ni depreciación. No es utilidad neta contable.</p>
         </ReporteImprimible>
       )}
