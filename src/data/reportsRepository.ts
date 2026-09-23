@@ -202,6 +202,72 @@ export interface ReporteRentabilidad {
   }[];
 }
 
+// ───────────── El detalle detrás de cada margen, en sus tres orígenes
+
+export interface VentaDeServicio {
+  service_id: string | null;
+  service_name: string;
+  quantity: number;
+  amount_cents: number;
+  invoice_number: string;
+  created_at: string;
+  customer_name: string;
+  vehicle_plate: string;
+  cashier_name: string | null;
+}
+
+export interface InsumoDeServicio {
+  service_id: string | null;
+  service_name: string | null;
+  product_name: string | null;
+  quantity: number;
+  cost_cents: number;
+  created_at: string;
+  order_number: string;
+  vehicle_plate: string;
+}
+
+export interface ComisionDeServicio {
+  /** Solo el NOMBRE: es la única llave con la que `profit_report` las casa. */
+  service_name: string;
+  amount_cents: number;
+  earned_on: string;
+  is_paid: boolean;
+  lavador: string | null;
+  order_number: string | null;
+}
+
+export interface RenglonesRentabilidad {
+  ventas: VentaDeServicio[];
+  insumos: InsumoDeServicio[];
+  comisiones: ComisionDeServicio[];
+  total_ventas: number;
+  total_insumos: number;
+  total_comisiones: number;
+  limit: number;
+  truncated: boolean;
+}
+
+/**
+ * Los renglones detrás del margen por servicio.
+ *
+ * Vienen en TRES listas y no en una porque de tres sitios distintos sale el
+ * cálculo: las ventas de los renglones de factura, los insumos de
+ * `service_consumptions` y las comisiones de `commissions`. El resumen no
+ * atribuye un insumo ni una comisión a una venta concreta —las suma por
+ * servicio en todo el periodo—, así que juntarlas en una fila inventaría una
+ * precisión que el número no tiene.
+ */
+export async function fetchRenglonesRentabilidad(
+  from: string, to: string, branchId?: string | null, limite = 1500
+): Promise<RenglonesRentabilidad> {
+  const { data, error } = await requireSupabase().rpc('profit_report_lines', {
+    p_from: from, p_to: to, p_branch_id: branchId ?? null, p_limit: limite
+  });
+  if (error) throw fallaDatos(error);
+  return data as unknown as RenglonesRentabilidad;
+}
+
 export async function fetchReporteRentabilidad(
   from: string, to: string, branchId?: string | null
 ): Promise<ReporteRentabilidad> {

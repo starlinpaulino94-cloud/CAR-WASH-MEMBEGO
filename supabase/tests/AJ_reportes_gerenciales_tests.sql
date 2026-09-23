@@ -312,6 +312,64 @@ select test.check('margen por servicio descuenta insumos Y comisiones',
      public.profit_report('2099-06-15','2099-06-15') -> 'margen_por_servicio') s
    where (s ->> 'name') = 'Lavado Alfa') = 150000 - 10000 - 10000);
 
+-- ── EL DETALLE DETRÁS DE CADA MARGEN ──
+--
+-- Lo que se protege: que las tres listas sumen EXACTAMENTE las tres columnas
+-- del resumen. Si no cuadraran, el papel tendría un desglose que contradice al
+-- margen que encabeza, y quien lo lea no sabría a cuál creerle.
+select test.check('las ventas del detalle suman lo mismo que «ventas» del margen por servicio',
+  (select coalesce(sum((v ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(
+       public.profit_report_lines('2099-06-15','2099-06-15') -> 'ventas') v
+    where (v ->> 'service_name') = 'Lavado Alfa')
+   = (select (s ->> 'sales_cents')::bigint from jsonb_array_elements(
+        public.profit_report('2099-06-15','2099-06-15') -> 'margen_por_servicio') s
+      where (s ->> 'name') = 'Lavado Alfa'));
+
+select test.check('los insumos del detalle suman lo mismo que «insumos»',
+  (select coalesce(sum((x ->> 'cost_cents')::bigint), 0)
+     from jsonb_array_elements(
+       public.profit_report_lines('2099-06-15','2099-06-15') -> 'insumos') x
+    where (x ->> 'service_name') = 'Lavado Alfa')
+   = (select (s ->> 'consumption_cents')::bigint from jsonb_array_elements(
+        public.profit_report('2099-06-15','2099-06-15') -> 'margen_por_servicio') s
+      where (s ->> 'name') = 'Lavado Alfa'));
+
+select test.check('las comisiones del detalle suman lo mismo que «comisión»',
+  (select coalesce(sum((c ->> 'amount_cents')::bigint), 0)
+     from jsonb_array_elements(
+       public.profit_report_lines('2099-06-15','2099-06-15') -> 'comisiones') c
+    where (c ->> 'service_name') = 'Lavado Alfa')
+   = (select (s ->> 'commission_cents')::bigint from jsonb_array_elements(
+        public.profit_report('2099-06-15','2099-06-15') -> 'margen_por_servicio') s
+      where (s ->> 'name') = 'Lavado Alfa'));
+
+-- Cada lista lleva lo que hace falta para poder revisarla: la venta, quién la
+-- cobró; el insumo, qué producto y de qué orden; la comisión, a quién se le
+-- debe o se le pagó.
+select test.check('cada venta del detalle dice factura, vehículo y quién cobró',
+  (select count(*) from jsonb_array_elements(
+     public.profit_report_lines('2099-06-15','2099-06-15') -> 'ventas') v
+   where coalesce(v ->> 'invoice_number', '') = ''
+      or coalesce(v ->> 'cashier_name', '') = '') = 0);
+
+select test.check('cada comisión del detalle dice a qué lavador y si está pagada',
+  (select count(*) from jsonb_array_elements(
+     public.profit_report_lines('2099-06-15','2099-06-15') -> 'comisiones') c
+   where coalesce(c ->> 'lavador', '') = '' or c ->> 'is_paid' is null) = 0);
+
+-- Las anuladas y las notas de crédito quedan fuera, igual que en el resumen.
+select test.check('el detalle no trae renglones de facturas anuladas',
+  (select count(*) from jsonb_array_elements(
+     public.profit_report_lines('2099-06-15','2099-06-15') -> 'ventas') v
+   where (v ->> 'amount_cents')::bigint = 20000) = 0);
+
+-- El tope se dice, igual que en el detalle de ventas.
+select test.check('cuando hay más renglones que el tope, se avisa',
+  (public.profit_report_lines('2099-06-15','2099-06-15', null, 1) ->> 'truncated')::boolean);
+select test.check('y sin recorte, no se avisa de nada',
+  not (public.profit_report_lines('2099-06-15','2099-06-15') ->> 'truncated')::boolean);
+
 -- ── permisos: consultar como CAJERO y como OPERARIO debe fallar ──
 set role postgres;
 select set_config('request.jwt.claim.sub', test.var('u_cashier_a'), false);
@@ -320,6 +378,8 @@ select test.expect_error('un cajero NO puede ver el rendimiento de los lavadores
   $q$select public.washer_report('2099-06-15','2099-06-15')$q$);
 select test.expect_error('un cajero NO puede ver el estado de resultados',
   $q$select public.profit_report('2099-06-15','2099-06-15')$q$);
+select test.expect_error('ni el detalle, que dice todavía más',
+  $q$select public.profit_report_lines('2099-06-15','2099-06-15')$q$);
 
 set role postgres;
 select set_config('request.jwt.claim.sub', test.var('op1'), false);

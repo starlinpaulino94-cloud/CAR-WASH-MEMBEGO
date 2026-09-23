@@ -1157,6 +1157,55 @@ if (hayCajas > 0) {
     papelCorto2.includes('Efectivo esperado') && papelCorto2.includes('Diferencia'));
 }
 
+// =========================================================================
+console.log('\n[18] Rentabilidad: qué hay detrás de un margen');
+// =========================================================================
+//
+// La pantalla ya avisa de cuántos servicios se vendieron por debajo de su
+// costo, pero el papel no daba NADA con qué averiguar por qué. Un aviso sin el
+// detrás es una alarma que no se puede atender.
+// El panel de la caja sigue abierto del paso anterior y su fondo intercepta
+// los clics. Se cierra con Escape, igual que haría el usuario.
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+
+await go(page, /^Reportes/, /^Rentabilidad/);
+await page.waitForTimeout(2500);
+await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+check('Rentabilidad también viene en «Detallado» por defecto',
+  (await page.getByRole('button', { name: 'Detallado' }).getAttribute('aria-pressed')) === 'true');
+
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(3500);
+
+check('imprimir Rentabilidad en detalle dispara la impresión',
+  (await page.evaluate(() => window.__imprimio)) === 1);
+
+const papelRent = await page.locator('.print-report').innerText();
+check('el papel trae el detalle por servicio, no solo el margen',
+  papelRent.includes('Detalle por servicio'));
+
+// Acotado a la sección de detalle: «Lavado Completo» y los importes también
+// salen en el resumen de arriba, así que buscarlos en el papel entero no
+// distinguiría un reporte con detalle de uno sin él.
+const soloRent = papelRent.slice(papelRent.indexOf('Detalle por servicio'));
+check('bajo cada servicio salen sus ventas, con factura y quién cobró',
+  soloRent.includes('Facturó') && (soloRent.includes('DET001') || soloRent.includes('DET002')),
+  `sección: ${soloRent.length} caracteres`);
+
+// Lo que NO se hace, y es una decisión: no se mezclan en una fila.
+check('el papel explica por qué ventas, insumos y comisiones van por separado',
+  papelRent.includes('no se reparten entre cada venta'));
+
+await page.getByRole('button', { name: 'Solo totales' }).click();
+await page.waitForTimeout(400);
+const rentCorto = await page.locator('.print-report').innerText();
+check('en «solo totales» el detalle por servicio NO sale',
+  !rentCorto.includes('Detalle por servicio'));
+check('pero la cascada y el margen por servicio siguen',
+  rentCorto.includes('Resultado operativo estimado') && rentCorto.includes('Margen por servicio'));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
