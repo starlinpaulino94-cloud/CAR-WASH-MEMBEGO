@@ -307,6 +307,49 @@ check('la bitácora se filtra en el servidor',
   (await filasBitacora()) === 1,
   `${await filasBitacora()} fila(s)`);
 
+// --- La bitácora impresa: TODO lo filtrado, no la página visible.
+//
+// Salía línea por línea —es una bitácora, no tiene cantidades que desglosar—
+// pero solo las 25 de la página. Una bitácora archivada con 25 de 400 eventos
+// no sirve para auditar: lo que se busca suele estar en las otras 375.
+//
+// Primero se quita el filtro de búsqueda, que acaba de dejar una sola fila.
+await page.getByLabel('Buscar en la bitácora').fill('');
+await page.waitForTimeout(1500);
+await page.evaluate(() => { window.__imprimio = 0; window.print = () => { window.__imprimio++; }; });
+
+check('«Todo lo filtrado» viene marcado por defecto',
+  (await page.getByRole('button', { name: 'Todo lo filtrado' }).getAttribute('aria-pressed')) === 'true');
+
+const enPantalla = await filasBitacora();
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(3500);
+
+check('imprimir la bitácora dispara la impresión',
+  (await page.evaluate(() => window.__imprimio)) === 1);
+
+const filasPapelAud = await page.locator('.print-report tbody tr').count();
+const totalEventos = Number(sql("select count(*) from audit_logs"));
+check('el papel lleva TODOS los eventos del filtro, no solo la página visible',
+  filasPapelAud > enPantalla && filasPapelAud === totalEventos,
+  `papel ${filasPapelAud} · pantalla ${enPantalla} · base ${totalEventos}`);
+
+const papelAud = await page.locator('.print-report').innerText();
+check('la cabecera dice cuántos eventos se imprimen del total',
+  /Eventos:\s*\d+\s*de\s*\d+/.test(papelAud), papelAud.slice(0, 200));
+check('cada evento dice con qué ROL se hizo, no solo quién',
+  papelAud.includes('Rol'));
+
+// Y el modo corto, para quien solo quiere la hoja de la pantalla.
+await page.getByRole('button', { name: 'Solo esta página' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /^Imprimir/ }).click();
+await page.waitForTimeout(1200);
+const filasPapelCorto = await page.locator('.print-report tbody tr').count();
+check('en «solo esta página» el papel vuelve a las filas visibles',
+  filasPapelCorto === enPantalla,
+  `papel ${filasPapelCorto} · pantalla ${enPantalla}`);
+
 // --- Ajustes (la nota de pie vive en el submódulo Impresión)
 await go(page, /^Configuración/, /^Impresión/);
 await page.getByLabel(/Nota de pie/).fill('Gracias por su visita — E2E');
