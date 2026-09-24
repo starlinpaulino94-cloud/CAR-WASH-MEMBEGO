@@ -6,11 +6,11 @@ import { can } from '../../lib/auth';
 import { formatCents } from '../../lib/money';
 import { usePagedQuery } from '../../hooks/usePagedQuery';
 import { FiltroFechas } from '../common/FiltroFechas';
-import { BotonImprimir, ReporteImprimible } from '../common/ReporteImprimible';
+import { imprimirReporte, ReporteImprimible } from '../common/ReporteImprimible';
 import { SeleccionFecha, rangoDeFechas, describirRango } from '../../lib/rangosFecha';
 import { toCsv, downloadCsv, stampedName } from '../../lib/csv';
 import { Button } from '../ui/button';
-import { Download } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import {
   fetchAuditPage, fetchDashboardMetrics, fetchTeam,
   AuditLog, DashboardMetrics, Profile
@@ -80,6 +80,21 @@ export const ReportsSupabaseView: React.FC = () => {
   const [team, setTeam] = useState<Profile[]>([]);
   const [exportando, setExportando] = useState(false);
 
+  /**
+   * Qué va al papel: TODO lo filtrado, o solo la página que se está viendo.
+   *
+   * Aquí la bitácora ya salía línea por línea —no hay cantidades que
+   * desglosar— pero solo las 25 de la página visible. Una bitácora de
+   * auditoría que se archiva con 25 de 400 eventos no sirve para auditar
+   * nada: justo lo que se busca en ella suele estar en las otras 375.
+   *
+   * Por defecto, todo lo filtrado. Quien quiera la hoja corta la pide.
+   */
+  const [todoElFiltro, setTodoElFiltro] = useState(true);
+  const [paraImprimir, setParaImprimir] = useState<AuditLog[] | null>(null);
+  const [recortado, setRecortado] = useState(false);
+  const [preparando, setPreparando] = useState(false);
+
   useEffect(() => {
     if (!canSee) return;
     fetchTeam().then(setTeam).catch(() => { /* el filtro de usuario es accesorio */ });
@@ -114,16 +129,53 @@ export const ReportsSupabaseView: React.FC = () => {
    * por páginas. Tope de 10.000 eventos con aviso; para más, acotar el rango
    * — que aquí SÍ se puede acotar.
    */
+  const TOPE_PAGINAS = 20;
+  const TAM_PAGINA = 500;
+
+  /** Todo lo que cae dentro del filtro. Lo usan la exportación y la impresión:
+   *  dos formas de sacar lo mismo no pueden diferir en QUÉ sacan. */
+  const traerTodoLoFiltrado = useCallback(async (): Promise<{ filas: AuditLog[]; recortado: boolean }> => {
+    const todas: AuditLog[] = [];
+    let recorte = true;
+    for (let pagina = 0; pagina < TOPE_PAGINAS; pagina++) {
+      const { rows } = await fetchAuditPage(pagina, TAM_PAGINA, filtrosAuditoria(q.searchInput));
+      todas.push(...rows);
+      if (rows.length < TAM_PAGINA) { recorte = false; break; }
+    }
+    return { filas: todas, recortado: recorte };
+  }, [filtrosAuditoria, q.searchInput]);
+
+  /**
+   * Imprimir: primero se traen las filas, LUEGO se imprime. `window.print()`
+   * compone con lo que haya en el DOM en ese instante.
+   */
+  const prepararImpresion = async () => {
+    if (preparando) return;
+    if (!todoElFiltro) { setParaImprimir(null); imprimirReporte('carta'); return; }
+    setPreparando(true);
+    try {
+      const { filas, recortado: r } = await traerTodoLoFiltrado();
+      setRecortado(r);
+      setParaImprimir(filas);
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!paraImprimir) return;
+    imprimirReporte('carta');
+  }, [paraImprimir]);
+
+  // Cambió el filtro: lo que se cargó para el papel ya no corresponde.
+  useEffect(() => {
+    setParaImprimir(null); setRecortado(false);
+  }, [fEntidad, fActor, rango.desde, rango.hasta, q.searchInput]);
+
   const exportarBitacora = async () => {
     setExportando(true);
     try {
-      const todas: AuditLog[] = [];
-      const TAM = 500;
-      for (let pagina = 0; pagina < 20; pagina++) {
-        const { rows } = await fetchAuditPage(pagina, TAM, filtrosAuditoria(q.searchInput));
-        todas.push(...rows);
-        if (rows.length < TAM) break;
-      }
+      const { filas: todas } = await traerTodoLoFiltrado();
       downloadCsv(stampedName('auditoria'), toCsv<AuditLog>([
         { header: 'cuando', value: l => new Date(l.occurred_at).toLocaleString('es-DO') },
         { header: 'accion', value: l => l.action },
@@ -168,7 +220,24 @@ export const ReportsSupabaseView: React.FC = () => {
         subtitle={`${branch?.name} · registro de solo inserción`}
         actions={
           <>
-            <BotonImprimir disabled={q.loading} />
+            <div className="inline-flex rounded-lg border border-line overflow-hidden" role="group"
+              aria-label="Qué se imprime">
+              <button type="button" onClick={() => setTodoElFiltro(true)} aria-pressed={todoElFiltro}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  todoElFiltro ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Todo lo filtrado
+              </button>
+              <button type="button" onClick={() => setTodoElFiltro(false)} aria-pressed={!todoElFiltro}
+                className={`px-2.5 py-1 text-xs font-bold transition-colors ${
+                  !todoElFiltro ? 'bg-brand text-on-accent' : 'bg-surface-2 text-muted hover:text-strong'}`}>
+                Solo esta página
+              </button>
+            </div>
+            <Button variant="outline" size="sm" disabled={q.loading || preparando}
+              onClick={() => void prepararImpresion()}>
+              {preparando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+              {preparando ? 'Preparando…' : 'Imprimir'}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => void exportarBitacora()}
               disabled={q.loading || exportando}>
               {exportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -280,8 +349,10 @@ export const ReportsSupabaseView: React.FC = () => {
         trigger. El autor y la hora los sella el servidor.
       </p>
 
-      {/* En papel va la página visible de la bitácora: para el histórico
-          completo está «Exportar filtrado». */}
+      {/* Al papel va TODO lo filtrado, salvo que se pida lo contrario. Antes
+          salía solo la página visible: una bitácora archivada con 25 de 400
+          eventos no sirve para auditar, porque lo que se busca suele estar en
+          las otras 375. */}
       <ReporteImprimible
         empresa={company?.trade_name}
         titulo="Bitácora de auditoría"
@@ -289,19 +360,32 @@ export const ReportsSupabaseView: React.FC = () => {
         filtros={[
           ...(fEntidad ? [`Módulo: ${ENTIDADES.find(x => x.id === fEntidad)?.label ?? fEntidad}`] : []),
           ...(fActor ? [`Usuario: ${team.find(t => t.id === fActor)?.full_name ?? ''}`] : []),
-          `Eventos: ${q.total} (se imprimen ${q.rows.length})`
+          ...(q.searchInput ? [`Búsqueda: ${q.searchInput}`] : []),
+          paraImprimir
+            ? `Eventos: ${paraImprimir.length} de ${q.total}`
+            : `Eventos: ${q.rows.length} de ${q.total} (solo esta página)`
         ]}
         generadoPor={profile?.full_name}
       >
+        {recortado && (
+          <p className="pr-nota">
+            ATENCIÓN: hay más eventos de los que caben en un reporte. Se imprimen los primeros
+            {' '}{paraImprimir?.length ?? 0}. Acote el periodo o use los filtros para verlos todos.
+          </p>
+        )}
         <table>
-          <thead><tr><th>Cuándo</th><th>Acción</th><th>Detalle</th><th>Quién</th></tr></thead>
+          <thead><tr><th>Cuándo</th><th>Acción</th><th>Detalle</th><th>Quién</th><th>Rol</th></tr></thead>
           <tbody>
-            {q.rows.map(l => (
+            {(paraImprimir ?? q.rows).map(l => (
               <tr key={l.id}>
                 <td>{new Date(l.occurred_at).toLocaleString('es-DO')}</td>
                 <td>{l.action}</td>
                 <td>{l.details}</td>
                 <td>{l.actor_name || '—'}</td>
+                {/* El rol va al lado del nombre: «quién» sin «con qué
+                    autoridad» deja la mitad de la pregunta sin responder, y en
+                    una bitácora esa mitad es la que importa. */}
+                <td>{l.actor_role ?? '—'}</td>
               </tr>
             ))}
           </tbody>
