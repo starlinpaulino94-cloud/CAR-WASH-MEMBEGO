@@ -13,6 +13,20 @@ import qrcode from 'qrcode-generator';
  * La corrección de errores es 'M': suficiente para un comprobante que no va a
  * ensuciarse, y deja el patrón menos denso (más fácil de leer con la cámara).
  */
+
+/**
+ * Margen blanco alrededor del patrón, en módulos.
+ *
+ * La norma del QR pide cuatro: es lo que permite al lector encontrar dónde
+ * empieza el código. Sin ella el patrón llegaba al filo del SVG y el pie de
+ * texto del comprobante quedaba pegado al borde de abajo —comprobado: cero
+ * píxeles entre uno y otro—, que es justo lo que hace que una cámara falle
+ * sobre papel térmico.
+ *
+ * El margen se descuenta del tamaño pedido en vez de agrandar el SVG: el
+ * comprobante reserva un ancho concreto y crecer por fuera lo desbordaría.
+ */
+const ZONA_SILENCIO = 4;
 export const QrCode: React.FC<{ value: string; size?: number; className?: string }> = ({
   value, size = 96, className
 }) => {
@@ -32,18 +46,21 @@ export const QrCode: React.FC<{ value: string; size?: number; className?: string
   }, [value]);
 
   // `shape-rendering: crispEdges` evita el antialias que borronea los módulos.
+  const lado = count + ZONA_SILENCIO * 2;
   return (
     <svg
       width={size}
       height={size}
-      viewBox={`0 0 ${count} ${count}`}
+      viewBox={`0 0 ${lado} ${lado}`}
       className={className}
       shapeRendering="crispEdges"
       role="img"
       aria-label="Código QR de la operación"
     >
-      <rect width={count} height={count} fill="#fff" />
-      <path d={path} fill="#000" />
+      <rect width={lado} height={lado} fill="#fff" />
+      <g transform={`translate(${ZONA_SILENCIO} ${ZONA_SILENCIO})`}>
+        <path d={path} fill="#000" />
+      </g>
     </svg>
   );
 };

@@ -13,7 +13,7 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "typecheck": "tsc --noEmit",
-    "test:api": "node --import tsx --test tests/api/*.test.mjs && npm run test:membego",
+    "test:api": "node --import tsx --test tests/api/*.test.mjs && npm run test:membego && npm run test:comprobante",
     "test:sql": "bash supabase/tests/run.sh && bash supabase/tests/concurrency.sh && bash supabase/tests/restore.sh",
     "test:e2e": "bash tests/e2e/run-all.sh",
     "test": "npm run typecheck && npm run test:api",
@@ -21,7 +21,8 @@
     "test:restore": "bash supabase/tests/restore.sh",
     "test:load": "node tests/load/carga.mjs",
     "db:verificar": "node scripts/verificar-despliegue.mjs",
-    "test:membego": "for f in tests/membego/*.test.ts; do npx tsx $f || exit 1; done"
+    "test:membego": "for f in tests/membego/*.test.ts; do npx tsx $f || exit 1; done",
+    "test:comprobante": "for f in tests/comprobante/*.test.ts; do npx tsx $f || exit 1; done"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
