@@ -10,7 +10,6 @@ import { fetchPerfilComprobanteMembego, PerfilComprobanteMembego } from '../../d
 import { LogoMark } from '../common/Logo';
 import { construirComprobante } from '../../lib/comprobante/constructor';
 import { TicketComprobante } from '../common/TicketComprobante';
-import { QrCode } from '../common/QrCode';
 
 interface Props {
   invoice: Invoice | null;

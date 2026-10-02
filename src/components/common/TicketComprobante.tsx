@@ -48,7 +48,13 @@ export const TicketComprobante: React.FC<{
       case 'qr':
         return (
           <div key={i} className="my-1 text-center">
-            <QrCode value={l.data} size={doc.paperWidthMm === 58 ? 104 : 128} />
+            {/* `mx-auto` y no solo el `text-center` del padre: el reset de
+                Tailwind pone `svg { display: block }`, y `text-align` no centra
+                un bloque. El QR salía pegado al margen izquierdo con su pie de
+                texto —ese sí centrado— montándosele encima. El logo de aquí
+                abajo ya lo hacía bien; el QR se quedó sin ello. */}
+            <QrCode value={l.data} size={doc.paperWidthMm === 58 ? 104 : 128}
+              className="mx-auto" />
             {l.caption && <div className="text-[0.85em]">{l.caption}</div>}
           </div>
         );
