@@ -286,6 +286,11 @@ check('lo fiado NO entró como efectivo en ninguna caja',
 // la membresía decidida sobre ese carro, que es peor—.
 console.log('\n[8] POS — elegir entre los carros del cliente');
 
+// La venta de arriba dejó el comprobante abierto, y su fondo se come los
+// clics: se cierra como lo hace el cajero, igual que tras cobrar en [3].
+await page.keyboard.press('Escape');
+await page.waitForTimeout(400);
+
 sql(`insert into public.vehicles (company_id, customer_id, plate, make, model, category) values
       ('11111111-1111-1111-1111-111111111111','${idMostrador}','POS0001','Toyota','Corolla','sedan'),
       ('11111111-1111-1111-1111-111111111111','${idMostrador}','POS0002','Honda','CR-V','suv');`);
@@ -321,6 +326,9 @@ await page.getByRole('button', { name: 'Crédito' }).click();
 await page.waitForTimeout(300);
 await page.getByRole('button', { name: /Cobrar/ }).click();
 await page.waitForTimeout(2500);
+
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 check('la factura sale con el SEGUNDO carro, no con el de siempre',
   sql('select vehicle_plate from invoices order by created_at desc limit 1') === 'POS0002',
