@@ -6,7 +6,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-const { conservarSeleccion, duenoPropuesto, accionDeTecla } = await import('../../src/lib/llegada.ts')
+const {
+  conservarSeleccion, duenoPropuesto, accionDeTecla,
+  duenoTrasCambioDePlaca, vehiculosDelCliente
+} = await import('../../src/lib/llegada.ts')
 
 // ── conservarSeleccion ──────────────────────────────────────────────────────
 
@@ -80,4 +83,100 @@ test('Ctrl+Enter o ⌘+Enter registran desde cualquier campo', () => {
 
 test('otras teclas no son atajos', () => {
   assert.equal(accionDeTecla({ key: 'a', ctrlKey: true, metaKey: false }, true), null)
+})
+
+// ── duenoTrasCambioDePlaca ──────────────────────────────────────────────────
+//
+// La regla que decide si el cliente en pantalla sobrevive a un cambio de placa.
+// El caso que la motivó: un cliente con dos carros viene hoy con el segundo.
+
+const porPlaca = { ...limpio, duenoPorPlaca: true, placaDeSuLista: false }
+
+test('el carro de otro suelta al cliente que puso la placa anterior', () => {
+  // Placa nueva sin dueño registrado: ese cliente era del carro anterior y
+  // dejarlo colgaría la orden de quien no es.
+  assert.deepEqual(duenoTrasCambioDePlaca(null, porPlaca), { accion: 'soltar' })
+})
+
+test('SU segundo carro NO lo suelta, aunque no esté registrado', () => {
+  // Es el caso del dueño: tocar el segundo vehículo de la lista del cliente
+  // vaciaba el nombre y el teléfono, y en el mostrador eso se lee como que
+  // «solo deja el principal».
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(null, { ...porPlaca, placaDeSuLista: true }),
+    { accion: 'dejar' }
+  )
+})
+
+test('y tampoco cuando SU segundo carro figura a nombre de otro', () => {
+  // Un carro que quedó a nombre de un familiar: el mostrador lo eligió de la
+  // lista de ESTE cliente, así que manda lo que eligió, no el registro. El
+  // aviso de «figura a nombre de» sigue saliendo aparte.
+  const deOtro = { plate: 'B222222', customer: { id: 'c2', name: 'Ana' } }
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(deOtro, { ...porPlaca, placaDeSuLista: true }),
+    { accion: 'dejar' }
+  )
+})
+
+test('tecleando la placa a mano vuelve a mandar el registro', () => {
+  // `placaDeSuLista` se apaga al teclear: ahí sí se propone el dueño real.
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(carro, porPlaca),
+    { accion: 'proponer', cliente: juan }
+  )
+})
+
+test('al cliente elegido a mano no se le toca nunca', () => {
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(null, { ...porPlaca, elegidoAMano: true }),
+    { accion: 'dejar' }
+  )
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(carro, { ...limpio, duenoPorPlaca: false, placaDeSuLista: false, elegidoAMano: true }),
+    { accion: 'dejar' }
+  )
+})
+
+test('sin cliente en pantalla no hay nada que soltar', () => {
+  assert.deepEqual(
+    duenoTrasCambioDePlaca(null, { ...limpio, duenoPorPlaca: false, placaDeSuLista: false }),
+    { accion: 'dejar' }
+  )
+})
+
+// ── vehiculosDelCliente ─────────────────────────────────────────────────────
+
+test('junta los carros del car wash con los de la membresía, sin repetir', () => {
+  const r = vehiculosDelCliente(
+    [{ id: 'v1', plate: 'A123456', make: 'Toyota', model: 'Corolla' }],
+    [{ id: 'm1', placa: 'A-123 456', marca: 'Toyota', modelo: 'Corolla' },
+     { id: 'm2', placa: 'B222222', marca: 'Honda', modelo: 'CR-V' }]
+  )
+  // La misma placa escrita de dos formas es UN carro, y gana el del car wash.
+  assert.deepEqual(r.map(v => v.id), ['v1', 'm2'])
+  assert.equal(r[0].registrado, true)
+  assert.equal(r[1].registrado, false)
+})
+
+test('el orden que llega se respeta: el que más vino va primero', () => {
+  const r = vehiculosDelCliente(
+    [{ id: 'v1', plate: 'A111111' }, { id: 'v2', plate: 'B222222' }], []
+  )
+  assert.deepEqual(r.map(v => v.placa), ['A111111', 'B222222'])
+})
+
+test('un vehículo de Membego sin placa no se enseña', () => {
+  // Un botón que rellena la placa con nada no sirve para nada.
+  const r = vehiculosDelCliente([], [{ id: 'm1', placa: null }, { id: 'm2', placa: '  ' }])
+  assert.deepEqual(r, [])
+})
+
+test('la descripción junta marca y modelo, y aguanta que falten', () => {
+  const r = vehiculosDelCliente(
+    [{ id: 'v1', plate: 'A111111', make: 'Toyota', model: null },
+     { id: 'v2', plate: 'B222222', make: '', model: '' }], []
+  )
+  assert.equal(r[0].descripcion, 'Toyota')
+  assert.equal(r[1].descripcion, '')
 })

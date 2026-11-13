@@ -33,6 +33,13 @@ interface Props {
   /** Si se pasa, los vehículos son botones que rellenan la placa. */
   onElegirPlaca?: (placa: string) => void;
   /**
+   * Enseñar «Sus vehículos». La llegada lo apaga: allí los carros del cliente
+   * ya salen en una sola lista —los del car wash y los de Membego juntos— y
+   * repetir aquí la mitad obligaría a mirar en dos sitios para la misma
+   * pregunta, con dos respuestas que no coinciden.
+   */
+  mostrarVehiculos?: boolean;
+  /**
    * Si se pasa, cada beneficio usable muestra un botón «Aplicar» que agrega el
    * servicio cubierto a la venta. Sin él, la ficha solo informa.
    */
@@ -48,7 +55,7 @@ interface Props {
 
 export const PanelFichaMembego: React.FC<Props> = ({
   ficha, error, buscando, placa = '', onElegirPlaca, onAplicarBeneficio, disabled = false,
-  membegoCustomerId
+  mostrarVehiculos = true, membegoCustomerId
 }) => {
   const promosElegibles = ficha?.promotions.filter(p => p.eligible) ?? [];
 
@@ -184,7 +191,7 @@ export const PanelFichaMembego: React.FC<Props> = ({
 
       {/* Sus carros en Membego. Tocar uno pone su placa: es lo que el mostrador
           iba a teclear mirando la matrícula. */}
-      {ficha && ficha.vehicles.length > 0 && (
+      {mostrarVehiculos && ficha && ficha.vehicles.length > 0 && (
         <div className="space-y-1">
           <span className="text-xs font-semibold text-muted uppercase">Sus vehículos</span>
           <div className="flex flex-wrap gap-1.5">
