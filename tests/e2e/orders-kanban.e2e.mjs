@@ -382,6 +382,86 @@ check('la edición quedó en la bitácora',
 
 await ctxAdmin.close();
 
+// ===================================== El cliente con más de un carro
+//
+// Queja del dueño: «cuando un cliente tiene más de un vehículo, no deja
+// seleccionar el que no es el principal». Eran dos cosas: no había lista de
+// SUS carros en ninguna parte —había que saberse la segunda matrícula— y, al
+// cambiar la placa, la regla que suelta al dueño del carro anterior soltaba
+// también al cliente cuando tocabas su propio segundo carro.
+console.log('\n[7] Llegada — el cliente con dos carros');
+
+await page.locator('nav[aria-label="Módulos"]').getByRole('link', { name: /^Operaciones/ }).click();
+await page.waitForTimeout(1800);
+
+const llegada = page.getByRole('dialog', { name: /Registrar llegada de vehículo/ });
+
+// Primer carro, cliente nuevo.
+await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
+await page.waitForTimeout(1200);
+await page.getByLabel('Placa *').fill('DOS0001');
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
+await page.getByLabel('Cliente nuevo').fill('Cliente Dos Carros');
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
+await page.waitForTimeout(2500);
+await cerrarComanda(page);
+
+// Segundo carro, el MISMO cliente, elegido del buscador.
+await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
+await page.waitForTimeout(1200);
+await page.getByLabel('Placa *').fill('DOS0002');
+await page.getByRole('button', { name: /Buscar o registrar/ }).click();
+await page.waitForTimeout(400);
+await page.getByLabel('Buscar cliente registrado').fill('Dos Carros');
+await page.waitForTimeout(1500);
+await llegada.getByRole('button', { name: /Cliente Dos Carros/ }).click();
+await page.waitForTimeout(600);
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
+await page.waitForTimeout(2500);
+await cerrarComanda(page);
+
+check('los dos carros quedan a nombre del mismo cliente',
+  sql("select count(*) from vehicles v join customers c on c.id=v.customer_id where c.name='Cliente Dos Carros'") === '2',
+  sql("select string_agg(v.plate,',' order by v.plate) from vehicles v join customers c on c.id=v.customer_id where c.name='Cliente Dos Carros'"));
+
+// Y ahora viene con el segundo.
+await page.getByRole('button', { name: /Registrar llegada/ }).first().click();
+await page.waitForTimeout(1200);
+await page.getByLabel('Placa *').fill('DOS0001');
+await page.waitForTimeout(2200);   // reconocer la placa + traer sus carros
+
+check('la placa conocida propone a su dueño',
+  await llegada.getByText('Cliente Dos Carros').first().isVisible().catch(() => false));
+check('con dos carros, el mostrador tiene de dónde elegir',
+  await llegada.getByRole('button', { name: /DOS0002/ }).isVisible().catch(() => false));
+
+await llegada.getByRole('button', { name: /DOS0002/ }).click();
+await page.waitForTimeout(2200);
+
+check('tocar su segundo carro cambia la placa',
+  (await page.getByLabel('Placa *').inputValue()) === 'DOS0002',
+  await page.getByLabel('Placa *').inputValue());
+// Lo que fallaba: el segundo carro cambiaba la placa Y borraba al cliente, con
+// su nombre y su teléfono. En el mostrador eso se ve como «solo deja el
+// principal», y la orden acababa saliendo con el carro de siempre.
+check('y el cliente NO se pierde al hacerlo',
+  await llegada.getByText('Cliente Dos Carros').first().isVisible().catch(() => false));
+
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Registrar e imprimir/ }).click();
+await page.waitForTimeout(2500);
+await cerrarComanda(page);
+
+check('la orden queda con el SEGUNDO carro y con su dueño',
+  sql("select c.name from work_orders o join customers c on c.id=o.customer_id where o.vehicle_plate='DOS0002' order by o.created_at desc limit 1") === 'Cliente Dos Carros',
+  sql("select coalesce(c.name,'(sin cliente)') from work_orders o left join customers c on c.id=o.customer_id where o.vehicle_plate='DOS0002' order by o.created_at desc limit 1"));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);

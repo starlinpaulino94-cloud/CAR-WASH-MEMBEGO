@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatCents } from '../../lib/money';
-import { accionDeTecla, conservarSeleccion, duenoPropuesto } from '../../lib/llegada';
+import {
+  accionDeTecla, conservarSeleccion, duenoTrasCambioDePlaca, vehiculosDelCliente
+} from '../../lib/llegada';
 import {
   createWorkOrder, fetchOperators, fetchServicesForCategory, VehicleCategory, WorkOrder
 } from '../../data/ordersRepository';
@@ -16,7 +18,8 @@ import { filtrarServicios, categoriasConServicios, TODAS } from '../../lib/filtr
 import { FiltroCategoriaServicio } from '../common/FiltroCategoriaServicio';
 import {
   lookupVehicleByPlate, normalizePlate, searchCustomers, fetchFichaMembego,
-  CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego
+  fetchVehiclesForCustomer,
+  CustomerMatch, VehicleMatch, FichaMembego, ErrorFichaMembego, VehiculoDelCliente
 } from '../../data/customersRepository';
 import { PanelFichaMembego } from '../common/FichaMembego';
 import { ComandaOrdenModal } from './ComandaOrdenModal';
@@ -131,6 +134,16 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const [duenoPorPlaca, setDuenoPorPlaca] = useState(false);
   /** Placa cuyo dueño propuesto se quitó con «Sin cliente». */
   const placaRechazada = useRef<string | null>(null);
+  /**
+   * La placa en pantalla salió de la lista de vehículos del cliente en pantalla.
+   *
+   * Con esto, tocar su segundo carro NO lo suelta: la placa cambió, el dueño
+   * no. Se apaga en cuanto alguien teclea la placa a mano o cambia de cliente,
+   * porque entonces ya no se sabe de quién es el carro.
+   */
+  const placaDeSuLista = useRef(false);
+  /** Los carros que ya tiene registrados el cliente en pantalla. */
+  const [susVehiculos, setSusVehiculos] = useState<VehiculoDelCliente[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [resultados, setResultados] = useState<CustomerMatch[]>([]);
   const [buscando, setBuscando] = useState(false);
@@ -237,23 +250,29 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
    * Y se suelta solo también: si la placa cambia y el cliente en pantalla lo
    * había puesto la placa anterior, se quita con su nombre y teléfono — ese
    * cliente era de OTRO carro y dejarlo crearía una ficha nueva a su nombre.
-   * Lo que eligió o escribió el mostrador a mano no se toca nunca.
+   * Lo que eligió o escribió el mostrador a mano no se toca nunca, ni tampoco
+   * cuando la placa nueva salió de la lista de carros de ESE mismo cliente:
+   * ahí el carro cambió y el dueño no.
+   *
+   * La regla entera vive en `duenoTrasCambioDePlaca` para poder probarla sola.
    */
   useEffect(() => {
-    if (clienteAMano.current) return;
-    const propuesto = duenoPropuesto(conocido, {
-      elegidoAMano: false,
+    const decision = duenoTrasCambioDePlaca(conocido, {
+      elegidoAMano: clienteAMano.current,
+      // Tocó uno de SUS carros: la placa cambió, el dueño no.
+      placaDeSuLista: placaDeSuLista.current,
+      duenoPorPlaca,
       // Si el nombre en pantalla lo puso la placa anterior, no cuenta como escrito.
       nombreEscrito: duenoPorPlaca ? '' : customerName,
       telefonoEscrito: duenoPorPlaca ? '' : customerPhone,
       placaRechazada: placaRechazada.current
     });
-    if (propuesto) {
-      setCliente(propuesto);
-      setCustomerName(propuesto.name);
-      setCustomerPhone(propuesto.phone ?? '');
+    if (decision.accion === 'proponer') {
+      setCliente(decision.cliente);
+      setCustomerName(decision.cliente.name);
+      setCustomerPhone(decision.cliente.phone ?? '');
       setDuenoPorPlaca(true);
-    } else if (duenoPorPlaca) {
+    } else if (decision.accion === 'soltar') {
       setCliente(null);
       setCustomerName('');
       setCustomerPhone('');
@@ -281,6 +300,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
 
   const elegirCliente = useCallback((c: CustomerMatch) => {
     clienteAMano.current = true;
+    placaDeSuLista.current = false;
     setDuenoPorPlaca(false);
     setCliente(c);
     setCustomerName(c.name);
@@ -293,6 +313,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
   const soltarCliente = useCallback((abrirBuscador: boolean) => {
     if (!clienteAMano.current && conocido) placaRechazada.current = conocido.plate;
     clienteAMano.current = false;
+    placaDeSuLista.current = false;
     setDuenoPorPlaca(false);
     setCliente(null);
     setCustomerName('');
@@ -301,6 +322,46 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
     setFichaError(null);
     setClienteAbierto(abrirBuscador);
   }, [conocido]);
+
+  /**
+   * Los carros que ese cliente ya tiene registrados en el car wash.
+   *
+   * No depende de la placa: la lista es del cliente y no cambia porque se
+   * escriba una matrícula. Pedirla otra vez en cada tecla sería una consulta
+   * por pulsación para una respuesta idéntica.
+   */
+  useEffect(() => {
+    const id = cliente?.id;
+    if (!id) { setSusVehiculos([]); return; }
+
+    let active = true;
+    fetchVehiclesForCustomer(id)
+      .then(v => { if (active) setSusVehiculos(v); })
+      // Sin la lista se sigue pudiendo teclear la placa: es una ayuda, no un
+      // requisito, y un fallo aquí no puede frenar una llegada.
+      .catch(() => { if (active) setSusVehiculos([]); });
+
+    return () => { active = false; };
+  }, [cliente]);
+
+  /**
+   * Tocar uno de sus carros.
+   *
+   * Solo pone la placa: marca, modelo, color y categoría los rellena el efecto
+   * que la reconoce, con las mismas reglas que si la hubieran tecleado —sin
+   * pisar lo ya escrito—. Y deja constancia de que la placa salió de SU lista,
+   * que es lo que impide que el cliente se suelte al cambiarla.
+   */
+  const elegirVehiculo = useCallback((placa: string) => {
+    placaDeSuLista.current = true;
+    setPlate(placa.toUpperCase());
+  }, []);
+
+  /** Sus carros, los del car wash y los de su membresía, sin repetir. */
+  const vehiculosElegibles = useMemo(
+    () => vehiculosDelCliente(susVehiculos, ficha?.vehicles ?? []),
+    [susVehiculos, ficha]
+  );
 
   /**
    * La ficha de Membego del cliente elegido.
@@ -504,7 +565,12 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
               <label htmlFor="na-plate" className="text-xs font-semibold text-muted uppercase">Placa *</label>
               <input
                 id="na-plate" ref={firstFieldRef} type="text" value={plate}
-                onChange={e => setPlate(e.target.value.toUpperCase())}
+                onChange={e => {
+                  // Tecleada a mano: ya no se sabe de quién es, vuelven a
+                  // mandar las reglas de la placa.
+                  placaDeSuLista.current = false;
+                  setPlate(e.target.value.toUpperCase());
+                }}
                 disabled={busy}
                 autoComplete="off" autoCapitalize="characters" enterKeyHint="next" spellCheck={false}
                 placeholder="A123456"
@@ -629,6 +695,45 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                   <Etiqueta>{cliente.total_visits} {cliente.total_visits === 1 ? 'visita' : 'visitas'}</Etiqueta>
                 </div>
 
+                {/* SUS CARROS. El que más vino primero.
+
+                    Sin esta lista, traer el segundo carro de alguien obligaba a
+                    saberse la matrícula de memoria, y lo que se hacía era
+                    registrar el de siempre: la orden salía con el carro
+                    equivocado. Se juntan los del car wash con los de su
+                    membresía porque son la misma pregunta —«¿cuál de sus carros
+                    es este?»— y mirarla en dos sitios es mirar mal en uno.
+
+                    Sale también con uno solo: la placa se teclea antes que el
+                    cliente, pero quien lo elige primero en el buscador se
+                    ahorra teclearla, y es lo que la ficha de Membego ya hacía
+                    antes de que esta lista la reemplazara. */}
+                {vehiculosElegibles.length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <span className="text-xs font-semibold text-muted uppercase">Sus vehículos</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {vehiculosElegibles.map(v => {
+                        const esActual = normalizePlate(v.placa) === normalizePlate(plate);
+                        return (
+                          <button
+                            key={v.id} type="button" disabled={busy} aria-pressed={esActual}
+                            onClick={() => elegirVehiculo(v.placa)}
+                            className={`px-2 py-1 rounded-lg border text-xs transition-colors disabled:opacity-50 ${
+                              esActual
+                                ? 'bg-brand text-on-accent border-brand font-bold'
+                                : 'bg-surface border-line text-body hover:border-brand'
+                            }`}>
+                            <strong>{v.placa}</strong>
+                            {v.descripcion && (
+                              <span className="font-normal opacity-80"> · {v.descripcion}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Lo que Membego sabe de él. Aparece solo, sin pedirlo.
                     El panel es el mismo que ve la caja: el que recibe y el que
                     cobra no pueden ver saldos distintos del mismo cliente. */}
@@ -636,7 +741,7 @@ export const NewArrivalSupabaseModal: React.FC<Props> = ({ onClose, onCreated })
                   <div className="pt-3 border-t border-brand/30">
                     <PanelFichaMembego
                       ficha={ficha} error={fichaError} buscando={fichaBuscando}
-                      placa={plate} onElegirPlaca={setPlate} disabled={busy}
+                      placa={plate} disabled={busy} mostrarVehiculos={false}
                       membegoCustomerId={cliente.membego_customer_id}
                     />
                   </div>

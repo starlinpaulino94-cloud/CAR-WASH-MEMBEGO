@@ -1,5 +1,6 @@
 import { requireSupabase, encabezadosMembego } from '../lib/supabase';
 import { Enums } from '../lib/database.types';
+import { normalizePlate } from '../lib/placa';
 import { fallaDatos } from './errorDatos';
 
 /**
@@ -75,9 +76,11 @@ export interface VehicleMatch {
   customer: CustomerMatch | null;
 }
 
-/** La placa se guarda normalizada; hay que buscar con la misma forma. */
-export const normalizePlate = (plate: string) =>
-  plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+/** La placa se guarda normalizada; hay que buscar con la misma forma.
+ *  La función vive en `lib/placa` —la usan también las reglas de la llegada,
+ *  que no pueden depender de este módulo— y se reexporta para no romper a
+ *  quien ya la importaba de aquí. */
+export { normalizePlate } from '../lib/placa';
 
 /**
  * Busca el vehículo por placa, con su dueño si lo tiene.
@@ -108,6 +111,44 @@ export async function lookupVehicleByPlate(plate: string): Promise<VehicleMatch 
     id: v.id, plate: v.plate, make: v.make, model: v.model, color: v.color,
     category: v.category, customer
   };
+}
+
+/**
+ * Los carros de un cliente, el que más vino primero.
+ *
+ * Existe porque el mostrador no tenía de dónde elegir. La llegada se escribe
+ * por placa, y para el carro que el cliente usa siempre eso basta: se teclea y
+ * ya. Pero quien tiene dos o tres —y viene hoy con el segundo— obligaba al
+ * mostrador a saberse una matrícula de memoria o a salir a buscarla a la
+ * pantalla de Vehículos. Lo que se hacía entonces era registrar el de siempre,
+ * y la orden quedaba con el carro equivocado.
+ *
+ * `vehicles` se lee tal cual: la RLS ya limita a la empresa de quien pregunta.
+ * El orden lo pone la última visita —el de siempre queda primero— y las que
+ * nunca han venido van detrás, por fecha de alta.
+ */
+export interface VehiculoDelCliente {
+  id: string;
+  plate: string;
+  make: string;
+  model: string;
+  color: string;
+  category: Enums['vehicle_category'];
+}
+
+export async function fetchVehiclesForCustomer(
+  customerId: string, limit = 12
+): Promise<VehiculoDelCliente[]> {
+  const { data, error } = await requireSupabase()
+    .from('vehicles')
+    .select('id, plate, make, model, color, category')
+    .eq('customer_id', customerId)
+    .order('last_visit_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) throw fallaDatos(error);
+  return (data ?? []) as VehiculoDelCliente[];
 }
 
 // ─────────────────────────────────────────────────── La ficha de Membego
