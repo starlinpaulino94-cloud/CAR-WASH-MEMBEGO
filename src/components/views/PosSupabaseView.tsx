@@ -19,9 +19,11 @@ import {
 } from '../../data/billingRepository';
 import { fetchCreditStatus, CreditStatus } from '../../data/creditRepository';
 import {
-  fetchCustomerById, searchCustomers, fetchFichaMembego,
-  CustomerMatch, FichaMembego, ErrorFichaMembego
+  fetchCustomerById, searchCustomers, fetchFichaMembego, fetchVehiclesForCustomer,
+  CustomerMatch, FichaMembego, ErrorFichaMembego, VehiculoDelCliente
 } from '../../data/customersRepository';
+import { normalizePlate } from '../../lib/placa';
+import { vehiculosDelCliente } from '../../lib/llegada';
 import {
   fetchVehicleCategoryLevels, fetchServiciosIncluiblesMembego,
   NivelesPorCategoria, ServicioIncluible
@@ -156,6 +158,8 @@ export const PosSupabaseView: React.FC = () => {
   const [preciosTope, setPreciosTope] = useState<Record<string, number> | null>(null);
   /** El identificador en Membego, venga de la ficha elegida o de la orden. */
   const [membegoCustomerId, setMembegoCustomerId] = useState<string | null>(null);
+  /** Los carros que ese cliente ya tiene registrados en el car wash. */
+  const [susVehiculos, setSusVehiculos] = useState<VehiculoDelCliente[]>([]);
   /** Resultado del último canje, para enseñárselo al cajero tras cobrar. */
   const [avisoCanje, setAvisoCanje] = useState<{ ok: boolean; texto: string } | null>(null);
   /** Resultado del último escaneo, para confirmarle al cajero qué entró. */
@@ -342,6 +346,25 @@ export const PosSupabaseView: React.FC = () => {
       .catch(() => { if (active) setMembegoCustomerId(null); });
     return () => { active = false; };
   }, [customerId, cliente]);
+
+  /**
+   * Los carros de ese cliente, para poder elegir entre ellos.
+   *
+   * Mismo caso que en la llegada: quien tiene dos o tres y hoy trae el
+   * segundo obligaba al cajero a saberse la matrícula. No depende de la placa
+   * —la lista es del cliente—, así que no se vuelve a pedir al teclearla.
+   */
+  useEffect(() => {
+    // Con una orden en pantalla el carro ya está decidido y la lista no se
+    // ofrece: no hay por qué ir a buscarla.
+    if (!customerId || orden) { setSusVehiculos([]); return; }
+    let active = true;
+    fetchVehiclesForCustomer(customerId)
+      .then(v => { if (active) setSusVehiculos(v); })
+      // Es una ayuda, no un requisito: sin ella la placa se sigue tecleando.
+      .catch(() => { if (active) setSusVehiculos([]); });
+    return () => { active = false; };
+  }, [customerId, orden]);
 
   /**
    * Qué cubre su membresía para ESTE carro.
@@ -654,6 +677,19 @@ export const PosSupabaseView: React.FC = () => {
       .catch(() => { /* se cubre completo y se avisa */ });
     return () => { vivo = false; };
   }, []);
+
+  /**
+   * Sus carros, los del car wash y los de su membresía, sin repetir.
+   *
+   * Cuando la venta viene de una ORDEN no se ofrece: ese carro ya lo decidió
+   * la recepción y cambiar aquí la placa dejaría la factura diciendo una cosa
+   * y la orden otra, sin que nada avise. Si la orden trae el carro
+   * equivocado, se corrige en la orden.
+   */
+  const vehiculosElegibles = useMemo(
+    () => (orden ? [] : vehiculosDelCliente(susVehiculos, ficha?.vehicles ?? [])),
+    [orden, susVehiculos, ficha]
+  );
 
   /** Los servicios que una membresía SÍ puede pagar, para poder nombrarlos. */
   const nombresIncluibles = useMemo(
@@ -1356,7 +1392,7 @@ export const PosSupabaseView: React.FC = () => {
             <div className="bg-surface-2/50 border border-line rounded-xl p-3">
               <PanelFichaMembego
                 ficha={ficha} error={fichaError} buscando={fichaBuscando}
-                placa={vehiclePlate} onElegirPlaca={setVehiclePlate}
+                placa={vehiclePlate} mostrarVehiculos={false}
                 onAplicarBeneficio={aplicarBeneficio}
                 disabled={submitting}
                 membegoCustomerId={membegoCustomerId}
@@ -1389,6 +1425,38 @@ export const PosSupabaseView: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* SUS CARROS, pegados al campo que rellenan.
+
+              Quien tiene dos o tres y viene con el segundo obligaba al cajero
+              a saberse la matrícula: lo que se teclea entonces es la de
+              siempre, y la factura sale con el carro que no es —y con la
+              membresía decidida sobre ese carro, que es peor—. */}
+          {vehiculosElegibles.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-muted uppercase">Sus vehículos</span>
+              <div className="flex flex-wrap gap-1.5">
+                {vehiculosElegibles.map(v => {
+                  const esActual = normalizePlate(v.placa) === normalizePlate(vehiclePlate);
+                  return (
+                    <button
+                      key={v.id} type="button" disabled={submitting} aria-pressed={esActual}
+                      onClick={() => setVehiclePlate(v.placa.toUpperCase())}
+                      className={`px-2 py-1 rounded-lg border text-xs transition-colors disabled:opacity-50 ${
+                        esActual
+                          ? 'bg-brand text-on-accent border-brand font-bold'
+                          : 'bg-surface border-line text-body hover:border-brand'
+                      }`}>
+                      <strong>{v.placa}</strong>
+                      {v.descripcion && (
+                        <span className="font-normal opacity-80"> · {v.descripcion}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Consulta de beneficios Membego por teléfono */}
           <div className="space-y-1.5">

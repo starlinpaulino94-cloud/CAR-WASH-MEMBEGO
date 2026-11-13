@@ -278,6 +278,54 @@ check('lo fiado NO entró como efectivo en ninguna caja',
        join invoices i on i.id = m.invoice_id
        where i.customer_id='${idMostrador}'`) === '0');
 
+// ============================================ El cliente con dos carros
+//
+// Mismo caso que en la llegada, en la caja: quien tiene dos o tres y viene
+// con el segundo obligaba al cajero a saberse la matrícula. Lo que se teclea
+// entonces es la de siempre, y la factura sale con el carro que no es —y con
+// la membresía decidida sobre ese carro, que es peor—.
+console.log('\n[8] POS — elegir entre los carros del cliente');
+
+sql(`insert into public.vehicles (company_id, customer_id, plate, make, model, category) values
+      ('11111111-1111-1111-1111-111111111111','${idMostrador}','POS0001','Toyota','Corolla','sedan'),
+      ('11111111-1111-1111-1111-111111111111','${idMostrador}','POS0002','Honda','CR-V','suv');`);
+
+await sidebarPos.click();
+await page.waitForTimeout(1800);
+await page.getByRole('tab', { name: 'Servicios' }).click();
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /Lavado Completo/ }).click();
+await page.waitForTimeout(300);
+
+check('sin cliente elegido no hay lista de carros que enseñar',
+  !(await page.getByText('Sus vehículos').isVisible().catch(() => false)));
+
+await page.getByLabel('Buscar cliente registrado').fill('Mostrador');
+await page.waitForTimeout(1300);
+await page.getByRole('button', { name: /Cliente Mostrador/ }).first().click();
+await page.waitForTimeout(1500);
+
+check('al elegir al cliente salen SUS dos carros',
+  await page.getByRole('button', { name: /POS0001/ }).isVisible().catch(() => false)
+  && await page.getByRole('button', { name: /POS0002/ }).isVisible().catch(() => false));
+
+// El segundo, que es con el que viene hoy.
+await page.getByRole('button', { name: /POS0002/ }).click();
+await page.waitForTimeout(600);
+
+check('tocar el segundo carro pone su placa en la factura',
+  (await page.getByLabel('Placa').inputValue()) === 'POS0002',
+  await page.getByLabel('Placa').inputValue());
+
+await page.getByRole('button', { name: 'Crédito' }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Cobrar/ }).click();
+await page.waitForTimeout(2500);
+
+check('la factura sale con el SEGUNDO carro, no con el de siempre',
+  sql('select vehicle_plate from invoices order by created_at desc limit 1') === 'POS0002',
+  sql("select coalesce(vehicle_plate,'(sin placa)') from invoices order by created_at desc limit 1"));
+
 await browser.close();
 
 const failed = results.filter(r => !r.pass);
